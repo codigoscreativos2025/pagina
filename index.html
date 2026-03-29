@@ -4,11 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pivot AI - Automatización Inteligente para Tu Negocio</title>
-    <meta name="description" content="Implementamos agentes de IA y automatizaciones inteligentes para condominios, odontólogos, farmacias y más.">
+    <meta name="description" content="Implementamos agentes de IA que trabajan 24/7. No pagues por humanos que se cansan o enferman.">
     
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/styles.css">
     
     <script>
@@ -16,524 +15,401 @@
             theme: {
                 extend: {
                     fontFamily: {
-                        'display': ['Space Grotesk', 'sans-serif'],
-                        'body': ['Outfit', 'sans-serif'],
+                        sans: ['Inter', 'sans-serif'],
                     },
                     colors: {
-                        'ai-dark': '#0a0a0f',
-                        'ai-purple': '#8b5cf6',
-                        'ai-cyan': '#06b6d4',
-                        'ai-pink': '#ec4899',
-                    },
-                    animation: {
-                        'float': 'float 6s ease-in-out infinite',
-                        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                        'gradient': 'gradient 8s ease infinite',
-                    },
-                    keyframes: {
-                        float: {
-                            '0%, 100%': { transform: 'translateY(0)' },
-                            '50%': { transform: 'translateY(-20px)' },
+                        brand: {
+                            50: '#EFF6FF',
+                            100: '#DBEAFE',
+                            200: '#BFDBFE',
+                            300: '#93C5FD',
+                            400: '#60A5FA',
+                            500: '#3B82F6',
+                            600: '#2563EB',
+                            700: '#1D4ED8',
+                            800: '#1E40AF',
+                            900: '#1E3A8A',
                         },
-                        gradient: {
-                            '0%, 100%': { backgroundPosition: '0% 50%' },
-                            '50%': { backgroundPosition: '100% 50%' },
-                        }
+                        accent: '#06B6D4',
                     }
                 }
             }
         }
     </script>
 </head>
-<body class="bg-ai-dark text-white font-body overflow-x-hidden">
-    
-    <!-- Fondo Ambiental con Partículas -->
-    <canvas id="particles-canvas" class="fixed inset-0 z-0 pointer-events-none"></canvas>
+<body class="bg-white text-slate-800 font-sans">
     
     <!-- Navegación -->
-    <nav class="fixed top-0 left-0 right-0 z-50 transition-all duration-300" id="navbar">
-        <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-            <a href="#" class="text-2xl font-display font-bold tracking-tight">
-                <span class="text-ai-cyan">Pivot</span><span class="text-ai-purple">.AI</span>
+    <nav class="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-sm z-50 border-b border-slate-100">
+        <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+            <a href="#" class="text-2xl font-bold tracking-tight">
+                <span class="text-brand-600">Pivot</span><span class="text-accent">.AI</span>
             </a>
             
-            <div class="hidden md:flex items-center space-x-8">
-                <a href="#servicios" class="text-sm text-gray-300 hover:text-white transition-colors">Servicios</a>
-                <a href="#condominios" class="text-sm text-gray-300 hover:text-white transition-colors">Condominios</a>
-                <a href="#odontologos" class="text-sm text-gray-300 hover:text-white transition-colors">Odontólogos</a>
-                <a href="#demo" class="text-sm text-gray-300 hover:text-white transition-colors">Demo CRM</a>
+            <div class="hidden md:flex items-center space-x-6 text-sm font-medium text-slate-600">
+                <a href="#problema" class="hover:text-brand-600 transition-colors">El Problema</a>
+                <a href="#servicios" class="hover:text-brand-600 transition-colors">Servicios</a>
+                <a href="#referidos" class="hover:text-brand-600 transition-colors">Referidos</a>
+                <a href="#demo" class="hover:text-brand-600 transition-colors">Demo</a>
             </div>
             
             <a href="https://wa.me/584123821754?text=Hola,%20me%20interesa%20conocer%20más%20sobre%20Pivot%20AI" 
                target="_blank"
-               class="bg-gradient-to-r from-ai-purple to-ai-cyan px-6 py-2.5 rounded-full text-sm font-semibold hover:opacity-90 transition-opacity">
+               class="bg-brand-600 text-white px-5 py-2.5 rounded-full text-sm font-semibold hover:bg-brand-700 transition-colors shadow-lg shadow-brand-600/25">
                 Escríbenos
             </a>
         </div>
     </nav>
 
-    <!-- Hero Section con Animación Tipográfica -->
-    <section class="relative min-h-screen flex items-center justify-center px-6 pt-20" id="hero">
-        <div class="relative z-10 max-w-5xl mx-auto text-center">
-            <div class="hero-badge inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 mb-8">
-                <span class="w-2 h-2 rounded-full bg-ai-cyan animate-pulse"></span>
-                <span class="text-sm text-gray-300">IA que transforma negocios</span>
+    <!-- Hero Section -->
+    <section class="pt-32 pb-20 px-6" id="hero">
+        <div class="max-w-4xl mx-auto text-center">
+            <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand-50 border border-brand-100 text-brand-700 text-sm font-medium mb-8">
+                <span class="w-2 h-2 rounded-full bg-accent animate-pulse"></span>
+                IA que trabaja 24/7 sin parar
             </div>
             
-            <h1 class="hero-title text-5xl md:text-7xl font-display font-bold mb-6 leading-tight">
-                <span class="block">Automatización</span>
-                <span class="hero-text-gradient bg-gradient-to-r from-ai-cyan via-ai-purple to-ai-pink bg-clip-text text-transparent">
-                    Inteligente a Tu Medida
-                </span>
+            <h1 class="text-4xl md:text-5xl lg:text-6xl font-extrabold text-slate-900 mb-6 leading-tight">
+                Deja de pagar por<br>
+                <span class="text-brand-600">humanos que se cansan</span>
             </h1>
             
-            <p class="hero-subtitle text-xl text-gray-400 mb-10 max-w-2xl mx-auto">
-                Implementamos agentes de IA personalizados para tu industria. 
-                <span class="text-ai-cyan">Escala tu negocio</span> sin fronteras y sin costos elevados.
+            <p class="text-xl text-slate-600 mb-10 max-w-2xl mx-auto">
+                Los empleados se cansan, se enferman, se van de vacaciones y cobran horas extra. 
+                <strong class="text-brand-600">La IA trabaja 24/7/365</strong> sin quejas, sin bajas, sin costos extras.
             </p>
             
-            <div class="hero-cta flex flex-col sm:flex-row items-center justify-center gap-4">
-                <a href="#demo" 
-                   class="group relative px-8 py-4 bg-white text-ai-dark rounded-full font-semibold text-lg overflow-hidden">
-                    <span class="relative z-10">Probar Demo del CRM</span>
-                    <div class="absolute inset-0 bg-gradient-to-r from-ai-cyan to-ai-purple opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                </a>
-                
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <a href="https://wa.me/584123821754?text=Hola,%20me%20interesa%20conocer%20más%20sobre%20las%20soluciones%20de%20IA%20para%20mi%20negocio" 
                    target="_blank"
-                   class="px-8 py-4 border border-white/20 rounded-full font-semibold text-lg hover:bg-white/5 transition-colors">
-                    Hablar con un Asesor
+                   class="w-full sm:w-auto px-8 py-4 bg-brand-600 text-white rounded-full font-semibold text-lg hover:bg-brand-700 transition-all shadow-xl shadow-brand-600/25">
+                    Solicitar Información
+                </a>
+                
+                <a href="#demo" 
+                   class="w-full sm:w-auto px-8 py-4 border-2 border-slate-200 text-slate-700 rounded-full font-semibold text-lg hover:border-brand-300 hover:bg-brand-50 transition-all">
+                    Probar Demo del CRM
                 </a>
             </div>
             
-            <!-- Stats Animadas -->
-            <div class="hero-stats mt-20 grid grid-cols-3 gap-8 max-w-xl mx-auto">
+            <!-- Stats rápidas -->
+            <div class="mt-16 grid grid-cols-3 gap-8 max-w-lg mx-auto">
                 <div class="text-center">
-                    <div class="text-3xl md:text-4xl font-bold text-ai-cyan">10x</div>
-                    <div class="text-sm text-gray-500">Velocidad</div>
+                    <div class="text-3xl font-bold text-brand-600">24/7</div>
+                    <div class="text-sm text-slate-500">Disponibilidad</div>
                 </div>
                 <div class="text-center">
-                    <div class="text-3xl md:text-4xl font-bold text-ai-purple">70%</div>
-                    <div class="text-sm text-gray-500">Ahorro</div>
+                    <div class="text-3xl font-bold text-brand-600">70%</div>
+                    <div class="text-sm text-slate-500">Ahorro</div>
                 </div>
                 <div class="text-center">
-                    <div class="text-3xl md:text-4xl font-bold text-ai-pink">24/7</div>
-                    <div class="text-sm text-gray-500">Disponibilidad</div>
+                    <div class="text-3xl font-bold text-brand-600">0</div>
+                    <div class="text-sm text-slate-500">Días baja</div>
                 </div>
             </div>
         </div>
-        
-        <!-- Elementos decorativos -->
-        <div class="absolute top-1/4 left-10 w-72 h-72 bg-ai-purple/20 rounded-full blur-3xl"></div>
-        <div class="absolute bottom-1/4 right-10 w-96 h-96 bg-ai-cyan/20 rounded-full blur-3xl"></div>
     </section>
 
-    <!-- Scrollytelling: Cómo Funciona la IA -->
-    <section class="relative py-32 px-6" id="como-funciona">
-        <div class="max-w-6xl mx-auto">
-            <div class="text-center mb-20">
-                <h2 class="text-4xl md:text-5xl font-display font-bold mb-4">
-                    La IA que <span class="text-ai-cyan">trabaja</span> por ti
+    <!-- El Problema: Humano vs IA -->
+    <section class="py-20 px-6 bg-slate-50" id="problema">
+        <div class="max-w-5xl mx-auto">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
+                    ¿Por qué seguir pagando lo mismo?
                 </h2>
-                <p class="text-gray-400 max-w-2xl mx-auto">
-                    Observa cómo nuestros agentes transforman tu operación diaria
+                <p class="text-slate-600 max-w-xl mx-auto">
+                    Compara los costos reales de un empleado vs una IA
                 </p>
             </div>
             
-            <!-- Scrollytelling Steps -->
-            <div class="scrollytell-container space-y-32">
-                <!-- Step 1 -->
-                <div class="scrollytell-step flex flex-col md:flex-row items-center gap-12 opacity-0 translate-y-20 transition-all duration-700" data-step="1">
-                    <div class="flex-1">
-                        <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-ai-purple to-ai-pink flex items-center justify-center text-2xl font-bold mb-6">
-                            1
-                        </div>
-                        <h3 class="text-2xl font-bold mb-4">Recibe la Solicitud</h3>
-                        <p class="text-gray-400">
-                            Tu cliente contacta por cualquier canal (WhatsApp, web, teléfono). 
-                            La IA identifica sus necesidades automáticamente.
-                        </p>
+            <!-- Comparativa -->
+            <div class="grid md:grid-cols-2 gap-8">
+                <!-- Humano -->
+                <div class="bg-white rounded-2xl p-8 shadow-lg border-2 border-red-100">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center text-2xl">👤</div>
+                        <h3 class="text-xl font-bold text-slate-900">Empleado Humano</h3>
                     </div>
-                    <div class="flex-1">
-                        <div class="relative p-8 rounded-2xl bg-white/5 border border-white/10">
-                            <div class="space-y-4">
-                                <div class="flex items-center gap-4">
-                                    <div class="w-10 h-10 rounded-full bg-ai-cyan/20 flex items-center justify">💬</div>
-                                    <div class="flex-1 p-3 rounded-lg bg-gray-800/50 text-sm">Hola, necesito información sobre...</div>
-                                </div>
-                                <div class="flex items-center gap-4">
-                                    <div class="w-10 h-10 rounded-full bg-ai-purple/20 flex items-center justify">🤖</div>
-                                    <div class="flex-1 p-3 rounded-lg bg-ai-purple/20 text-sm">¡Claro! Te cuento sobre nuestras soluciones...</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Step 2 -->
-                <div class="scrollytell-step flex flex-col md:flex-row-reverse items-center gap-12 opacity-0 translate-y-20 transition-all duration-700" data-step="2">
-                    <div class="flex-1">
-                        <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-ai-cyan to-ai-purple flex items-center justify-center text-2xl font-bold mb-6">
-                            2
-                        </div>
-                        <h3 class="text-2xl font-bold mb-4">Procesa y Responde</h3>
-                        <p class="text-gray-400">
-                            En milisegundos, la IA analiza el contexto y ofrece respuestas 
-                            personalizadas adaptadas a tu negocio.
-                        </p>
-                    </div>
-                    <div class="flex-1">
-                        <div class="relative p-6 rounded-2xl bg-white/5 border border-white/10">
-                            <div class="grid grid-cols-3 gap-4 text-center">
-                                <div class="p-4 rounded-xl bg-gray-800/50">
-                                    <div class="text-2xl mb-2">🔍</div>
-                                    <div class="text-xs text-gray-400">Analiza</div>
-                                </div>
-                                <div class="p-4 rounded-xl bg-gray-800/50">
-                                    <div class="text-2xl mb-2">🧠</div>
-                                    <div class="text-xs text-gray-400">Procesa</div>
-                                </div>
-                                <div class="p-4 rounded-xl bg-gray-800/50">
-                                    <div class="text-2xl mb-2">⚡</div>
-                                    <div class="text-xs text-gray-400">Responde</div>
-                                </div>
-                            </div>
-                        </div>
+                    
+                    <ul class="space-y-4">
+                        <li class="flex items-start gap-3">
+                            <span class="text-red-500 text-xl">✗</span>
+                            <span class="text-slate-600">Se cansa después de 8 horas</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="text-red-500 text-xl">✗</span>
+                            <span class="text-slate-600">Se enferma y falta al trabajo</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="text-red-500 text-xl">✗</span>
+                            <span class="text-slate-600">Vacaciones pagadas</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="text-red-500 text-xl">✗</span>
+                            <span class="text-slate-600">Horas extras y bonificaciones</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="text-red-500 text-xl">✗</span>
+                            <span class="text-slate-600">Liquidación al irse</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="text-red-500 text-xl">✗</span>
+                            <span class="text-slate-600">Requiere supervisión</span>
+                        </li>
+                    </ul>
+                    
+                    <div class="mt-6 pt-6 border-t border-slate-100">
+                        <div class="text-sm text-slate-500">Costo real mensual</div>
+                        <div class="text-3xl font-bold text-red-600">$800 - $1,500+</div>
                     </div>
                 </div>
                 
-                <!-- Step 3 -->
-                <div class="scrollytell-step flex flex-col md:flex-row items-center gap-12 opacity-0 translate-y-20 transition-all duration-700" data-step="3">
-                    <div class="flex-1">
-                        <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-ai-pink to-ai-cyan flex items-center justify-center text-2xl font-bold mb-6">
-                            3
-                        </div>
-                        <h3 class="text-2xl font-bold mb-4">Cierra la Venta</h3>
-                        <p class="text-gray-400">
-                            La IA agenda citas, envía cotizaciones y convierte prospectos 
-                            en clientes mientras tú duermes.
-                        </p>
+                <!-- IA -->
+                <div class="bg-white rounded-2xl p-8 shadow-xl border-2 border-brand-200 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 bg-brand-600 text-white text-xs font-bold px-3 py-1 rounded-bl-lg">
+                        RECOMENDADO
                     </div>
-                    <div class="flex-1">
-                        <div class="relative p-6 rounded-2xl bg-gradient-to-br from-ai-purple/20 to-ai-pink/20 border border-white/10">
-                            <div class="text-center">
-                                <div class="text-5xl mb-4">🎉</div>
-                                <div class="font-bold text-xl">¡Cita Agendada!</div>
-                                <div class="text-gray-400 text-sm mt-2">Cliente convertido automáticamente</div>
-                            </div>
-                        </div>
+                    
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-12 h-12 rounded-full bg-brand-100 flex items-center justify-center text-2xl">🤖</div>
+                        <h3 class="text-xl font-bold text-slate-900">Agente de IA</h3>
                     </div>
+                    
+                    <ul class="space-y-4">
+                        <li class="flex items-start gap-3">
+                            <span class="text-brand-600 text-xl">✓</span>
+                            <span class="text-slate-600">Trabaja sin descansar</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="text-brand-600 text-xl">✓</span>
+                            <span class="text-slate-600">Nunca se enferma</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="text-brand-600 text-xl">✓</span>
+                            <span class="text-slate-600">Sin vacaciones</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="text-brand-600 text-xl">✓</span>
+                            <span class="text-slate-600">Costo fijo mensual</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="text-brand-600 text-xl">✓</span>
+                            <span class="text-slate-600">Sin liquidaciones</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="text-brand-600 text-xl">✓</span>
+                            <span class="text-slate-600">Se auto-gestiona</span>
+                        </li>
+                    </ul>
+                    
+                    <div class="mt-6 pt-6 border-t border-slate-100">
+                        <div class="text-sm text-slate-500">Costo mensual</div>
+                        <div class="text-3xl font-bold text-brand-600">$150 - $300</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Beneficio destacado -->
+            <div class="mt-12 text-center">
+                <div class="inline-block bg-brand-50 border border-brand-200 rounded-2xl px-8 py-6">
+                    <div class="text-brand-600 font-bold text-lg mb-2">Ahorro promedio por empleado替换为:</div>
+                    <div class="text-4xl font-extrabold text-slate-900">70% menos costos</div>
+                    <div class="text-slate-600 mt-2">Más eficiencia, misma o mejor atención</div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Sección Condominios - Diseño Único -->
-    <section class="relative py-32 px-6 bg-gradient-to-b from-transparent via-ai-purple/5 to-transparent" id="condominios">
-        <div class="max-w-6xl mx-auto">
-            <div class="text-center mb-20">
-                <span class="inline-block px-4 py-1 rounded-full bg-ai-cyan/20 text-ai-cyan text-sm font-medium mb-4">
-                    Solución Exclusiva
-                </span>
-                <h2 class="text-4xl md:text-5xl font-display font-bold mb-4">
-                    CRM para <span class="text-ai-cyan">Condominios</span>
+    <!-- Servicios Principales -->
+    <section class="py-20 px-6" id="servicios">
+        <div class="max-w-5xl mx-auto">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
+                    No solo agregamos IA, <span class="text-brand-600">optimizamos tus procesos</span>
                 </h2>
-                <p class="text-gray-400 max-w-2xl mx-auto">
-                    Gestionamos la comunicación, seguridad y administración de tu residencial
+                <p class="text-slate-600 max-w-2xl mx-auto">
+                    Analizamos tu negocio, implementamos agentes de IA y reducimos tus costos operativos
                 </p>
             </div>
             
-            <!-- Grid de Problemas-Soluciones -->
-            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
-                <!-- Problema 1 -->
-                <div class="condominio-card group p-6 rounded-2xl bg-white/5 border border-white/10 hover:border-ai-cyan/50 transition-all duration-300">
-                    <div class="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center text-2xl mb-4">
-                        🔔
+            <div class="grid md:grid-cols-2 gap-6">
+                <!-- Condominios -->
+                <div class="group bg-white rounded-2xl p-8 shadow-lg border border-slate-100 hover:border-brand-200 hover:shadow-xl transition-all">
+                    <div class="w-14 h-14 rounded-xl bg-brand-100 flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition-transform">
+                        🏢
                     </div>
-                    <h4 class="font-bold mb-2 group-hover:text-ai-cyan transition-colors">¿Cansado de quejas no respondidas?</h4>
-                    <p class="text-sm text-gray-400">La IA responde instantáneamente a todos los residentes las 24 horas.</p>
+                    <h3 class="text-xl font-bold text-slate-900 mb-2">CRM para Condominios</h3>
+                    <p class="text-slate-600 mb-4">
+                        Gestión completa: comunicación con residentes, control de acceso,cobranza y más.
+                    </p>
+                    <ul class="space-y-2 text-sm text-slate-500 mb-6">
+                        <li>✓ Atención 24/7 a residentes</li>
+                        <li>✓ Control de acceso automatizado</li>
+                        <li>✓ Cobranza inteligente</li>
+                    </ul>
+                    <a href="https://wa.me/584123821754?text=Hola,%20quiero%20información%20sobre%20el%20CRM%20para%20condominios" 
+                       target="_blank"
+                       class="text-brand-600 font-semibold hover:underline">
+                        Más información →
+                    </a>
                 </div>
                 
-                <!-- Problema 2 -->
-                <div class="condominio-card group p-6 rounded-2xl bg-white/5 border border-white/10 hover:border-ai-cyan/50 transition-all duration-300">
-                    <div class="w-12 h-12 rounded-xl bg-yellow-500/20 flex items-center justify-center text-2xl mb-4">
-                        🚗
+                <!-- Odontólogos -->
+                <div class="group bg-white rounded-2xl p-8 shadow-lg border border-slate-100 hover:border-brand-200 hover:shadow-xl transition-all">
+                    <div class="w-14 h-14 rounded-xl bg-accent/10 flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition-transform">
+                        🦷
                     </div>
-                    <h4 class="font-bold mb-2 group-hover:text-ai-cyan transition-colors">Control de acceso caótico</h4>
-                    <p class="text-sm text-gray-400">Registros automatizados de visitantes y vehículos con alertas en tiempo real.</p>
+                    <h3 class="text-xl font-bold text-slate-900 mb-2">IA para Odontólogos</h3>
+                    <p class="text-slate-600 mb-4">
+                        Automatiza tu consultorio: agenda citas, recuerda pacientes, gestiona historiales.
+                    </p>
+                    <ul class="space-y-2 text-sm text-slate-500 mb-6">
+                        <li>✓ Agenda automática</li>
+                        <li>✓ Recordatorios por WhatsApp</li>
+                        <li>✓ Historial digital</li>
+                    </ul>
+                    <a href="https://wa.me/584123821754?text=Hola,%20me%20interesa%20el%20sistema%20de%20IA%20para%20consultorios%20dentales" 
+                       target="_blank"
+                       class="text-accent font-semibold hover:underline">
+                        Más información →
+                    </a>
                 </div>
                 
-                <!-- Problema 3 -->
-                <div class="condominio-card group p-6 rounded-2xl bg-white/5 border border-white/10 hover:border-ai-cyan/50 transition-all duration-300">
-                    <div class="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center text-2xl mb-4">
-                        💳
+                <!-- Empresas -->
+                <div class="group bg-white rounded-2xl p-8 shadow-lg border border-slate-100 hover:border-brand-200 hover:shadow-xl transition-all">
+                    <div class="w-14 h-14 rounded-xl bg-green-100 flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition-transform">
+                        🏢
                     </div>
-                    <h4 class="font-bold mb-2 group-hover:text-ai-cyan transition-colors">Cobros y morosos</h4>
-                    <p class="text-sm text-gray-400">Recordatorios automáticos de pagos y gestión de cobranza inteligente.</p>
+                    <h3 class="text-xl font-bold text-slate-900 mb-2">Empresas</h3>
+                    <p class="text-slate-600 mb-4">
+                        Automatización de procesos internos y atención al cliente 24/7.
+                    </p>
+                    <ul class="space-y-2 text-sm text-slate-500 mb-6">
+                        <li>✓ Atención al cliente 24/7</li>
+                        <li>✓ Chatbots inteligentes</li>
+                        <li>✓ Optimización de procesos</li>
+                    </ul>
+                    <a href="https://wa.me/584123821754?text=Hola,%20quiero%20automatizar%20procesos%20de%20mi%20empresa%20con%20IA" 
+                       target="_blank"
+                       class="text-green-600 font-semibold hover:underline">
+                        Más información →
+                    </a>
                 </div>
                 
-                <!-- Problema 4 -->
-                <div class="condominio-card group p-6 rounded-2xl bg-white/5 border border-white/10 hover:border-ai-cyan/50 transition-all duration-300">
-                    <div class="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center text-2xl mb-4">
-                        📋
+                <!-- Farmacias -->
+                <div class="group bg-white rounded-2xl p-8 shadow-lg border border-slate-100 hover:border-brand-200 hover:shadow-xl transition-all">
+                    <div class="w-14 h-14 rounded-xl bg-pink-100 flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition-transform">
+                        💊
                     </div>
-                    <h4 class="font-bold mb-2 group-hover:text-ai-cyan transition-colors">Administración manual</h4>
-                    <p class="text-sm text-gray-400">Digitaliza todos los procesos: áreas comunes, reservas, asamblea.</p>
+                    <h3 class="text-xl font-bold text-slate-900 mb-2">Farmacias</h3>
+                    <p class="text-slate-600 mb-4">
+                        Control de inventario, recordatorios de medicamentos y más.
+                    </p>
+                    <ul class="space-y-2 text-sm text-slate-500 mb-6">
+                        <li>✓ Control de inventario</li>
+                        <li>✓ Recordatorios automáticos</li>
+                        <li>✓ Gestión de clientes</li>
+                    </ul>
+                    <a href="https://wa.me/584123821754?text=Hola,%20necesito%20información%20sobre%20soluciones%20IA%20para%20farmacias" 
+                       target="_blank"
+                       class="text-pink-600 font-semibold hover:underline">
+                        Más información →
+                    </a>
                 </div>
-                
-                <!-- Problema 5 -->
-                <div class="condominio-card group p-6 rounded-2xl bg-white/5 border border-white/10 hover:border-ai-cyan/50 transition-all duration-300">
-                    <div class="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center text-2xl mb-4">
-                        🔐
-                    </div>
-                    <h4 class="font-bold mb-2 group-hover:text-ai-cyan transition-colors">Seguridad integrada</h4>
-                    <p class="text-sm text-gray-400">Monitoreo de cámaras y alertas automáticas ante situaciones sospechosas.</p>
-                </div>
-                
-                <!-- Problema 6 -->
-                <div class="condominio-card group p-6 rounded-2xl bg-white/5 border border-white/10 hover:border-ai-cyan/50 transition-all duration-300">
-                    <div class="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center text-2xl mb-4">
-                        📱
-                    </div>
-                    <h4 class="font-bold mb-2 group-hover:text-ai-cyan transition-colors">App para residentes</h4>
-                    <p class="text-sm text-gray-400">Aplicación móvil para que los vecinos reporten, reserven y paguen.</p>
-                </div>
-            </div>
-            
-            <!-- Visualización de Datos -->
-            <div class="condominio-stats p-8 rounded-3xl bg-gradient-to-r from-ai-cyan/10 to-ai-purple/10 border border-white/10">
-                <div class="grid md:grid-cols-4 gap-8 text-center">
-                    <div>
-                        <div class="text-4xl font-bold text-ai-cyan mb-2 counter" data-target="95">0%</div>
-                        <div class="text-sm text-gray-400">Satisfacción</div>
-                    </div>
-                    <div>
-                        <div class="text-4xl font-bold text-ai-purple mb-2 counter" data-target="80">0%</div>
-                        <div class="text-sm text-gray-400">Menos Quejas</div>
-                    </div>
-                    <div>
-                        <div class="text-4xl font-bold text-ai-pink mb-2 counter" data-target="60">0%</div>
-                        <div class="text-sm text-gray-400">Cobranza</div>
-                    </div>
-                    <div>
-                        <div class="text-4xl font-bold text-ai-cyan mb-2 counter" data-target="24">0/7</div>
-                        <div class="text-sm text-gray-400">Atención</div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- CTA Condominios -->
-            <div class="text-center mt-12">
-                <a href="https://wa.me/584123821754?text=Hola,%20quiero%20información%20sobre%20el%20CRM%20para%20condominios" 
-                   target="_blank"
-                   class="inline-flex items-center gap-3 px-8 py-4 bg-ai-cyan text-ai-dark rounded-full font-semibold text-lg hover:bg-ai-cyan/90 transition-colors">
-                    <span>Solicitar Demo para Condominios</span>
-                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                </a>
             </div>
         </div>
     </section>
 
-    <!-- Sección Odontólogos - Diseño Único -->
-    <section class="relative py-32 px-6" id="odontologos">
-        <div class="max-w-6xl mx-auto">
-            <div class="text-center mb-20">
-                <span class="inline-block px-4 py-1 rounded-full bg-ai-pink/20 text-ai-pink text-sm font-medium mb-4">
-                    Solución Exclusiva
-                </span>
-                <h2 class="text-4xl md:text-5xl font-display font-bold mb-4">
-                    IA para <span class="text-ai-pink">Odontólogos</span>
-                </h2>
-                <p class="text-gray-400 max-w-2xl mx-auto">
-                    Transforma tu consultorio con automatización inteligente
-                </p>
-            </div>
-            
-            <!-- Flujo Visual Paciente -->
-            <div class="odontologo-flow relative">
-                <!-- Timeline -->
-                <div class="absolute left-1/2 top-0 bottom-0 w-0.5 bg-gradient-to-b from-ai-pink via-ai-purple to-ai-cyan hidden md:block"></div>
-                
-                <!-- Paso 1 -->
-                <div class="odontologo-step relative flex flex-col md:flex-row items-center gap-8 mb-16">
-                    <div class="flex-1 md:text-right">
-                        <div class="inline-block px-4 py-1 rounded-full bg-ai-pink/20 text-ai-pink text-sm mb-3">Paso 1</div>
-                        <h3 class="text-2xl font-bold mb-2">Paciente Solicita Cita</h3>
-                        <p class="text-gray-400">El paciente contacta por WhatsApp o redes sociales. La IA captura sus datos y necesidades.</p>
-                    </div>
-                    <div class="w-16 h-16 rounded-full bg-ai-pink flex items-center justify-center text-2xl font-bold z-10 shadow-lg shadow-ai-pink/30">1</div>
-                    <div class="flex-1">
-                        <div class="p-6 rounded-2xl bg-white/5 border border-white/10">
-                            <div class="flex items-center gap-4">
-                                <div class="text-3xl">👤</div>
-                                <div>
-                                    <div class="font-medium">María González</div>
-                                    <div class="text-sm text-gray-400">"Quiero agenda limpieza dental"</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Paso 2 -->
-                <div class="odontologo-step relative flex flex-col md:flex-row-reverse items-center gap-8 mb-16">
-                    <div class="flex-1 md:text-left">
-                        <div class="inline-block px-4 py-1 rounded-full bg-ai-purple/20 text-ai-purple text-sm mb-3">Paso 2</div>
-                        <h3 class="text-2xl font-bold mb-2">IA Verifica Disponibilidad</h3>
-                        <p class="text-gray-400">Consulta el calendario en tiempo real y ofrece horarios disponibles automáticamente.</p>
-                    </div>
-                    <div class="w-16 h-16 rounded-full bg-ai-purple flex items-center justify-center text-2xl font-bold z-10 shadow-lg shadow-ai-purple/30">2</div>
-                    <div class="flex-1 md:text-right">
-                        <div class="p-6 rounded-2xl bg-gradient-to-r from-ai-purple/20 to-ai-pink/20 border border-white/10">
-                            <div class="space-y-2">
-                                <div class="flex items-center justify-end gap-2">
-                                    <span class="text-sm text-gray-400">Mié 15 - 10:00 AM</span>
-                                    <span class="w-3 h-3 rounded-full bg-green-500"></span>
-                                </div>
-                                <div class="flex items-center justify-end gap-2">
-                                    <span class="text-sm text-gray-400">Mié 15 - 2:00 PM</span>
-                                    <span class="w-3 h-3 rounded-full bg-green-500"></span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Paso 3 -->
-                <div class="odontologo-step relative flex flex-col md:flex-row items-center gap-8 mb-16">
-                    <div class="flex-1 md:text-right">
-                        <div class="inline-block px-4 py-1 rounded-full bg-ai-cyan/20 text-ai-cyan text-sm mb-3">Paso 3</div>
-                        <h3 class="text-2xl font-bold mb-2">Confirma y Envía Recordatorio</h3>
-                        <p class="text-gray-400">La IA confirma la cita y envía recordatorios automáticos 24hrs y 2hrs antes.</p>
-                    </div>
-                    <div class="w-16 h-16 rounded-full bg-ai-cyan flex items-center justify-center text-2xl font-bold z-10 shadow-lg shadow-ai-cyan/30">3</div>
-                    <div class="flex-1">
-                        <div class="p-6 rounded-2xl bg-white/5 border border-white/10">
-                            <div class="space-y-3">
-                                <div class="flex items-center gap-3">
-                                    <span class="text-xl">✅</span>
-                                    <span class="text-sm">Cita confirmada</span>
-                                </div>
-                                <div class="flex items-center gap-3">
-                                    <span class="text-xl">📱</span>
-                                    <span class="text-sm">Recordatorio enviado</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Paso 4 -->
-                <div class="odontologo-step relative flex flex-col md:flex-row-reverse items-center gap-8">
-                    <div class="flex-1 md:text-left">
-                        <div class="inline-block px-4 py-1 rounded-full bg-green-500/20 text-green-400 text-sm mb-3">Paso 4</div>
-                        <h3 class="text-2xl font-bold mb-2">Paciente Llega y Se Registra</h3>
-                        <p class="text-gray-400">Check-in automático, historial actualizado y el odontólogo tiene toda la info necesaria.</p>
-                    </div>
-                    <div class="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center text-2xl font-bold z-10 shadow-lg shadow-green-500/30">4</div>
-                    <div class="flex-1 md:text-right">
-                        <div class="p-6 rounded-2xl bg-green-500/10 border border-green-500/30">
-                            <div class="text-center">
-                                <div class="text-3xl mb-2">🦷</div>
-                                <div class="font-medium text-green-400">¡Listo para atender!</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Beneficios Destacados -->
-            <div class="mt-20 grid md:grid-cols-3 gap-6">
-                <div class="odontologo-benefit text-center p-8 rounded-2xl bg-white/5 border border-white/10 hover:border-ai-pink/50 transition-all">
-                    <div class="text-4xl mb-4">📅</div>
-                    <h4 class="font-bold mb-2">Agenda Inteligente</h4>
-                    <p class="text-sm text-gray-400">Optimiza tu agenda reduciendo huecos y cancelaciones</p>
-                </div>
-                <div class="odontologo-benefit text-center p-8 rounded-2xl bg-white/5 border border-white/10 hover:border-ai-pink/50 transition-all">
-                    <div class="text-4xl mb-4">💰</div>
-                    <h4 class="font-bold mb-2">Aumenta Ingresos</h4>
-                    <p class="text-sm text-gray-400">Recupera hasta 30% de pacientes perdidos por falta de seguimiento</p>
-                </div>
-                <div class="odontologo-benefit text-center p-8 rounded-2xl bg-white/5 border border-white/10 hover:border-ai-pink/50 transition-all">
-                    <div class="text-4xl mb-4">🏥</div>
-                    <h4 class="font-bold mb-2">Historial Digital</h4>
-                    <p class="text-sm text-gray-400">Cada paciente tiene su historial completo y actualizado</p>
-                </div>
-            </div>
-            
-            <!-- CTA Odontólogos -->
-            <div class="text-center mt-12">
-                <a href="https://wa.me/584123821754?text=Hola,%20me%20interesa%20el%20sistema%20de%20IA%20para%20consultorios%20dentales" 
-                   target="_blank"
-                   class="inline-flex items-center gap-3 px-8 py-4 bg-ai-pink text-white rounded-full font-semibold text-lg hover:bg-ai-pink/90 transition-colors">
-                    <span>Solicitar Demo para Odontólogos</span>
-                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                </a>
-            </div>
-        </div>
-    </section>
-
-    <!-- Demo CRM (Juego) -->
-    <section class="relative py-32 px-6 bg-gradient-to-b from-ai-dark via-ai-purple/10 to-ai-dark" id="demo">
-        <div class="max-w-4xl mx-auto text-center">
-            <span class="inline-block px-4 py-1 rounded-full bg-gradient-to-r from-ai-purple to-ai-pink text-white text-sm font-medium mb-4">
-                🎮 Nueva Experiencia
-            </span>
-            <h2 class="text-4xl md:text-5xl font-display font-bold mb-4">
-                Prueba el <span class="text-transparent bg-clip-text bg-gradient-to-r from-ai-purple to-ai-pink">CRM del Futuro</span>
+    <!-- Sistema de Referidos -->
+    <section class="py-20 px-6 bg-brand-600 text-white" id="referidos">
+        <div class="max-w-3xl mx-auto text-center">
+            <div class="text-6xl mb-6">🎁</div>
+            <h2 class="text-3xl md:text-4xl font-bold mb-4">
+                Sistema de Referidos
             </h2>
-            <p class="text-gray-400 max-w-2xl mx-auto mb-12">
-                Juega y descubre cómo la IA puede transformar tu negocio. 
-                <span class="text-ai-cyan">Sin compromiso, 100% interactivo.</span>
+            <p class="text-xl text-brand-100 mb-8 max-w-xl mx-auto">
+                ¿Conoces a alguien que necesita automatizar su negocio? 
+                <strong>Por cada cliente que refieras, obtén 15% de descuento</strong> en tu próximo servicio.
             </p>
             
-            <!-- Contenedor del Juego CRM -->
-            <div class="crm-game relative rounded-3xl overflow-hidden border border-white/10 bg-white/5 backdrop-blur-sm" id="crm-game-container">
-                <!-- El juego se cargará aquí dinámicamente -->
-                <div class="p-8">
-                    <div class="mb-8">
-                        <div class="text-sm text-gray-400 mb-2">Nivel <span id="game-level">1</span></div>
-                        <div class="h-2 bg-gray-700 rounded-full overflow-hidden">
-                            <div class="h-full bg-gradient-to-r from-ai-purple to-ai-pink transition-all duration-500" id="game-progress" style="width: 0%"></div>
-                        </div>
+            <div class="bg-white/10 backdrop-blur-sm rounded-2xl p-6 mb-8 inline-block">
+                <div class="text-5xl font-extrabold mb-2">15%</div>
+                <div class="text-brand-200">de descuento por cada referido</div>
+            </div>
+            
+            <div>
+                <a href="https://wa.me/584123821754?text=Hola,%20me%20interesa%20el%20sistema%20de%20referidos%20de%20Pivot%20AI" 
+                   target="_blank"
+                   class="inline-block bg-white text-brand-600 px-8 py-4 rounded-full font-semibold text-lg hover:bg-brand-50 transition-colors shadow-xl">
+                    Quiero Participar
+                </a>
+            </div>
+            
+            <p class="text-sm text-brand-200 mt-6">
+                * El descuento aplica en servicios mensuales o anuales. Sin límite de referidos.
+            </p>
+        </div>
+    </section>
+
+    <!-- Demo CRM -->
+    <section class="py-20 px-6 bg-slate-50" id="demo">
+        <div class="max-w-3xl mx-auto">
+            <div class="text-center mb-8">
+                <span class="inline-block px-4 py-1 rounded-full bg-brand-100 text-brand-700 text-sm font-medium mb-4">
+                    🎮 Nueva Experiencia
+                </span>
+                <h2 class="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
+                    Prueba el <span class="text-brand-600">CRM del Futuro</span>
+                </h2>
+                <p class="text-slate-600">
+                    Juega y descubre cómo la IA puede transformar tu negocio. 
+                    <strong class="text-accent">Sin compromiso.</strong>
+                </p>
+            </div>
+            
+            <!-- Contenedor del Juego -->
+            <div class="bg-white rounded-2xl shadow-xl border border-slate-100 p-8" id="crm-game-container">
+                <div class="mb-6">
+                    <div class="flex justify-between text-sm text-slate-500 mb-2">
+                        <span>Nivel</span>
+                        <span id="game-level">1</span>
                     </div>
-                    
-                    <div class="grid md:grid-cols-3 gap-4 mb-8">
-                        <button onclick="crmGame.play('leads')" class="game-btn p-6 rounded-xl bg-white/5 border border-white/10 hover:border-ai-cyan hover:bg-white/10 transition-all text-left">
-                            <div class="text-3xl mb-3">👥</div>
-                            <div class="font-bold mb-1">Gestionar Leads</div>
-                            <div class="text-sm text-gray-400">0/10 contactos</div>
-                        </button>
-                        <button onclick="crmGame.play('citas')" class="game-btn p-6 rounded-xl bg-white/5 border border-white/10 hover:border-ai-purple hover:bg-white/10 transition-all text-left">
-                            <div class="text-3xl mb-3">📅</div>
-                            <div class="font-bold mb-1">Agendar Citas</div>
-                            <div class="text-sm text-gray-400">0/5 citas</div>
-                        </button>
-                        <button onclick="crmGame.play('ventas')" class="game-btn p-6 rounded-xl bg-white/5 border border-white/10 hover:border-ai-pink hover:bg-white/10 transition-all text-left">
-                            <div class="text-3xl mb-3">💰</div>
-                            <div class="font-bold mb-1">Cerrar Ventas</div>
-                            <div class="text-sm text-gray-400">$0 generado</div>
-                        </button>
+                    <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
+                        <div class="h-full bg-brand-600 transition-all duration-500" id="game-progress" style="width: 0%"></div>
                     </div>
-                    
-                    <div class="p-4 rounded-xl bg-gray-800/50 text-left">
-                        <div class="flex items-center gap-3 mb-2">
-                            <span class="text-2xl">🤖</span>
-                            <span class="font-medium text-ai-cyan">Asistente IA</span>
-                        </div>
-                        <p class="text-gray-300" id="game-message">¡Bienvenido! Elige una acción para comenzar a gestionar tu negocio con IA.</p>
+                </div>
+                
+                <div class="grid grid-cols-3 gap-4 mb-6">
+                    <button onclick="crmGame.play('leads')" class="game-btn p-4 rounded-xl bg-slate-50 border border-slate-200 hover:border-brand-300 hover:bg-brand-50 transition-all text-center">
+                        <div class="text-2xl mb-2">👥</div>
+                        <div class="font-semibold text-sm">Leads</div>
+                        <div class="text-xs text-slate-500" id="leads-count">0/10</div>
+                    </button>
+                    <button onclick="crmGame.play('citas')" class="game-btn p-4 rounded-xl bg-slate-50 border border-slate-200 hover:border-brand-300 hover:bg-brand-50 transition-all text-center">
+                        <div class="text-2xl mb-2">📅</div>
+                        <div class="font-semibold text-sm">Citas</div>
+                        <div class="text-xs text-slate-500" id="citas-count">0/5</div>
+                    </button>
+                    <button onclick="crmGame.play('ventas')" class="game-btn p-4 rounded-xl bg-slate-50 border border-slate-200 hover:border-brand-300 hover:bg-brand-50 transition-all text-center">
+                        <div class="text-2xl mb-2">💰</div>
+                        <div class="font-semibold text-sm">Ventas</div>
+                        <div class="text-xs text-slate-500" id="ventas-count">$0</div>
+                    </button>
+                </div>
+                
+                <div class="p-4 bg-brand-50 border border-brand-100 rounded-xl text-left">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="text-xl">🤖</span>
+                        <span class="font-semibold text-brand-600">Asistente IA</span>
                     </div>
-                    
-                    <div class="mt-6 text-sm text-gray-500">
-                        💡 <span class="text-ai-cyan">Tip:</span> La IA te ayuda automáticamente en cada paso
-                    </div>
+                    <p class="text-slate-700" id="game-message">¡Bienvenido! Elige una acción para comenzar a gestionar tu negocio con IA.</p>
                 </div>
             </div>
             
-            <div class="mt-12">
+            <div class="text-center mt-8">
                 <a href="https://wa.me/584123821754?text=Hola,%20probé%20la%20demo%20del%20CRM%20y%20me%20interesa%20saber%20más" 
                    target="_blank"
-                   class="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-ai-purple to-ai-pink text-white rounded-full font-semibold text-lg hover:opacity-90 transition-opacity">
+                   class="inline-flex items-center gap-2 px-8 py-4 bg-brand-600 text-white rounded-full font-semibold text-lg hover:bg-brand-700 transition-colors">
                     <span>¡Quiero el CRM Completo!</span>
                     <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
                 </a>
@@ -541,103 +417,33 @@
         </div>
     </section>
 
-    <!-- Otros Servicios -->
-    <section class="relative py-32 px-6" id="servicios">
-        <div class="max-w-6xl mx-auto">
-            <div class="text-center mb-16">
-                <h2 class="text-4xl md:text-5xl font-display font-bold mb-4">
-                    Más <span class="text-ai-purple">Soluciones</span>
-                </h2>
-                <p class="text-gray-400">Adaptamos la IA a cualquier industria</p>
-            </div>
-            
-            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <!-- Farmacias -->
-                <div class="servicio-card group p-8 rounded-2xl bg-white/5 border border-white/10 hover:border-ai-cyan transition-all">
-                    <div class="text-4xl mb-4">💊</div>
-                    <h3 class="text-xl font-bold mb-2 group-hover:text-ai-cyan transition-colors">Farmacias</h3>
-                    <p class="text-sm text-gray-400 mb-4">Control de inventario, recordatorios de medicamentos, automáticamente.</p>
-                    <a href="https://wa.me/584123821754?text=Hola,%20necesito%20información%20sobre%20soluciones%20IA%20para%20farmacias" 
-                       target="_blank"
-                       class="text-ai-cyan text-sm hover:underline">Más información →</a>
-                </div>
-                
-                <!-- Empresas -->
-                <div class="servicio-card group p-8 rounded-2xl bg-white/5 border border-white/10 hover:border-ai-purple transition-all">
-                    <div class="text-4xl mb-4">🏢</div>
-                    <h3 class="text-xl font-bold mb-2 group-hover:text-ai-purple transition-colors">Empresas</h3>
-                    <p class="text-sm text-gray-400 mb-4">Automatización de procesos internos, atención al cliente 24/7.</p>
-                    <a href="https://wa.me/584123821754?text=Hola,%20quiero%20automatizar%20procesos%20de%20mi%20empresa%20con%20IA" 
-                       target="_blank"
-                       class="text-ai-purple text-sm hover:underline">Más información →</a>
-                </div>
-                
-                <!-- Emprendedores -->
-                <div class="servicio-card group p-8 rounded-2xl bg-white/5 border border-white/10 hover:border-ai-pink transition-all">
-                    <div class="text-4xl mb-4">🚀</div>
-                    <h3 class="text-xl font-bold mb-2 group-hover:text-ai-pink transition-colors">Emprendedores</h3>
-                    <p class="text-sm text-gray-400 mb-4">Soluciones escalables para hacer crecer tu negocio desde cero.</p>
-                    <a href="https://wa.me/584123821754?text=Hola,%20me%20interesa%20implementar%20IA%20para%20mi%20emprendimiento" 
-                       target="_blank"
-                       class="text-ai-pink text-sm hover:underline">Más información →</a>
-                </div>
-            </div>
-        </div>
-    </section>
-
     <!-- Footer -->
-    <footer class="relative py-16 px-6 border-t border-white/10">
-        <div class="max-w-6xl mx-auto">
-            <div class="grid md:grid-cols-4 gap-12 mb-12">
+    <footer class="py-12 px-6 bg-slate-900 text-slate-400">
+        <div class="max-w-5xl mx-auto">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-6">
                 <div>
-                    <a href="#" class="text-2xl font-display font-bold tracking-tight">
-                        <span class="text-ai-cyan">Pivot</span><span class="text-ai-purple">.AI</span>
+                    <a href="#" class="text-2xl font-bold text-white">
+                        <span class="text-brand-400">Pivot</span><span class="text-accent">.AI</span>
                     </a>
-                    <p class="text-sm text-gray-400 mt-4">
-                        Automatización inteligente para negocios del futuro.
-                    </p>
+                    <p class="text-sm mt-2">Automatización inteligente para negocios</p>
                 </div>
                 
-                <div>
-                    <h4 class="font-bold mb-4">Servicios</h4>
-                    <ul class="space-y-2 text-sm text-gray-400">
-                        <li><a href="#condominios" class="hover:text-white transition-colors">Condominios</a></li>
-                        <li><a href="#odontologos" class="hover:text-white transition-colors">Odontólogos</a></li>
-                        <li><a href="#servicios" class="hover:text-white transition-colors">Farmacias</a></li>
-                        <li><a href="#servicios" class="hover:text-white transition-colors">Empresas</a></li>
-                    </ul>
+                <div class="flex items-center gap-6 text-sm">
+                    <a href="#problema" class="hover:text-white transition-colors">El Problema</a>
+                    <a href="#servicios" class="hover:text-white transition-colors">Servicios</a>
+                    <a href="#referidos" class="hover:text-white transition-colors">Referidos</a>
                 </div>
                 
-                <div>
-                    <h4 class="font-bold mb-4">Empresa</h4>
-                    <ul class="space-y-2 text-sm text-gray-400">
-                        <li><a href="#" class="hover:text-white transition-colors">Nosotros</a></li>
-                        <li><a href="#" class="hover:text-white transition-colors">Blog</a></li>
-                        <li><a href="#" class="hover:text-white transition-colors">Casos de Éxito</a></li>
-                    </ul>
-                </div>
-                
-                <div>
-                    <h4 class="font-bold mb-4">Contacto</h4>
-                    <a href="https://wa.me/584123821754?text=Hola,%20necesito%20más%20información%20sobre%20Pivot%20AI" 
-                       target="_blank"
-                       class="inline-flex items-center gap-2 text-ai-cyan hover:underline">
-                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                        WhatsApp
-                    </a>
-                </div>
+                <a href="https://wa.me/584123821754?text=Hola,%20necesito%20más%20información%20sobre%20Pivot%20AI" 
+                   target="_blank"
+                   class="flex items-center gap-2 text-brand-400 hover:text-white transition-colors">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                    Chatea con nosotros
+                </a>
             </div>
             
-            <div class="pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4">
-                <p class="text-sm text-gray-500">© 2025 Pivot AI. Todos los derechos reservados.</p>
-                <div class="flex items-center gap-6">
-                    <a href="#" class="text-gray-400 hover:text-white transition-colors">
-                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
-                    </a>
-                    <a href="#" class="text-gray-400 hover:text-white transition-colors">
-                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
-                    </a>
-                </div>
+            <div class="mt-8 pt-8 border-t border-slate-800 text-center text-sm">
+                © 2025 Pivot AI. Todos los derechos reservados.
             </div>
         </div>
     </footer>
@@ -646,383 +452,5 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
     <script src="js/main.js"></script>
-</body>
-</html>
-=======
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pivot | Agencia de Automatización e IA</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <style>
-        /* --- VARIABLES CSS --- */
-        :root {
-            --bg-color: #0B0E14;
-            --card-bg: #151A23;
-            --primary: #8B5CF6; /* Violeta brillante */
-            --secondary: #3B82F6; /* Azul brillante */
-            --text-main: #F3F4F6;
-            --text-muted: #9CA3AF;
-            --gradient: linear-know(135deg, var(--primary), var(--secondary));
-        }
-
-        /* --- RESET --- */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Inter', sans-serif;
-        }
-
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            line-height: 1.6;
-            overflow-x: hidden;
-        }
-
-        a { text-decoration: none; color: inherit; transition: 0.3s; }
-        ul { list-style: none; }
-
-        /* --- NAVBAR --- */
-        .navbar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 20px 5%;
-            position: fixed;
-            width: 100%;
-            top: 0;
-            background: rgba(11, 14, 20, 0.9);
-            backdrop-filter: blur(10px);
-            z-index: 1000;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-        }
-
-        .logo {
-            font-size: 1.8rem;
-            font-weight: 700;
-            background: linear-gradient(to right, var(--primary), var(--secondary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            letter-spacing: -1px;
-        }
-
-        .nav-links { display: flex; gap: 30px; }
-        .nav-links a:hover { color: var(--primary); }
-
-        .btn-cta {
-            padding: 10px 24px;
-            background: var(--primary);
-            color: white;
-            border-radius: 50px;
-            font-weight: 600;
-            border: 1px solid transparent;
-        }
-
-        .btn-cta:hover {
-            background: transparent;
-            border-color: var(--primary);
-            box-shadow: 0 0 15px rgba(139, 92, 246, 0.5);
-        }
-
-        /* --- HERO SECTION --- */
-        .hero {
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-            padding: 0 20px;
-            position: relative;
-        }
-
-        /* Efecto de fondo (Glow) */
-        .hero::before {
-            content: '';
-            position: absolute;
-            width: 300px;
-            height: 300px;
-            background: var(--primary);
-            filter: blur(150px);
-            opacity: 0.2;
-            z-index: -1;
-            top: 20%;
-        }
-
-        .hero h1 {
-            font-size: 3.5rem;
-            line-height: 1.1;
-            margin-bottom: 20px;
-            max-width: 800px;
-        }
-
-        .hero h1 span {
-            background: linear-gradient(to right, var(--primary), var(--secondary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .hero p {
-            font-size: 1.2rem;
-            color: var(--text-muted);
-            max-width: 600px;
-            margin-bottom: 40px;
-        }
-
-        /* --- SERVICIOS --- */
-        .section { padding: 80px 5%; }
-        
-        .section-header {
-            text-align: center;
-            margin-bottom: 60px;
-        }
-
-        .section-header h2 { font-size: 2.5rem; margin-bottom: 10px; }
-        .section-header p { color: var(--text-muted); }
-
-        .services-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 30px;
-        }
-
-        .card {
-            background: var(--card-bg);
-            padding: 40px;
-            border-radius: 16px;
-            border: 1px solid rgba(255,255,255,0.05);
-            transition: 0.3s;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .card:hover {
-            transform: translateY(-10px);
-            border-color: var(--primary);
-            box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
-        }
-
-        .card i {
-            font-size: 2.5rem;
-            color: var(--primary);
-            margin-bottom: 20px;
-        }
-
-        .card h3 { margin-bottom: 15px; font-size: 1.5rem; }
-        .card p { color: var(--text-muted); font-size: 0.95rem; }
-
-        /* --- FEATURES / DATOS --- */
-        .features {
-            background: linear-gradient(to bottom, var(--bg-color), #0f1219);
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: space-around;
-            text-align: center;
-        }
-
-        .stat h3 { font-size: 3rem; color: var(--secondary); }
-        .stat p { color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-size: 0.8rem; }
-
-        /* --- CONTACTO --- */
-        .contact-container {
-            max-width: 600px;
-            margin: 0 auto;
-            background: var(--card-bg);
-            padding: 40px;
-            border-radius: 16px;
-            border: 1px solid rgba(255,255,255,0.05);
-        }
-
-        .form-group { margin-bottom: 20px; }
-        
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-size: 0.9rem;
-            color: var(--text-muted);
-        }
-
-        .form-group input, .form-group textarea {
-            width: 100%;
-            padding: 12px;
-            background: rgba(0,0,0,0.2);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 8px;
-            color: white;
-            font-size: 1rem;
-        }
-
-        .form-group input:focus, .form-group textarea:focus {
-            outline: none;
-            border-color: var(--primary);
-        }
-
-        .btn-submit {
-            width: 100%;
-            padding: 15px;
-            background: linear-gradient(90deg, var(--primary), var(--secondary));
-            border: none;
-            color: white;
-            font-size: 1rem;
-            font-weight: 700;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: 0.3s;
-        }
-
-        .btn-submit:hover { opacity: 0.9; }
-
-        /* --- FOOTER --- */
-        footer {
-            text-align: center;
-            padding: 40px;
-            border-top: 1px solid rgba(255,255,255,0.05);
-            color: var(--text-muted);
-            font-size: 0.9rem;
-        }
-
-        /* --- MEDIA QUERIES --- */
-        @media (max-width: 768px) {
-            .hero h1 { font-size: 2.5rem; }
-            .nav-links { display: none; } /* Simplificado para el ejemplo */
-            .navbar { justify-content: space-between; }
-        }
-    </style>
-</head>
-<body>
-
-    <nav class="navbar">
-        <div class="logo">Pivot.</div>
-        <ul class="nav-links">
-            <li><a href="#inicio">Inicio</a></li>
-            <li><a href="#servicios">Servicios</a></li>
-            <li><a href="#contacto">Contacto</a></li>
-        </ul>
-        <a href="#contacto" class="btn-cta">Agendar Demo</a>
-    </nav>
-
-    <header id="inicio" class="hero">
-        <h1>Transforma tu negocio con <br><span>Inteligencia Artificial</span></h1>
-        <p>Implementamos agentes de IA y automatizaciones inteligentes para que dejes de perder tiempo en tareas repetitivas y escales tu empresa.</p>
-        <div style="margin-top: 20px;">
-            <a href="#servicios" class="btn-cta">Ver Soluciones</a>
-        </div>
-    </header>
-
-    <section id="servicios" class="section">
-        <div class="section-header">
-            <h2>Nuestros Servicios</h2>
-            <p>Tecnología de vanguardia aplicada a tus procesos diarios.</p>
-        </div>
-
-        <div class="services-grid">
-            <div class="card">
-                <i class="fa-solid fa-robot"></i>
-                <h3>Agentes de IA</h3>
-                <p>Chatbots avanzados entrenados con tu propia data. Atención al cliente 24/7, onboarding de empleados y asistentes de ventas.</p>
-            </div>
-
-            <div class="card">
-                <i class="fa-solid fa-bolt"></i>
-                <h3>Automatización (RPA)</h3>
-                <p>Conectamos tus apps favoritas (CRM, Email, Sheets) para crear flujos de trabajo automáticos que funcionan mientras duermes.</p>
-            </div>
-
-            <div class="card">
-                <i class="fa-solid fa-brain"></i>
-                <h3>Consultoría IA</h3>
-                <p>Analizamos tu modelo de negocio para identificar dónde la Inteligencia Artificial tendrá el mayor impacto en rentabilidad.</p>
-            </div>
-        </div>
-    </section>
-
-    <section class="section features">
-        <div class="stat">
-            <h3>+40%</h3>
-            <p>Eficiencia Operativa</p>
-        </div>
-        <div class="stat">
-            <h3>24/7</h3>
-            <p>Disponibilidad</p>
-        </div>
-        <div class="stat">
-            <h3>0</h3>
-            <p>Errores Humanos</p>
-        </div>
-    </section>
-
-    <section id="contacto" class="section">
-        <div class="section-header">
-            <h2>Hablemos de tu Proyecto</h2>
-            <p>Cuéntanos qué desafío tienes y diseñaremos una solución.</p>
-        </div>
-
-        <div class="contact-container">
-            <form id="contactForm">
-                <div class="form-group">
-                    <label>Nombre Completo</label>
-                    <input type="text" placeholder="Tu nombre" required>
-                </div>
-                <div class="form-group">
-                    <label>Email Corporativo</label>
-                    <input type="email" placeholder="nombre@empresa.com" required>
-                </div>
-                <div class="form-group">
-                    <label>¿Qué te gustaría automatizar?</label>
-                    <textarea rows="4" placeholder="Describe brevemente tu necesidad..."></textarea>
-                </div>
-                <button type="submit" class="btn-submit">Enviar Solicitud</button>
-            </form>
-        </div>
-    </section>
-
-    <footer>
-        <p>&copy; 2024 Pivot AI Solutions. Todos los derechos reservados.</p>
-    </footer>
-
-    <script>
-        // Scroll suave para los enlaces de navegación
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                document.querySelector(this.getAttribute('href')).scrollIntoView({
-                    behavior: 'smooth'
-                });
-            });
-        });
-
-        // Animación simple al hacer scroll (Aparición de elementos)
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.style.opacity = 1;
-                    entry.target.style.transform = 'translateY(0)';
-                }
-            });
-        });
-
-        // Manejo básico del formulario (solo alerta visual)
-        document.getElementById('contactForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const btn = this.querySelector('button');
-            const originalText = btn.innerText;
-            
-            btn.innerText = "¡Enviado!";
-            btn.style.background = "#10B981"; // Verde éxito
-            
-            setTimeout(() => {
-                btn.innerText = originalText;
-                btn.style.background = ""; // Volver al gradiente original
-                this.reset();
-                alert("Gracias por contactar a Pivot. Te responderemos pronto.");
-            }, 2000);
-        });
-    </script>
 </body>
 </html>

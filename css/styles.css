@@ -1,5 +1,5 @@
 /* ========================================
-   Pivot AI - Estilos Ligeros y Claros
+   Pivot AI - Estilos con Animaciones
    ======================================== */
 
 /* Variables */
@@ -34,12 +34,75 @@ body {
     line-height: 1.6;
 }
 
-/* Navegación */
+/* ========================================
+   Fondo Ambiental con Partículas
+   ======================================== */
+#particles-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+}
+
+/* Gradientes ambientales animados */
+.ambient-gradient {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.5;
+    animation: floatGradient 20s ease-in-out infinite;
+}
+
+.gradient-1 {
+    top: 10%;
+    left: 10%;
+    width: 400px;
+    height: 400px;
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.3), rgba(6, 182, 212, 0.2));
+    animation-delay: 0s;
+}
+
+.gradient-2 {
+    bottom: 20%;
+    right: 10%;
+    width: 500px;
+    height: 500px;
+    background: linear-gradient(135deg, rgba(6, 182, 212, 0.3), rgba(37, 99, 235, 0.2));
+    animation-delay: -10s;
+}
+
+@keyframes floatGradient {
+    0%, 100% {
+        transform: translate(0, 0) scale(1);
+    }
+    25% {
+        transform: translate(30px, -30px) scale(1.1);
+    }
+    50% {
+        transform: translate(-20px, 20px) scale(0.9);
+    }
+    75% {
+        transform: translate(-30px, -20px) scale(1.05);
+    }
+}
+
+/* ========================================
+   Navegación
+   ======================================== */
 nav {
     transition: all 0.3s ease;
 }
 
-/* Hero */
+nav:hover {
+    background: white;
+}
+
+/* ========================================
+   Hero con Animación Tipográfica
+   ======================================== */
 #hero {
     position: relative;
     overflow: hidden;
@@ -67,7 +130,191 @@ nav {
     pointer-events: none;
 }
 
-/* Animaciones */
+/* Texto typing动画 */
+.typing-text {
+    display: inline-block;
+    border-right: 3px solid var(--brand-600);
+    padding-right: 5px;
+    animation: blink 0.8s step-end infinite;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+@keyframes blink {
+    0%, 100% { border-color: var(--brand-600); }
+    50% { border-color: transparent; }
+}
+
+/* Elementos flotantes */
+.animate-float {
+    animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-20px); }
+}
+
+/* ========================================
+   Animaciones Scroll Reveal
+   ======================================== */
+.scroll-reveal {
+    opacity: 0;
+    transform: translateY(40px);
+    transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.scroll-reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Stagger animation for children */
+.stagger-children > * {
+    opacity: 0;
+    transform: translateY(20px);
+}
+
+.stagger-children.visible > *:nth-child(1) { transition-delay: 0.1s; }
+.stagger-children.visible > *:nth-child(2) { transition-delay: 0.2s; }
+.stagger-children.visible > *:nth-child(3) { transition-delay: 0.3s; }
+.stagger-children.visible > *:nth-child(4) { transition-delay: 0.4s; }
+.stagger-children.visible > *:nth-child(5) { transition-delay: 0.5s; }
+.stagger-children.visible > * {
+    opacity: 1;
+    transform: translateY(0);
+    transition: all 0.6s ease;
+}
+
+/* ========================================
+   Procesos - Barras de Progreso
+   ======================================== */
+.process-item {
+    transition: all 0.4s ease;
+}
+
+.process-item:hover {
+    transform: translateX(10px);
+}
+
+/* ========================================
+   Botones CTA con Microinteracción
+   ======================================== */
+.cta-button {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.cta-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.2),
+        transparent
+    );
+    transition: left 0.5s ease;
+}
+
+.cta-button:hover::before {
+    left: 100%;
+}
+
+/* ========================================
+   Hover Effects para Tarjetas
+   ======================================== */
+.service-card {
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.service-card:hover {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 20px 40px rgba(37, 99, 235, 0.15);
+}
+
+/* ========================================
+   Juego CRM
+   ======================================== */
+#crm-game-container {
+    transition: all 0.3s ease;
+}
+
+.game-btn {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.game-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+}
+
+.game-btn:active {
+    transform: scale(0.98);
+}
+
+/* ========================================
+   Línea de Tiempo Animada
+   ======================================== */
+.timeline-line {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: linear-gradient(to bottom, var(--brand-600), var(--accent));
+    transform: translateX(-50%);
+}
+
+.timeline-item {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.6s ease;
+}
+
+.timeline-item.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* ========================================
+   Section spacing
+   ======================================== */
+section {
+    scroll-margin-top: 80px;
+    position: relative;
+    z-index: 1;
+}
+
+/* ========================================
+   Scrollbar Personalizada
+   ======================================== */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--slate-50);
+}
+
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(var(--brand-400), var(--accent));
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(var(--brand-600), var(--accent));
+}
+
+/* ========================================
+   Animaciones de Entrada
+   ======================================== */
 @keyframes fadeInUp {
     from {
         opacity: 0;
@@ -79,12 +326,25 @@ nav {
     }
 }
 
-@keyframes pulse-gentle {
-    0%, 100% {
-        opacity: 1;
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
     }
-    50% {
-        opacity: 0.7;
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
     }
 }
 
@@ -92,74 +352,32 @@ nav {
     animation: fadeInUp 0.6s ease forwards;
 }
 
-/* Botones CTA */
-a[href*="wa.me"] {
-    transition: all 0.3s ease;
+.animate-fade-in-down {
+    animation: fadeInDown 0.6s ease forwards;
 }
 
-a[href*="wa.me"]:hover {
-    transform: translateY(-2px);
+.animate-scale-in {
+    animation: scaleIn 0.6s ease forwards;
 }
 
-/* Tarjetas de servicios */
-.group {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.group:hover {
-    transform: translateY(-4px);
-}
-
-/* Juego CRM */
-#crm-game-container {
-    transition: all 0.3s ease;
-}
-
-.game-btn {
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.game-btn:hover {
-    transform: scale(1.02);
-}
-
-.game-btn:active {
-    transform: scale(0.98);
-}
-
-/* Section spacing */
-section {
-    scroll-margin-top: 80px;
-}
-
-/* Scrollbar */
-::-webkit-scrollbar {
-    width: 8px;
-}
-
-::-webkit-scrollbar-track {
-    background: var(--slate-50);
-}
-
-::-webkit-scrollbar-thumb {
-    background: var(--brand-200);
-    border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: var(--brand-600);
-}
-
-/* Responsive */
+/* ========================================
+   Responsive
+   ======================================== */
 @media (max-width: 768px) {
     section {
-        padding-top: 5rem;
-        padding-bottom: 5rem;
+        padding-top: 4rem;
+        padding-bottom: 4rem;
+    }
+    
+    .gradient-1, .gradient-2 {
+        width: 200px;
+        height: 200px;
     }
 }
 
-/* Optimizaciones */
+/* ========================================
+   Optimizaciones de Rendimiento
+   ======================================== */
 @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
@@ -168,4 +386,20 @@ section {
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
     }
+}
+
+/* ========================================
+   Utilidades
+   ======================================== */
+.gradient-text {
+    background: linear-gradient(135deg, var(--brand-600), var(--accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.glass-effect {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
 }

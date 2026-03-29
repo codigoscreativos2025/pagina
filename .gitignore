@@ -1,0 +1,33 @@
+# Pivot AI Landing Page - Git Ignore
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+*.log
+
+# Archivos de editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Carpeta de node_modules (si se usa npm)
+node_modules/
+
+# Archivos privados
+.env
+.env.local
+*.pem
+
+# Archivos de backup
+*.bak
+*.backup
+
+# Videos grandes (descomentar cuando tengas los videos)
+# assets/videos/*.mp4
+# assets/videos/*.webm
+
+# Carpeta de build (si se genera)
+dist/
+build/

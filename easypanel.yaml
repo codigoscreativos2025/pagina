@@ -1,0 +1,23 @@
+# EasyPanel Configuration for Pivot AI Landing
+# 
+# Este archivo es para referencia. En EasyPanel, la configuración
+# se hace principalmente desde el panel web.
+#
+# Configuración recomendada para sitio estático:
+# - Type: Static
+# - Build command: (vacío - servir archivos directamente)
+# - Output directory: ./
+# - Port: 80/443
+# - SSL: Automático (Let's Encrypt)
+
+# Para desplegar en GitHub con EasyPanel:
+# 1. Conecta tu repositorio de GitHub
+# 2. Selecciona "Static" como tipo de app
+# 3. Configura el dominio
+# 4. ¡Listo!
+
+# Estructura de archivos necesaria:
+# index.html (este archivo debe estar en la raíz)
+# css/styles.css
+# js/main.js
+# assets/ (opcional - para imágenes y videos)

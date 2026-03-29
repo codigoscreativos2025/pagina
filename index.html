@@ -49,14 +49,16 @@
 </head>
 <body class="bg-white text-slate-800 font-sans overflow-x-hidden">
     
-    <!-- Fondo Ambiental con Partículas -->
-    <canvas id="particles-canvas" class="fixed inset-0 z-0 pointer-events-none opacity-50"></canvas>
-    
-    <!-- Gradiente ambiental animado -->
-    <div class="fixed inset-0 z-0 pointer-events-none">
+    <!-- Fondo Ambiental - Toda la página -->
+    <div class="ambient-container">
+        <canvas id="particles-canvas"></canvas>
         <div class="ambient-gradient gradient-1"></div>
         <div class="ambient-gradient gradient-2"></div>
+        <div class="ambient-gradient gradient-3"></div>
     </div>
+    
+    <!-- Contenido principal con fondo semitransparente -->
+    <div class="relative z-10">
     
     <!-- Navegación -->
     <nav class="fixed top-0 left-0 right-0 bg-white/90 backdrop-blur-md z-50 border-b border-slate-100">
@@ -120,15 +122,15 @@
             <div class="hero-stats mt-16 grid grid-cols-3 gap-8 max-w-lg mx-auto opacity-0">
                 <div class="text-center">
                     <div class="text-3xl md:text-4xl font-bold text-brand-600 counter" data-target="24">0</div>
-                    <div class="text-sm text-slate-500">/7 días</div>
+                    <div class="text-sm text-slate-500">horas/día trabaja</div>
                 </div>
                 <div class="text-center">
-                    <div class="text-3xl md:text-4xl font-bold text-brand-600 counter" data-target="70">0</div>
-                    <div class="text-sm text-slate-500">% ahorro</div>
+                    <div class="text-3xl md:text-4xl font-bold text-brand-600">70<span class="text-2xl">%</span></div>
+                    <div class="text-sm text-slate-500">ahorro en costos</div>
                 </div>
                 <div class="text-center">
-                    <div class="text-3xl md:text-4xl font-bold text-accent counter" data-target="0">0</div>
-                    <div class="text-sm text-slate-500">días baja</div>
+                    <div class="text-3xl md:text-4xl font-bold text-accent">0</div>
+                    <div class="text-sm text-slate-500">días de descanso</div>
                 </div>
             </div>
         </div>
@@ -139,7 +141,7 @@
     </section>
 
     <!-- El Problema: Humano vs IA -->
-    <section class="relative py-24 px-6 bg-slate-50" id="problema">
+    <section class="relative py-24 px-6 bg-white/80 backdrop-blur-sm" id="problema">
         <div class="max-w-5xl mx-auto">
             <div class="text-center mb-16">
                 <h2 class="scroll-reveal text-3xl md:text-4xl font-bold text-slate-900 mb-4">
@@ -233,7 +235,7 @@
     </section>
 
     <!-- Sección Procesos Automatizados (Nueva) -->
-    <section class="relative py-24 px-6 bg-white" id="procesos">
+    <section class="relative py-24 px-6 bg-white/80 backdrop-blur-sm" id="procesos">
         <div class="max-w-5xl mx-auto">
             <div class="text-center mb-16">
                 <span class="scroll-reveal inline-block px-4 py-1 rounded-full bg-brand-100 text-brand-700 text-sm font-medium mb-4">
@@ -259,12 +261,12 @@
                             <h4 class="font-bold text-slate-900">Revisar 50 correos</h4>
                             <div class="text-sm text-slate-500">Ahorro: <span class="font-bold text-brand-600">99%</span></div>
                         </div>
-                        <div class="relative h-8 bg-slate-200 rounded-full overflow-hidden">
-                            <div class="absolute left-0 top-0 h-full bg-red-400/30 flex items-center justify-end pr-3" style="width: 45%">
-                                <span class="text-xs font-medium text-red-600">2 horas</span>
+                        <div class="relative h-10 bg-slate-200 rounded-full overflow-hidden">
+                            <div class="absolute left-0 top-0 h-full bg-gradient-to-r from-red-400 to-red-500 flex items-center justify-end pr-4" style="width: 45%">
+                                <span class="text-sm font-bold text-white">2 horas</span>
                             </div>
-                            <div class="absolute left-0 top-0 h-full bg-brand-500 flex items-center justify-end" style="width: 1%">
-                                <span class="text-xs font-medium text-white mr-1">30s</span>
+                            <div class="absolute left-0 top-0 h-full bg-gradient-to-r from-brand-500 to-accent flex items-center justify-start pl-2" style="width: 8%">
+                                <span class="text-xs font-bold text-white">30s</span>
                             </div>
                         </div>
                     </div>
@@ -280,12 +282,12 @@
                             <h4 class="font-bold text-slate-900">Subir 100 productos al sistema</h4>
                             <div class="text-sm text-slate-500">Ahorro: <span class="font-bold text-brand-600">99%</span></div>
                         </div>
-                        <div class="relative h-8 bg-slate-200 rounded-full overflow-hidden">
-                            <div class="absolute left-0 top-0 h-full bg-red-400/30 flex items-center justify-end pr-3" style="width: 50%">
-                                <span class="text-xs font-medium text-red-600">4 horas</span>
+                        <div class="relative h-10 bg-slate-200 rounded-full overflow-hidden">
+                            <div class="absolute left-0 top-0 h-full bg-gradient-to-r from-red-400 to-red-500 flex items-center justify-end pr-4" style="width: 50%">
+                                <span class="text-sm font-bold text-white">4 horas</span>
                             </div>
-                            <div class="absolute left-0 top-0 h-full bg-brand-500 flex items-center justify-end" style="width: 2%">
-                                <span class="text-xs font-medium text-white mr-1">2 min</span>
+                            <div class="absolute left-0 top-0 h-full bg-gradient-to-r from-brand-500 to-accent flex items-center justify-start pl-2" style="width: 8%">
+                                <span class="text-xs font-bold text-white">2 min</span>
                             </div>
                         </div>
                     </div>
@@ -301,12 +303,12 @@
                             <h4 class="font-bold text-slate-900">Responder consultas comunes</h4>
                             <div class="text-sm text-slate-500">Ahorro: <span class="font-bold text-brand-600">100%</span></div>
                         </div>
-                        <div class="relative h-8 bg-slate-200 rounded-full overflow-hidden">
-                            <div class="absolute left-0 top-0 h-full bg-red-400/30 flex items-center justify-end pr-3" style="width: 33%">
-                                <span class="text-xs font-medium text-red-600">8 horas/día</span>
+                        <div class="relative h-10 bg-slate-200 rounded-full overflow-hidden">
+                            <div class="absolute left-0 top-0 h-full bg-gradient-to-r from-red-400 to-red-500 flex items-center justify-end pr-4" style="width: 33%">
+                                <span class="text-sm font-bold text-white">8 horas</span>
                             </div>
-                            <div class="absolute left-0 top-0 h-full bg-brand-500 flex items-center justify-end" style="width: 0.5%">
-                                <span class="text-xs font-medium text-white mr-1">0s</span>
+                            <div class="absolute left-0 top-0 h-full bg-gradient-to-r from-brand-500 to-accent flex items-center justify-start pl-2" style="width: 8%">
+                                <span class="text-xs font-bold text-white">0s</span>
                             </div>
                         </div>
                     </div>
@@ -322,12 +324,12 @@
                             <h4 class="font-bold text-slate-900">Generar reportes diarios</h4>
                             <div class="text-sm text-slate-500">Ahorro: <span class="font-bold text-brand-600">99%</span></div>
                         </div>
-                        <div class="relative h-8 bg-slate-200 rounded-full overflow-hidden">
-                            <div class="absolute left-0 top-0 h-full bg-red-400/30 flex items-center justify-end pr-3" style="width: 10%">
-                                <span class="text-xs font-medium text-red-600">1 hora</span>
+                        <div class="relative h-10 bg-slate-200 rounded-full overflow-hidden">
+                            <div class="absolute left-0 top-0 h-full bg-gradient-to-r from-red-400 to-red-500 flex items-center justify-end pr-4" style="width: 10%">
+                                <span class="text-sm font-bold text-white">1 hora</span>
                             </div>
-                            <div class="absolute left-0 top-0 h-full bg-brand-500 flex items-center justify-end" style="width: 0.5%">
-                                <span class="text-xs font-medium text-white mr-1">5s</span>
+                            <div class="absolute left-0 top-0 h-full bg-gradient-to-r from-brand-500 to-accent flex items-center justify-start pl-2" style="width: 8%">
+                                <span class="text-xs font-bold text-white">5s</span>
                             </div>
                         </div>
                     </div>
@@ -343,12 +345,12 @@
                             <h4 class="font-bold text-slate-900">Seguimiento a clientes</h4>
                             <div class="text-sm text-slate-500">Ahorro: <span class="font-bold text-brand-600">95%</span></div>
                         </div>
-                        <div class="relative h-8 bg-slate-200 rounded-full overflow-hidden">
-                            <div class="absolute left-0 top-0 h-full bg-red-400/30 flex items-center justify-end pr-3" style="width: 25%">
-                                <span class="text-xs font-medium text-red-600">3 horas</span>
+                        <div class="relative h-10 bg-slate-200 rounded-full overflow-hidden">
+                            <div class="absolute left-0 top-0 h-full bg-gradient-to-r from-red-400 to-red-500 flex items-center justify-end pr-4" style="width: 25%">
+                                <span class="text-sm font-bold text-white">3 horas</span>
                             </div>
-                            <div class="absolute left-0 top-0 h-full bg-brand-500 flex items-center justify-end" style="width: 1%">
-                                <span class="text-xs font-medium text-white mr-1">automático</span>
+                            <div class="absolute left-0 top-0 h-full bg-gradient-to-r from-brand-500 to-accent flex items-center justify-start pl-2" style="width: 8%">
+                                <span class="text-xs font-bold text-white">auto</span>
                             </div>
                         </div>
                     </div>
@@ -368,7 +370,7 @@
     </section>
 
     <!-- Servicios Principales -->
-    <section class="relative py-24 px-6 bg-slate-50" id="servicios">
+    <section class="relative py-24 px-6 bg-white/80 backdrop-blur-sm" id="servicios">
         <div class="max-w-5xl mx-auto">
             <div class="text-center mb-16">
                 <h2 class="scroll-reveal text-3xl md:text-4xl font-bold text-slate-900 mb-4">
@@ -499,7 +501,7 @@
     </section>
 
     <!-- Demo CRM -->
-    <section class="relative py-24 px-6 bg-slate-50" id="demo">
+    <section class="relative py-24 px-6 bg-white/80 backdrop-blur-sm" id="demo">
         <div class="max-w-3xl mx-auto">
             <div class="scroll-reveal text-center mb-8">
                 <span class="inline-block px-4 py-1 rounded-full bg-brand-100 text-brand-700 text-sm font-medium mb-4">
@@ -595,6 +597,7 @@
             </div>
         </div>
     </footer>
+    </div>
 
     <!-- Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>

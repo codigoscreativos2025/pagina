@@ -500,58 +500,154 @@
         </div>
     </section>
 
-    <!-- Demo CRM -->
+    <!-- Demo CRM - Nuevo -->
     <section class="relative py-24 px-6 bg-white/80 backdrop-blur-sm" id="demo">
-        <div class="max-w-3xl mx-auto">
+        <div class="max-w-5xl mx-auto">
             <div class="scroll-reveal text-center mb-8">
                 <span class="inline-block px-4 py-1 rounded-full bg-brand-100 text-brand-700 text-sm font-medium mb-4">
-                    🎮 Nueva Experiencia
+                    🎮 Demo Interactiva
                 </span>
                 <h2 class="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
                     Prueba el <span class="text-brand-600">CRM del Futuro</span>
                 </h2>
                 <p class="text-slate-600">
-                    Juega y descubre cómo la IA puede transformar tu negocio. 
+                    Chatea con leads simulados y descubre cómo la IA automatiza conversaciones. 
                     <strong class="text-accent">Sin compromiso.</strong>
                 </p>
             </div>
             
-            <!-- Contenedor del Juego -->
-            <div class="scroll-reveal bg-white rounded-2xl shadow-xl border border-slate-100 p-8" id="crm-game-container">
-                <div class="mb-6">
-                    <div class="flex justify-between text-sm text-slate-500 mb-2">
-                        <span>Nivel</span>
-                        <span id="game-level">1</span>
+            <!-- Nuevo Demo CRM con Chat -->
+            <div class="scroll-reveal bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden" id="crm-demo-container">
+                <div class="flex flex-col lg:flex-row h-[600px]">
+                    <!-- Panel Izquierdo: Lista de Leads + Stats -->
+                    <div class="w-full lg:w-80 border-r border-slate-100 flex flex-col bg-slate-50">
+                        <!-- Mini Stats -->
+                        <div class="p-4 border-b border-slate-100 bg-white">
+                            <h3 class="font-bold text-slate-900 mb-3 flex items-center gap-2">
+                                📊 Dashboard
+                            </h3>
+                            <div class="grid grid-cols-3 gap-2 text-center">
+                                <div class="p-2 bg-brand-50 rounded-lg">
+                                    <div class="text-lg font-bold text-brand-600" id="crm-total-leads">3</div>
+                                    <div class="text-xs text-slate-500">Leads</div>
+                                </div>
+                                <div class="p-2 bg-accent/10 rounded-lg">
+                                    <div class="text-lg font-bold text-accent" id="crm-conversations">3</div>
+                                    <div class="text-xs text-slate-500">Chats</div>
+                                </div>
+                                <div class="p-2 bg-green-50 rounded-lg">
+                                    <div class="text-lg font-bold text-green-600" id="crm-ventas">$0</div>
+                                    <div class="text-xs text-slate-500">Ventas</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Lista de Leads -->
+                        <div class="flex-1 overflow-y-auto">
+                            <div class="p-3 border-b border-slate-100">
+                                <h4 class="text-sm font-semibold text-slate-600">Conversaciones Recientes</h4>
+                            </div>
+                            <div id="leads-list">
+                                <!-- Lead 1 -->
+                                <div class="lead-item active p-4 border-b border-slate-100 cursor-pointer hover:bg-white transition-all" data-lead-id="1">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-full bg-brand-100 flex items-center justify-center text-brand-600 font-bold">
+                                            M
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <div class="flex justify-between items-center">
+                                                <span class="font-medium text-slate-900 truncate">María González</span>
+                                                <span class="text-xs text-slate-400">2:30 PM</span>
+                                            </div>
+                                            <p class="text-sm text-slate-500 truncate">Me interesa el servicio de IA...</p>
+                                        </div>
+                                        <div class="w-2 h-2 rounded-full bg-brand-500"></div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Lead 2 -->
+                                <div class="lead-item p-4 border-b border-slate-100 cursor-pointer hover:bg-white transition-all" data-lead-id="2">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center text-accent font-bold">
+                                            C
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <div class="flex justify-between items-center">
+                                                <span class="font-medium text-slate-900 truncate">Carlos Pérez</span>
+                                                <span class="text-xs text-slate-400">1:15 PM</span>
+                                            </div>
+                                            <p class="text-sm text-slate-500 truncate">Tengo un problema con el sistema...</p>
+                                        </div>
+                                        <div class="w-2 h-2 rounded-full bg-accent"></div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Lead 3 -->
+                                <div class="lead-item p-4 border-b border-slate-100 cursor-pointer hover:bg-white transition-all" data-lead-id="3">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 font-bold">
+                                            A
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <div class="flex justify-between items-center">
+                                                <span class="font-medium text-slate-900 truncate">Ana López</span>
+                                                <span class="text-xs text-slate-400">11:45 AM</span>
+                                            </div>
+                                            <p class="text-sm text-slate-500 truncate">Cuánto cuesta implementar la IA?</p>
+                                        </div>
+                                        <div class="w-2 h-2 rounded-full bg-green-500"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
-                        <div class="h-full bg-brand-600 transition-all duration-500" id="game-progress" style="width: 0%"></div>
+                    
+                    <!-- Panel Derecho: Chat -->
+                    <div class="flex-1 flex flex-col bg-[#efeae2]" id="chat-panel">
+                        <!-- Chat Header -->
+                        <div class="p-4 bg-white border-b border-slate-100 flex items-center justify-between" id="chat-header">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full bg-brand-100 flex items-center justify-center text-brand-600 font-bold" id="chat-avatar">
+                                    M
+                                </div>
+                                <div>
+                                    <h3 class="font-medium text-slate-900" id="chat-name">María González</h3>
+                                    <p class="text-xs text-slate-500">En línea • <span class="text-brand-600">🤖 IA Activa</span></p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Mensajes -->
+                        <div class="flex-1 overflow-y-auto p-4 space-y-3" id="chat-messages">
+                            <!-- Mensaje del lead -->
+                            <div class="flex justify-start">
+                                <div class="bg-white rounded-lg rounded-tl-none px-4 py-2 max-w-[80%] shadow-sm">
+                                    <p class="text-sm text-slate-800" id="initial-message">Hola, me interesa el servicio de IA para mi consultorio dental. ¿Podrían darme más información?</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Input de mensaje -->
+                        <div class="p-4 bg-white border-t border-slate-100">
+                            <div class="flex items-center gap-3">
+                                <input 
+                                    type="text" 
+                                    id="message-input"
+                                    placeholder="Escribe un mensaje..." 
+                                    class="flex-1 px-4 py-3 rounded-full border border-slate-200 focus:outline-none focus:border-brand-500 text-sm"
+                                >
+                                <button 
+                                    onclick="demoCRM.sendMessage()"
+                                    class="w-10 h-10 rounded-full bg-brand-600 text-white flex items-center justify-center hover:bg-brand-700 transition-all"
+                                >
+                                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                                </button>
+                            </div>
+                            <p class="text-xs text-slate-400 mt-2 text-center">
+                                💡 La IA responde automáticamente después de unos segundos
+                            </p>
+                        </div>
                     </div>
-                </div>
-                
-                <div class="grid grid-cols-3 gap-4 mb-6">
-                    <button onclick="crmGame.play('leads')" class="game-btn p-4 rounded-xl bg-slate-50 border border-slate-200 hover:border-brand-300 hover:bg-brand-50 transition-all text-center">
-                        <div class="text-2xl mb-2">👥</div>
-                        <div class="font-semibold text-sm">Leads</div>
-                        <div class="text-xs text-slate-500" id="leads-count">0/10</div>
-                    </button>
-                    <button onclick="crmGame.play('citas')" class="game-btn p-4 rounded-xl bg-slate-50 border border-slate-200 hover:border-brand-300 hover:bg-brand-50 transition-all text-center">
-                        <div class="text-2xl mb-2">📅</div>
-                        <div class="font-semibold text-sm">Citas</div>
-                        <div class="text-xs text-slate-500" id="citas-count">0/5</div>
-                    </button>
-                    <button onclick="crmGame.play('ventas')" class="game-btn p-4 rounded-xl bg-slate-50 border border-slate-200 hover:border-brand-300 hover:bg-brand-50 transition-all text-center">
-                        <div class="text-2xl mb-2">💰</div>
-                        <div class="font-semibold text-sm">Ventas</div>
-                        <div class="text-xs text-slate-500" id="ventas-count">$0</div>
-                    </button>
-                </div>
-                
-                <div class="p-4 bg-brand-50 border border-brand-100 rounded-xl text-left">
-                    <div class="flex items-center gap-2 mb-2">
-                        <span class="text-xl">🤖</span>
-                        <span class="font-semibold text-brand-600">Asistente IA</span>
-                    </div>
-                    <p class="text-slate-700" id="game-message">¡Bienvenido! Elige una acción para comenzar a gestionar tu negocio con IA.</p>
                 </div>
             </div>
             

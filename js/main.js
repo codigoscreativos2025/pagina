@@ -417,5 +417,157 @@ const crmGame = {
     }
 };
 
+// ========================================
+// Demo CRM Nuevo - Chat Interactivo con Leads
+// ========================================
+const demoCRM = {
+    currentLead: 1,
+    messageCount: {},
+    
+    leads: {
+        1: {
+            name: 'María González',
+            initial: 'M',
+            color: 'bg-brand-100',
+            textColor: 'text-brand-600',
+            messages: [
+                { text: 'Hola, me interesa el servicio de IA para mi consultorio dental. ¿Podrían darme más información?', from: 'lead' },
+                { text: '¡Hola María! Gracias por contactarnos. Cuéntame, ¿cuál es el tamaño de tu consultorio y qué tipo de pacientes atiendes?', from: 'ia' },
+                { text: 'Tengo un consultorio pequeño, apenas starting con 2 empleados. Atiendo principalmente familias.', from: 'lead' },
+                { text: '¡Perfecto! Para un consultorio de tu tamaño, nuestro sistema de IA puede automatizar la agenda, recordatorios y seguimiento de pacientes. ¿Te gustaría agendar una demo gratuita de 15 minutos?', from: 'ia' }
+            ]
+        },
+        2: {
+            name: 'Carlos Pérez',
+            initial: 'C',
+            color: 'bg-accent/20',
+            textColor: 'text-accent',
+            messages: [
+                { text: 'Tengo un problema con el sistema de mi condominio, necesito ayuda urgentemente', from: 'lead' },
+                { text: '¡Hola Carlos! Lamento escuchar eso. Cuéntame qué está pasando para poder ayudarte mejor.', from: 'ia' },
+                { text: 'Los residentes no reciben las notificaciones y hay很多 quejas de morosos', from: 'lead' },
+                { text: 'Entiendo la urgencia. Nuestro CRM para condominios puede resolver eso y más: notificaciones automáticas, control de cobranza y comunicación 24/7. ¿Cuántas unidades tiene tu residencial?', from: 'ia' }
+            ]
+        },
+        3: {
+            name: 'Ana López',
+            initial: 'A',
+            color: 'bg-green-100',
+            textColor: 'text-green-600',
+            messages: [
+                { text: 'Cuánto cuesta implementar la IA en mi empresa?', from: 'lead' },
+                { text: '¡Hola Ana! Gracias por tu interés. El costo depende del tamaño de tu empresa y los módulos que necesites. Tenemos planes desde $150/mes. ¿En qué industria está tu empresa?', from: 'ia' },
+                { text: 'Somos una empresa de servicios, unos 50 empleados', from: 'lead' },
+                { text: '¡Excelente! Para 50 empleados te recomiendo nuestro paquete empresarial que incluye atención al cliente 24/7, automatización de procesos y dashboard de métricas. ¿Te gustaría que te envíe una propuesta personalizada?', from: 'ia' }
+            ]
+        }
+    },
+    
+    init() {
+        this.setupLeadListeners();
+        this.setupMessageInput();
+    },
+    
+    setupLeadListeners() {
+        const leadItems = document.querySelectorAll('.lead-item');
+        leadItems.forEach(item => {
+            item.addEventListener('click', () => {
+                const leadId = parseInt(item.dataset.leadId);
+                this.switchLead(leadId);
+                
+                // Update active state
+                leadItems.forEach(l => l.classList.remove('active', 'bg-white'));
+                item.classList.add('active', 'bg-white');
+            });
+        });
+    },
+    
+    setupMessageInput() {
+        const input = document.getElementById('message-input');
+        if (input) {
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    this.sendMessage();
+                }
+            });
+        }
+    },
+    
+    switchLead(leadId) {
+        this.currentLead = leadId;
+        const lead = this.leads[leadId];
+        
+        // Update header
+        document.getElementById('chat-avatar').textContent = lead.initial;
+        document.getElementById('chat-avatar').className = `w-10 h-10 rounded-full ${lead.color} flex items-center justify-center ${lead.textColor} font-bold`;
+        document.getElementById('chat-name').textContent = lead.name;
+        
+        // Clear and load messages
+        const messagesContainer = document.getElementById('chat-messages');
+        messagesContainer.innerHTML = '';
+        
+        lead.messages.forEach((msg, index) => {
+            setTimeout(() => {
+                this.addMessage(msg.text, msg.from);
+            }, index * 100);
+        });
+        
+        // Update initial message display
+        document.getElementById('initial-message').textContent = lead.messages[0].text;
+    },
+    
+    addMessage(text, from) {
+        const messagesContainer = document.getElementById('chat-messages');
+        const div = document.createElement('div');
+        div.className = from === 'lead' ? 'flex justify-start' : 'flex justify-end';
+        
+        const bubbleClass = from === 'lead' 
+            ? 'bg-white rounded-lg rounded-tl-none' 
+            : 'bg-[#d9fdd3] rounded-lg rounded-tr-none';
+        
+        div.innerHTML = `
+            <div class="${bubbleClass} px-4 py-2 max-w-[80%] shadow-sm">
+                <p class="text-sm text-slate-800">${text}</p>
+            </div>
+        `;
+        
+        messagesContainer.appendChild(div);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    },
+    
+    sendMessage() {
+        const input = document.getElementById('message-input');
+        const text = input.value.trim();
+        
+        if (!text) return;
+        
+        // Add user message
+        this.addMessage(text, 'user');
+        input.value = '';
+        
+        // Simulate IA response after delay
+        setTimeout(() => {
+            const responses = [
+                'Gracias por tu interés. ¿Te gustaría agendar una demo gratuita?',
+                '¡Perfecto! ¿Cuándo te conviene que hablemos?',
+                'Entiendo. Te envío más información al respecto.',
+                '¡Genial! Nuestro equipo te contactará en breve.',
+                '¿Hay alguna otra pregunta que pueda resolverte?'
+            ];
+            
+            const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+            this.addMessage(randomResponse, 'ia');
+        }, 1500 + Math.random() * 1000);
+    }
+};
+
+// Inicializar Demo CRM cuando el DOM esté listo
+document.addEventListener('DOMContentLoaded', () => {
+    // ... existing code ...
+    
+    // Inicializar Demo CRM
+    demoCRM.init();
+});
+
 // ScrollToPlugin
 gsap.registerPlugin(ScrollToPlugin);

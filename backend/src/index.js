@@ -117,7 +117,7 @@ async function start() {
         ('Pro', 49.99, 2000, '{"google_sheets": true, "multiple_channels": true}'),
         ('Business', 99.99, 10000, '{"api_access": true}'),
         ('Enterprise', 299.99, 999999, '{"priority": true, "support": true}')
-      `;
+      `);
     }
     
     client.release();

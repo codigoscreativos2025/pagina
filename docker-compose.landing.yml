@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  # Frontend Landing - www.pivotsoluciones.com
+  frontend:
+    image: nginx:alpine
+    volumes:
+      - ./:/usr/share/nginx/html
+    ports:
+      - "80:80"
+    restart: unless-stopped

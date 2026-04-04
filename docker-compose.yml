@@ -1,0 +1,103 @@
+version: '3.8'
+
+services:
+  # Frontend Landing - www.pivotsoluciones.com
+  frontend:
+    image: nginx:alpine
+    volumes:
+      - ./:/usr/share/nginx/html
+    ports:
+      - "80:80"
+    networks:
+      - pivots-network
+    restart: unless-stopped
+
+  # Frontend App - agents.pivotsoluciones.com
+  frontend-app:
+    build:
+      context: ./pivots/frontend-app
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=/api
+    networks:
+      - pivots-network
+    restart: unless-stopped
+
+  # API Backend
+  api:
+    build:
+      context: ./pivot-agents/api
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/pivotagents
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET:-change-this-secure-random-string}
+      - OPENCLAW_URL=http://openclaw:18789
+      - WEBHOOK_VERIFY_TOKEN=${WEBHOOK_VERIFY_TOKEN:-pivot_verify_token}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      openclaw:
+        condition: service_started
+    networks:
+      - pivots-network
+    restart: unless-stopped
+
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=pivotagents
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pivots-network
+    restart: unless-stopped
+
+  # Redis for cache and message queue
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    networks:
+      - pivots-network
+    restart: unless-stopped
+
+  # OpenClaw - AI Brain (already deployed on port 18789)
+  openclaw:
+    image: openclawai/openclaw:latest
+    ports:
+      - "18789:18789"
+    environment:
+      - OPENCLAW_PROVIDER=openai
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    volumes:
+      - openclaw_data:/app/data
+    networks:
+      - pivots-network
+    restart: unless-stopped
+
+networks:
+  pivots-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  openclaw_data:

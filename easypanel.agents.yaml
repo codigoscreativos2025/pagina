@@ -1,0 +1,23 @@
+# EasyPanel Configuration - Pivot Agents App
+#
+# Type: Node.js
+# Build command: npm run build
+# Output directory: dist
+# Port: 3000
+# SSL: Automatic
+
+name: pivot-agents-app
+logo: ""
+
+build:
+  framework: vite
+  command: npm run build
+  output: dist
+
+features:
+  - proxy
+  - ssl
+
+env:
+  - key: VITE_API_URL
+    value: /api

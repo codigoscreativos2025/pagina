@@ -4,9 +4,10 @@
 name: pivot-agents-api
 logo: ""
 
-# Build de Node.js
+# Build de Node.js desde la carpeta api/
 build:
   framework: node
+  root: api
   command: npm install
   output: .
 

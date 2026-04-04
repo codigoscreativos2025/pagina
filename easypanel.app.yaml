@@ -4,9 +4,10 @@
 name: pivot-agents-app
 logo: ""
 
-# Build con Vite
+# Build con Vite desde la carpeta app/
 build:
   framework: vite
+  root: app
   command: npm install && npm run build
   output: dist
 

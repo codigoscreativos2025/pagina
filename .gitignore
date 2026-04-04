@@ -1,33 +1,41 @@
-# Pivot AI Landing Page - Git Ignore
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
 
-# Archivos del sistema
+# Build
+dist/
+build/
+
+# Environment
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
 .DS_Store
 Thumbs.db
-*.log
 
-# Archivos de editor
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
 
-# Carpeta de node_modules (si se usa npm)
-node_modules/
+# OpenClaw (no needed for deploy, use Docker image instead)
+openclaw-main/
 
-# Archivos privados
-.env
-.env.local
-*.pem
+# Misc
+*.log
 
-# Archivos de backup
-*.bak
-*.backup
-
-# Videos grandes (descomentar cuando tengas los videos)
-# assets/videos/*.mp4
-# assets/videos/*.webm
-
-# Carpeta de build (si se genera)
-dist/
-build/
+# Pivot Agents
+pivots/frontend-app/node_modules/
+pivots/frontend-app/dist/
+pivot-agents/api/node_modules/

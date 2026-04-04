@@ -1,7 +1,7 @@
-# EasyPanel Configuration - Pivot Agents App
+# EasyPanel Configuration - Agents App
 # Tipo: Node.js - Framework Vite
 # Puerto: 3000
-name: pivot-agents-app
+name: agents
 logo: ""
 
 # Build con Vite desde la carpeta app/

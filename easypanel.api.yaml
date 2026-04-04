@@ -1,7 +1,7 @@
-# EasyPanel Configuration - Pivot Agents API
+# EasyPanel Configuration - API Backend
 # Tipo: Node.js
 # Puerto: 3001
-name: pivot-agents-api
+name: agents-api
 logo: ""
 
 # Build de Node.js desde la carpeta api/

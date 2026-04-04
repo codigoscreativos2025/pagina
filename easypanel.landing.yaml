@@ -1,10 +1,9 @@
 # EasyPanel Configuration - Landing Page
-# Tipo: Static - serve archivos directamente
+# Tipo: Static
 # Puerto: 80
-name: pivotsoluciones-landing
+name: landing
 logo: ""
 
-# Servir archivos estáticos desde raíz
 features:
   - proxy
   - ssl

@@ -1,15 +1,12 @@
 # EasyPanel Configuration - Agents App
-# Tipo: Node.js - Framework Vite
 # Puerto: 3000
 name: agents
 logo: ""
 
-# Build con Vite desde la carpeta app/
+# Build con Dockerfile desde app/
 build:
-  framework: vite
-  root: app
-  command: npm install && npm run build
-  output: dist
+  docker:
+    file: app/Dockerfile
 
 # Puerto donde corre la app
 port: 3000

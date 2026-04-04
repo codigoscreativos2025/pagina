@@ -1,9 +1,9 @@
 # EasyPanel Configuration - Landing Page
-# Tipo: Static
 # Puerto: 80
 name: landing
 logo: ""
 
+# Static - sirve archivos directamente
 features:
   - proxy
   - ssl

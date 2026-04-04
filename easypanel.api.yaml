@@ -1,20 +1,12 @@
 # EasyPanel Configuration - API Backend
-# Tipo: Node.js
 # Puerto: 3001
 name: agents-api
 logo: ""
 
-# Build de Node.js desde la carpeta api/
+# Build con Dockerfile desde api/
 build:
-  framework: node
-  root: api
-  command: npm install
-  output: .
-
-# Start del servidor
-start:
-  command: npm start
-  socket: false
+  docker:
+    file: api/Dockerfile
 
 # Puerto donde corre la API
 port: 3001

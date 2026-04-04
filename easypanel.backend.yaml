@@ -3,10 +3,10 @@
 name: agents-api
 logo: ""
 
-# Build con Dockerfile desde api/
+# Build con Dockerfile desde backend/
 build:
   docker:
-    file: api/Dockerfile
+    file: backend/Dockerfile
 
 # Puerto donde corre la API
 port: 3001

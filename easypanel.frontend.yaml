@@ -1,0 +1,21 @@
+# EasyPanel Configuration - Agents App (Frontend)
+# Puerto: 3000
+name: agents-frontend
+logo: ""
+
+# Build con Dockerfile desde frontend/
+build:
+  docker:
+    file: frontend/Dockerfile
+
+# Puerto donde corre Nginx
+port: 3000
+
+features:
+  - proxy
+  - ssl
+
+# Variables de entorno en build-time/runtime
+env:
+  - key: VITE_API_URL
+    value: /api

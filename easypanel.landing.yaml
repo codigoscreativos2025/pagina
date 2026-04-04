@@ -3,6 +3,14 @@
 name: landing
 logo: ""
 
+# Build con Dockerfile desde landing/
+build:
+  docker:
+    file: landing/Dockerfile
+
+# Puerto donde corre Nginx para la landing
+port: 80
+
 # Static - sirve archivos directamente
 features:
   - proxy

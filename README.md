@@ -1,59 +1,59 @@
-# Pivot AI - Landing Page
+# Pivot Soluciones - Plataforma de Agentes IA
 
-Landing page moderna para empresa de automatización con IA.
+Plataforma SaaS para crear agentes de IA personalizados que trabajan 24/7 en WhatsApp.
 
-## Características
-
-- ✨ Fondo ambiental con partículas interactivas
-- 🎯 Animaciones tipográficas expresivas
-- 📖 Scrollytelling integrado
-- 🎮 Demo interactiva del CRM (juego)
-- 📱 Diseño responsive
-- 💬 WhatsApp personalizado por sección
-
-## Estructura
+## Estructura del Proyecto
 
 ```
-├── index.html          # Página principal
-├── css/
-│   └── styles.css      # Estilos personalizados
-├── js/
-│   └── main.js         # Animaciones y lógica
-├── assets/
-│   └── videos/         # Videos optimizados (agregar aquí)
-├── .gitignore         # Archivos ignorados
-├── easypanel.yaml     # Configuración EasyPanel
-└── README.md          # Este archivo
+├── index.html          # Landing page (www.pivotsoluciones.com)
+├── css/                # Estilos de la landing
+├── js/                 # Scripts de la landing
+├── app/                # React App (agents.pivotsoluciones.com)
+│   ├── src/
+│   │   ├── pages/      # Login, Register, Dashboard, Config, Plans, Admin
+│   │   ├── contexts/   # AuthContext
+│   │   └── services/   # API client
+│   ├── package.json
+│   └── Dockerfile
+├── api/                # Backend Node.js
+│   ├── src/
+│   │   ├── routes/     # auth, users, agents, plans, webhooks, admin
+│   │   ├── services/   # messageQueue, openclawService
+│   │   └── middleware/ # auth
+│   ├── package.json
+│   └── Dockerfile
+├── easypanel.landing.yaml
+├── easypanel.agents.yaml
+├── easypanel.api.yaml
+└── ENV_CONFIG.md       # Variables de entorno
 ```
 
-## Videos Recomendados
+## Aplicaciones EasyPanel
 
-Para optimizar videos, usa:
-- **Handbrake** (gratuito) - Compresión de video
-- Formato: WebM (Chrome/Firefox) + MP4 (Safari)
-- Resolución máxima: 720p
-- Duración máxima: 30 segundos
-- Poster image como fallback
+| App | Dominio | Puerto | Propósito |
+|-----|---------|--------|-----------|
+| Landing | www.pivotsoluciones.com | 80 | Página principal |
+| Agents App | agents.pivotsoluciones.com | 3000 | Dashboard usuarios |
+| API | (interno) | 3001 | Backend |
 
-## Despliegue en EasyPanel
+## Landing Page
 
-1. Sube este proyecto a GitHub
-2. En EasyPanel, crea una nueva app
-3. Selecciona "Static" 
-4. Conecta tu repositorio
-5. Configura tu dominio
-6. ¡Listo!
+Página principal con:
+- Sección "El Problema" (humano vs IA)
+- Procesos automatizados
+- **Nueva sección Pivot Agents**
+- Servicios (CRM para condos, dentistas, etc.)
+- Sistema de referidos
+- Demo interactiva del CRM
 
-## WhatsApp
+## Tech Stack
 
-Número: +58 412-3821754
-
-Cada sección tiene un mensaje personalizado:
-- General: "Hola, me interesa conocer más sobre las soluciones de IA para mi negocio"
-- Condominios: "Hola, quiero información sobre el CRM para condominios"
-- Odontólogos: "Hola, me interesa el sistema de IA para consultorios dentales"
-- Demo CRM: "Hola, probé la demo del CRM y me interesa saber más"
+- **Frontend**: React + Vite + Tailwind CSS
+- **Backend**: Node.js + Express
+- **Base de datos**: PostgreSQL
+- **Cache/Cola**: Redis
+- **IA**: OpenClaw (Docker)
 
 ## Licencia
 
-© 2025 Pivot AI - Todos los derechos reservados.
+© 2025 Pivot Soluciones - Todos los derechos reservados.

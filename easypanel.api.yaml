@@ -1,23 +1,23 @@
 # EasyPanel Configuration - Pivot Agents API
-#
-# Type: Node.js
-# Build command: npm install
-# Output directory: .
-# Port: 3001
-# SSL: Automatic (internal)
-
+# Tipo: Node.js
+# Puerto: 3001
 name: pivot-agents-api
 logo: ""
 
+# Build de Node.js
 build:
   framework: node
   command: npm install
   output: .
 
+# Start del servidor
 start:
   command: npm start
   socket: false
 
+# Puerto donde corre la API
+port: 3001
+
+# Solo proxy, sin SSL externo (interno)
 features:
   - proxy
-  - ssl

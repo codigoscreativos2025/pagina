@@ -29,13 +29,8 @@ Thumbs.db
 *.swp
 *.swo
 
-# OpenClaw (no needed for deploy, use Docker image instead)
+# OpenClaw (use Docker image instead)
 openclaw-main/
 
 # Misc
 *.log
-
-# Pivot Agents
-pivots/frontend-app/node_modules/
-pivots/frontend-app/dist/
-pivot-agents/api/node_modules/

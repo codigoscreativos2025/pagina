@@ -1,14 +1,10 @@
 # EasyPanel Configuration - Landing Page
-#
-# Type: Static
-# Build command: (empty - serve files directly)
-# Output directory: ./
-# Port: 80
-# SSL: Automatic (Let's Encrypt)
-
+# Tipo: Static - serve archivos directamente
+# Puerto: 80
 name: pivotsoluciones-landing
 logo: ""
 
+# Servir archivos estáticos desde raíz
 features:
   - proxy
   - ssl

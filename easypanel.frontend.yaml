@@ -9,7 +9,7 @@ build:
     file: frontend/Dockerfile
 
 # Puerto donde corre Nginx
-port: 3000
+port: 80
 
 features:
   - proxy

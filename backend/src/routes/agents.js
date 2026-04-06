@@ -60,6 +60,30 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
+router.get('/stats', auth, async (req, res) => {
+  try {
+    const redis = req.redis;
+    const userId = req.user.id;
+    
+    const messagesKey = `user:${userId}:messages`;
+    const messages = await redis.get(messagesKey) || 0;
+    
+    const agent = await req.pool.query(
+      'SELECT is_active, created_at FROM agents WHERE user_id = $1',
+      [userId]
+    );
+    
+    res.json({
+      messages: parseInt(messages),
+      conversations: Math.floor(parseInt(messages) / 2),
+      active: agent.rows.length > 0 && agent.rows[0].is_active
+    });
+  } catch (error) {
+    console.error('Get stats error:', error);
+    res.json({ messages: 0, conversations: 0, active: false });
+  }
+});
+
 router.get('/:id', auth, async (req, res) => {
   try {
     const result = await req.pool.query(
@@ -142,30 +166,6 @@ router.post('/test-prompt', auth, async (req, res) => {
   } catch (error) {
     console.error('Test prompt error:', error);
     res.json({ response: 'Error connecting to AI. Using mock response for testing.' });
-  }
-});
-
-router.get('/stats', auth, async (req, res) => {
-  try {
-    const redis = req.redis;
-    const userId = req.user.id;
-    
-    const messagesKey = `user:${userId}:messages`;
-    const messages = await redis.get(messagesKey) || 0;
-    
-    const agent = await req.pool.query(
-      'SELECT is_active, created_at FROM agents WHERE user_id = $1',
-      [userId]
-    );
-    
-    res.json({
-      messages: parseInt(messages),
-      conversations: Math.floor(parseInt(messages) / 2),
-      active: agent.rows.length > 0 && agent.rows[0].is_active
-    });
-  } catch (error) {
-    console.error('Get stats error:', error);
-    res.json({ messages: 0, conversations: 0, active: false });
   }
 });
 

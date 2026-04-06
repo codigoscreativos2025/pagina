@@ -276,11 +276,12 @@ export default function AgentConfig() {
           {/* WhatsApp / Meta Embedded Signup */}
           <section className="bg-white rounded-xl p-6 border border-slate-200">
             <h2 className="text-lg font-bold text-slate-900 mb-4">💬 Conexión con WhatsApp Business</h2>
-            <p className="text-slate-600 text-sm mb-6">
-              Olvida las configuraciones manuales complejas. Vincula o crea tu cuenta de WhatsApp Business oficial usando Meta de manera segura con un par de clics.
-            </p>
             
-            <div className="flex flex-col md:flex-row items-center gap-6 bg-brand-50 p-6 rounded-xl border border-brand-100">
+            <p className="text-slate-700 font-semibold mb-2">Opción 1: Conexión Automática Oficial</p>
+            <p className="text-slate-600 text-sm mb-4">
+              Requiere que tu aplicación de Meta for Developers tenga Verificación de Negocio aprobada.
+            </p>
+            <div className="flex flex-col md:flex-row items-center gap-6 bg-brand-50 p-6 rounded-xl border border-brand-100 mb-6">
               <div className="flex-1">
                 {formData.whatsapp_config?.phone_number_id ? (
                   <div className="flex items-center gap-3">
@@ -318,9 +319,38 @@ export default function AgentConfig() {
                 )}
               </button>
             </div>
+
+            <div className="border-t border-slate-200 my-6"></div>
+
+            <p className="text-slate-700 font-semibold mb-2">Opción 2: Conexión Manual (Desarrollo / Sin verificar)</p>
+            <p className="text-slate-600 text-sm mb-4">
+              Si aún no tienes tu negocio verificado, ingresa directamente las credenciales generadas en el panel de Meta for Developers.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-slate-600 text-sm font-medium mb-2">Phone Number ID</label>
+                <input
+                  type="text"
+                  value={formData.whatsapp_config?.phone_number_id || ''}
+                  onChange={(e) => handleChange('whatsapp_config', 'phone_number_id', e.target.value)}
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-brand-500"
+                  placeholder="Ej: 1045231415252..."
+                />
+              </div>
+              <div>
+                <label className="block text-slate-600 text-sm font-medium mb-2">Access Token Permanente</label>
+                <input
+                  type="password"
+                  value={formData.whatsapp_config?.access_token || ''}
+                  onChange={(e) => handleChange('whatsapp_config', 'access_token', e.target.value)}
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-brand-500"
+                  placeholder="EAXXXX..."
+                />
+              </div>
+            </div>
             
             <p className="text-slate-500 text-xs mt-4">
-              🔒 El Token de tu cuenta se renovará detrás de escena en el servidor para mantenerse activo. No lo compartiremos.
+              🔒 Estas credenciales se almacenan de forma segura y solo son usadas para conectar la IA a tu WhatsApp.
             </p>
           </section>
 

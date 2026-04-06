@@ -1,5 +1,6 @@
 const express = require('express')
 const router = express.Router()
+const auth = require('../middleware/auth')
 const MessageQueue = require('../services/messageQueue')
 const OpenClawService = require('../services/openclawService')
 
@@ -19,6 +20,86 @@ router.get('/', (req, res) => {
   console.log('[WhatsApp] Webhook verification failed')
   res.sendStatus(403)
 })
+
+router.post('/onboarding', auth, async (req, res) => {
+  try {
+    const { access_token } = req.body;
+    if (!access_token) return res.status(400).json({ error: 'Missing access_token' });
+    
+    const APP_ID = process.env.FACEBOOK_APP_ID;
+    const APP_SECRET = process.env.FACEBOOK_APP_SECRET;
+    
+    if (!APP_ID || !APP_SECRET) {
+      console.warn('Faltan configurar FACEBOOK_APP_ID o FACEBOOK_APP_SECRET en el backend');
+      return res.status(500).json({ error: 'Falta configuración en la aplicación.' });
+    }
+
+    // 1. Debug Token: Extraemos el WABA ID compartido
+    const debugUrl = `https://graph.facebook.com/v18.0/debug_token?input_token=${access_token}&access_token=${APP_ID}|${APP_SECRET}`;
+    const debugRes = await fetch(debugUrl);
+    const debugData = await debugRes.json();
+    
+    let wabaId = null;
+    const granularScopes = debugData?.data?.granular_scopes || [];
+    for (const scopeObj of granularScopes) {
+      if (scopeObj.scope === 'whatsapp_business_management' && scopeObj.target_ids && scopeObj.target_ids.length > 0) {
+        wabaId = scopeObj.target_ids[0];
+        break;
+      }
+    }
+    
+    if (!wabaId) {
+      // Intentar método alternativo consultando la cuenta
+      const wabaUrl = `https://graph.facebook.com/v18.0/me/client_whatsapp_business_accounts?access_token=${access_token}`;
+      const wabaRes = await fetch(wabaUrl);
+      const wabaJson = await wabaRes.json();
+      if (wabaJson.data && wabaJson.data.length > 0) {
+        wabaId = wabaJson.data[0].id;
+      }
+    }
+
+    if (!wabaId) {
+      return res.status(400).json({ error: 'No se encontraron Cuentas de WhatsApp Business compartidas.' });
+    }
+
+    // 2. Extraer Phone Number ID
+    const phoneRes = await fetch(`https://graph.facebook.com/v18.0/${wabaId}/phone_numbers?access_token=${access_token}`);
+    const phoneData = await phoneRes.json();
+    if (!phoneData.data || phoneData.data.length === 0) {
+      return res.status(400).json({ error: 'No se encontró un número de teléfono en la cuenta WABA.' });
+    }
+    const phoneNumberId = phoneData.data[0].id;
+
+    // 3. Suscribir el Webhook a esta App y a este WABA
+    await fetch(`https://graph.facebook.com/v18.0/${wabaId}/subscribed_apps`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${access_token}`
+      }
+    });
+
+    // 4. Guardar en Base de Datos para el Usuario
+    const pool = req.pool;
+    const agentExist = await pool.query('SELECT id, whatsapp_config FROM agents WHERE user_id = $1', [req.user.id]);
+    
+    let wtsConfig = { phone_number_id: phoneNumberId, access_token: access_token };
+    
+    if (agentExist.rows.length > 0) {
+      const oldConfig = agentExist.rows[0].whatsapp_config || {};
+      wtsConfig = { ...oldConfig, ...wtsConfig };
+      await pool.query('UPDATE agents SET whatsapp_config = $1, is_active = true WHERE user_id = $2', [JSON.stringify(wtsConfig), req.user.id]);
+    } else {
+      await pool.query(`INSERT INTO agents (user_id, name, whatsapp_config) VALUES ($1, 'Nuevo Agente', $2)`, [req.user.id, JSON.stringify(wtsConfig)]);
+    }
+
+    console.log('[Meta Onboarding] Completado exitosamente para user:', req.user.id);
+    res.json({ success: true, phone_number_id: phoneNumberId, waba_id: wabaId });
+
+  } catch (error) {
+    console.error('Meta onboarding error:', error);
+    res.status(500).json({ error: 'Fallo interno al registrar WhatsApp. API caída.' });
+  }
+});
 
 router.post('/', async (req, res) => {
   try {

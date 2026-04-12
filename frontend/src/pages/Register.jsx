@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { GoogleLogin } from '@react-oauth/google'
 import { useAuth } from '../contexts/AuthContext'
 
 export default function Register() {
@@ -9,7 +10,7 @@ export default function Register() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const { register } = useAuth()
+  const { register, loginGoogle } = useAuth()
   const navigate = useNavigate()
 
   const handleSubmit = async (e) => {
@@ -31,6 +32,17 @@ export default function Register() {
     } catch (err) {
       setError(err.response?.data?.error || 'Error al registrarse')
     } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    try {
+      setLoading(true)
+      await loginGoogle(credentialResponse.credential)
+      navigate('/dashboard')
+    } catch (err) {
+      setError(err.response?.data?.error || 'No se pudo registrar con Google')
       setLoading(false)
     }
   }
@@ -106,6 +118,25 @@ export default function Register() {
               {loading ? 'Creando cuenta...' : 'Crear Cuenta'}
             </button>
           </form>
+
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-white/20"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-4 bg-transparent text-slate-400">o</span>
+            </div>
+          </div>
+
+          <div className="flex justify-center mt-6">
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={() => setError('Falló la ventana de Google Login')}
+              theme="filled_blue"
+              shape="rectangular"
+              text="signup_with"
+            />
+          </div>
 
           <p className="text-center text-slate-400 mt-6">
             ¿Ya tienes cuenta?{' '}

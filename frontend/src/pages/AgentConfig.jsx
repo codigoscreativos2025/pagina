@@ -60,28 +60,38 @@ export default function AgentConfig() {
   }
 
   const launchWhatsAppSignup = () => {
+    if (!window.FB) {
+      alert('Error: El sistema de Facebook no pudo cargar. Si tienes un bloqueador de anuncios (AdBlock), desactívalo temporalmente e intenta de nuevo.')
+      return
+    }
+
     setFacebookLoading(true)
     
     // Configuración recomendada para Meta Embedded Signup
     const configId = import.meta.env.VITE_FACEBOOK_CONFIG_ID || ''
     
-    window.FB.login((response) => {
+    try {
+      window.FB.login((response) => {
+        setFacebookLoading(false)
+        if (response.authResponse) {
+          const accessToken = response.authResponse.accessToken
+          // Enviar el token corto al backend para completar onboard
+          exchangeTokenWithBackend(accessToken)
+        } else {
+          alert('Se canceló la vinculación con Facebook.')
+        }
+      }, {
+        config_id: configId,
+        extras: {
+          feature: 'whatsapp_embedded_signup',
+          version: 2
+        },
+        scope: 'whatsapp_business_management, whatsapp_business_messaging'
+      });
+    } catch (err) {
       setFacebookLoading(false)
-      if (response.authResponse) {
-        const accessToken = response.authResponse.accessToken
-        // Enviar el token corto al backend para completar onboard
-        exchangeTokenWithBackend(accessToken)
-      } else {
-        alert('Se canceló la vinculación con Facebook.')
-      }
-    }, {
-      config_id: configId,
-      extras: {
-        feature: 'whatsapp_embedded_signup',
-        version: 2
-      },
-      scope: 'whatsapp_business_management, whatsapp_business_messaging'
-    });
+      alert('El botón de Meta fue bloqueado. Asegúrate de configurar bien tu VITE_FACEBOOK_APP_ID y tener habilitados los Pop-Ups.')
+    }
   }
 
   const exchangeTokenWithBackend = async (accessToken) => {

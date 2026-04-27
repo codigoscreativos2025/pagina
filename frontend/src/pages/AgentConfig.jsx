@@ -68,7 +68,7 @@ export default function AgentConfig() {
     setFacebookLoading(true)
     
     // Configuración recomendada para Meta Embedded Signup
-    const configId = '18f0c10a8fa37974df890c7b4451126d'
+    const configId = '4111992845771305'
     
     try {
       window.FB.login((response) => {

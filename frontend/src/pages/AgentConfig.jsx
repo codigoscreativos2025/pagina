@@ -43,7 +43,7 @@ export default function AgentConfig() {
   const initFacebookSdk = () => {
     window.fbAsyncInit = function() {
       window.FB.init({
-        appId      : import.meta.env.VITE_FACEBOOK_APP_ID || 'TU_FACEBOOK_APP_ID',
+        appId      : '26381123114874501',
         cookie     : true,
         xfbml      : true,
         version    : 'v18.0'
@@ -68,7 +68,7 @@ export default function AgentConfig() {
     setFacebookLoading(true)
     
     // Configuración recomendada para Meta Embedded Signup
-    const configId = import.meta.env.VITE_FACEBOOK_CONFIG_ID || ''
+    const configId = '18f0c10a8fa37974df890c7b4451126d'
     
     try {
       window.FB.login((response) => {

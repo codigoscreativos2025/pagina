@@ -156,7 +156,7 @@ async function processWithAgent(req, clientPhone, agentPhone, messageText) {
     `SELECT a.*, u.id as user_id 
      FROM agents a 
      JOIN users u ON a.user_id = u.id 
-     WHERE a.whatsapp_config->>'phone' = $1 
+     WHERE REGEXP_REPLACE(a.whatsapp_config->>'phone', '\\D', '', 'g') = $1 
      AND a.is_active = true 
      AND u.is_active = true`,
     [agentPhone]
@@ -192,7 +192,7 @@ async function checkAgentExists(pool, agentPhone) {
     `SELECT id 
      FROM agents 
      WHERE is_active = true 
-     AND whatsapp_config->>'phone' = $1`,
+     AND REGEXP_REPLACE(whatsapp_config->>'phone', '\\D', '', 'g') = $1`,
     [agentPhone]
   )
 
@@ -207,7 +207,7 @@ async function sendWhatsAppMessage(req, to, message) {
       `SELECT whatsapp_config->>'phone_number_id' as phone_number_id,
               whatsapp_config->>'access_token' as access_token
        FROM agents 
-       WHERE whatsapp_config->>'phone' = $1`,
+       WHERE REGEXP_REPLACE(whatsapp_config->>'phone', '\\D', '', 'g') = $1`,
       [to]
     )
 

@@ -152,39 +152,48 @@ async function handleIncomingMessage(req, clientPhone, messageText, agentPhone) 
 }
 
 async function processWithAgent(clientPhone, agentPhone, messageText) {
-  const pool = global.pool
+  try {
+    console.log(`[Queue] Procesando mensaje para el agente ${agentPhone} del cliente ${clientPhone}`);
+    const pool = global.pool
 
-  const agentResult = await pool.query(
-    `SELECT a.*, u.id as user_id 
-     FROM agents a 
-     JOIN users u ON a.user_id = u.id 
-     WHERE REGEXP_REPLACE(a.whatsapp_config->>'phone', '\\D', '', 'g') = $1 
-     AND a.is_active = true 
-     AND u.is_active = true`,
-    [agentPhone]
-  )
+    const agentResult = await pool.query(
+      `SELECT a.*, u.id as user_id 
+       FROM agents a 
+       JOIN users u ON a.user_id = u.id 
+       WHERE REGEXP_REPLACE(a.whatsapp_config->>'phone', '\\D', '', 'g') = $1 
+       AND a.is_active = true 
+       AND u.is_active = true`,
+      [agentPhone]
+    )
 
-  if (agentResult.rows.length === 0) {
-    await sendWhatsAppMessage(clientPhone, agentPhone, 'El agente no está disponible en este momento.')
-    return
+    if (agentResult.rows.length === 0) {
+      console.log(`[Queue] Agente ${agentPhone} no encontrado o inactivo.`);
+      await sendWhatsAppMessage(clientPhone, agentPhone, 'El agente no está disponible en este momento.')
+      return
+    }
+
+    const agent = agentResult.rows[0]
+    const userId = agent.user_id
+    console.log(`[Queue] Agente encontrado (ID: ${agent.id}, User: ${userId}). Enviando a OpenClaw...`);
+
+    if (!openclawService) {
+      openclawService = new OpenClawService(process.env.OPENCLAW_URL)
+    }
+
+    const result = await openclawService.sendMessage(userId, messageText, agent)
+    console.log(`[Queue] Respuesta de OpenClaw recibida:`, result.success);
+
+    if (result.success && result.response) {
+      await sendWhatsAppMessage(clientPhone, agentPhone, result.response)
+    } else {
+      console.error(`[Queue] Fallo en OpenClaw:`, result.error || result.response);
+      await sendWhatsAppMessage(clientPhone, agentPhone, 'Lo siento, estoy teniendo problemas técnicos. Por favor intenta más tarde.')
+    }
+
+    await updateMessageCount(userId)
+  } catch (error) {
+    console.error(`[Queue] Error CRITICO en processWithAgent:`, error);
   }
-
-  const agent = agentResult.rows[0]
-  const userId = agent.user_id
-
-  if (!openclawService) {
-    openclawService = new OpenClawService(process.env.OPENCLAW_URL)
-  }
-
-  const result = await openclawService.sendMessage(userId, messageText, agent)
-
-  if (result.success && result.response) {
-    await sendWhatsAppMessage(clientPhone, agentPhone, result.response)
-  } else {
-    await sendWhatsAppMessage(clientPhone, agentPhone, 'Lo siento, estoy teniendo problemas técnicos. Por favor intenta más tarde.')
-  }
-
-  await updateMessageCount(userId)
 }
 
 async function checkAgentExists(pool, agentPhone) {

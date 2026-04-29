@@ -115,10 +115,11 @@ router.post('/', async (req, res) => {
     const from = message.from
     const text = message.text?.body
     const type = message.type
+    const agentPhone = value?.metadata?.display_phone_number
     
-    console.log('[WhatsApp] Received message:', { from, text, type })
+    console.log('[WhatsApp] Received message:', { from, agentPhone, text, type })
     
-    await handleIncomingMessage(req, from, text)
+    await handleIncomingMessage(req, from, text, agentPhone)
     
     res.sendStatus(200)
   } catch (error) {
@@ -127,25 +128,25 @@ router.post('/', async (req, res) => {
   }
 })
 
-async function handleIncomingMessage(req, clientPhone, messageText) {
+async function handleIncomingMessage(req, clientPhone, messageText, agentPhone) {
   const pool = req.pool
   const redis = req.redis
 
   if (!messageQueue) {
     messageQueue = new MessageQueue(redis, 3000)
     messageQueue.onFlush = async (phoneNumber, combinedMessage) => {
-      await processWithAgent(req, clientPhone, phoneNumber, combinedMessage)
+      await processWithAgent(req, clientPhone, agentPhone, combinedMessage)
     }
   }
 
-  const agentPhone = await findAgentByPhone(pool, clientPhone)
+  const agentExists = await checkAgentExists(pool, agentPhone)
   
-  if (!agentPhone) {
-    await sendWhatsAppMessage(req, clientPhone, '¡Hola! Para usar el servicio de IA, el negocio debe tener un agente configurado en Pivot Agents.')
+  if (!agentExists) {
+    console.log(`[WhatsApp] No agent found for business phone: ${agentPhone}`)
     return
   }
 
-  await messageQueue.addMessage(agentPhone, messageText)
+  await messageQueue.addMessage(clientPhone, messageText)
 }
 
 async function processWithAgent(req, clientPhone, agentPhone, messageText) {
@@ -184,21 +185,18 @@ async function processWithAgent(req, clientPhone, agentPhone, messageText) {
   await updateMessageCount(req, userId)
 }
 
-async function findAgentByPhone(pool, clientPhone) {
+async function checkAgentExists(pool, agentPhone) {
+  if (!agentPhone) return false;
+  
   const result = await pool.query(
-    `SELECT whatsapp_config->>'phone' as phone 
+    `SELECT id 
      FROM agents 
      WHERE is_active = true 
-     AND whatsapp_config IS NOT NULL`
+     AND whatsapp_config->>'phone' = $1`,
+    [agentPhone]
   )
 
-  for (const row of result.rows) {
-    if (row.phone === clientPhone) {
-      return row.phone
-    }
-  }
-
-  return null
+  return result.rows.length > 0;
 }
 
 async function sendWhatsAppMessage(req, to, message) {

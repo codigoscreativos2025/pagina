@@ -151,7 +151,10 @@ router.post('/test-prompt', auth, async (req, res) => {
     
     const openclawResponse = await fetch(process.env.OPENCLAW_URL + '/api/chat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.OPENCLAW_GATEWAY_TOKEN}`
+      },
       body: JSON.stringify({
         session: `test_${req.user.id}`,
         message: test_message,

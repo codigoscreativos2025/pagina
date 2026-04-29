@@ -134,8 +134,9 @@ async function handleIncomingMessage(req, clientPhone, messageText, agentPhone) 
 
   if (!messageQueue) {
     messageQueue = new MessageQueue(redis, 3000)
-    messageQueue.onFlush = async (phoneNumber, combinedMessage) => {
-      await processWithAgent(req, clientPhone, agentPhone, combinedMessage)
+    messageQueue.onFlush = async (queueKey, combinedMessage) => {
+      const [aPhone, cPhone] = queueKey.split(':')
+      await processWithAgent(cPhone, aPhone, combinedMessage)
     }
   }
 
@@ -146,11 +147,12 @@ async function handleIncomingMessage(req, clientPhone, messageText, agentPhone) 
     return
   }
 
-  await messageQueue.addMessage(clientPhone, messageText)
+  const queueKey = `${agentPhone}:${clientPhone}`
+  await messageQueue.addMessage(queueKey, messageText)
 }
 
-async function processWithAgent(req, clientPhone, agentPhone, messageText) {
-  const pool = req.pool
+async function processWithAgent(clientPhone, agentPhone, messageText) {
+  const pool = global.pool
 
   const agentResult = await pool.query(
     `SELECT a.*, u.id as user_id 
@@ -163,7 +165,7 @@ async function processWithAgent(req, clientPhone, agentPhone, messageText) {
   )
 
   if (agentResult.rows.length === 0) {
-    await sendWhatsAppMessage(req, clientPhone, 'El agente no está disponible en este momento.')
+    await sendWhatsAppMessage(clientPhone, agentPhone, 'El agente no está disponible en este momento.')
     return
   }
 
@@ -177,12 +179,12 @@ async function processWithAgent(req, clientPhone, agentPhone, messageText) {
   const result = await openclawService.sendMessage(userId, messageText, agent)
 
   if (result.success && result.response) {
-    await sendWhatsAppMessage(req, clientPhone, result.response)
+    await sendWhatsAppMessage(clientPhone, agentPhone, result.response)
   } else {
-    await sendWhatsAppMessage(req, clientPhone, 'Lo siento, estoy teniendo problemas técnicos. Por favor intenta más tarde.')
+    await sendWhatsAppMessage(clientPhone, agentPhone, 'Lo siento, estoy teniendo problemas técnicos. Por favor intenta más tarde.')
   }
 
-  await updateMessageCount(req, userId)
+  await updateMessageCount(userId)
 }
 
 async function checkAgentExists(pool, agentPhone) {
@@ -199,27 +201,27 @@ async function checkAgentExists(pool, agentPhone) {
   return result.rows.length > 0;
 }
 
-async function sendWhatsAppMessage(req, to, message) {
+async function sendWhatsAppMessage(to, agentPhone, message) {
   try {
-    const pool = req.pool
+    const pool = global.pool
     
     const agentResult = await pool.query(
       `SELECT whatsapp_config->>'phone_number_id' as phone_number_id,
               whatsapp_config->>'access_token' as access_token
        FROM agents 
        WHERE REGEXP_REPLACE(whatsapp_config->>'phone', '\\D', '', 'g') = $1`,
-      [to]
+      [agentPhone]
     )
 
     if (agentResult.rows.length === 0) {
-      console.log('[WhatsApp] No agent config found for', to)
+      console.log('[WhatsApp] No agent config found for', agentPhone)
       return
     }
 
     const { phone_number_id, access_token } = agentResult.rows[0]
 
     if (!phone_number_id || !access_token) {
-      console.log('[WhatsApp] Missing credentials for', to)
+      console.log('[WhatsApp] Missing credentials for', agentPhone)
       return
     }
 
@@ -248,8 +250,8 @@ async function sendWhatsAppMessage(req, to, message) {
   }
 }
 
-async function updateMessageCount(req, userId) {
-  const redis = req.redis
+async function updateMessageCount(userId) {
+  const redis = global.redisClient
   const key = `user:${userId}:messages`
   
   try {

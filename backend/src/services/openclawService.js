@@ -27,7 +27,7 @@ class OpenClawService {
         headers['Authorization'] = `Bearer ${this.token}`
       }
 
-      const response = await fetch(`${this.openclawUrl}/v1/responses`, {
+      const response = await fetch(`${this.openclawUrl}/v1/chat/completions`, {
         method: 'POST',
         headers: headers,
         body: JSON.stringify({
@@ -75,7 +75,7 @@ class OpenClawService {
         headers['Authorization'] = `Bearer ${this.token}`
       }
 
-      const response = await fetch(`${this.openclawUrl}/v1/responses`, {
+      const response = await fetch(`${this.openclawUrl}/v1/chat/completions`, {
         method: 'POST',
         headers: headers,
         body: JSON.stringify({

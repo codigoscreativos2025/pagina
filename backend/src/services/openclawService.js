@@ -27,24 +27,30 @@ class OpenClawService {
         headers['Authorization'] = `Bearer ${this.token}`
       }
 
-      const response = await fetch(`${this.openclawUrl}/api/chat`, {
+      const response = await fetch(`${this.openclawUrl}/v1/chat/completions`, {
         method: 'POST',
         headers: headers,
         body: JSON.stringify({
-          session: sessionId,
-          message: message,
-          context: context
+          model: 'main',
+          user: sessionId,
+          messages: [
+            { 
+              role: 'system', 
+              content: `${context.systemPrompt || ''}\n\n[Business Info]\n${JSON.stringify(context.businessInfo || {})}\n\n[Sheets Info]\n${JSON.stringify(context.googleSheets || {})}` 
+            },
+            { role: 'user', content: message }
+          ]
         })
       })
 
       if (!response.ok) {
-        throw new Error(`OpenClaw error: ${response.status}`)
+        throw new Error(`OpenClaw error: ${response.status} - ${await response.text()}`)
       }
 
       const data = await response.json()
       return {
         success: true,
-        response: data.response || data.message,
+        response: data.choices?.[0]?.message?.content || 'Sin respuesta',
         session: sessionId
       }
     } catch (error) {
@@ -69,24 +75,30 @@ class OpenClawService {
         headers['Authorization'] = `Bearer ${this.token}`
       }
 
-      const response = await fetch(`${this.openclawUrl}/api/chat`, {
+      const response = await fetch(`${this.openclawUrl}/v1/chat/completions`, {
         method: 'POST',
         headers: headers,
         body: JSON.stringify({
-          session: sessionId,
-          message: message,
-          context: context
+          model: 'main',
+          user: sessionId,
+          messages: [
+            { 
+              role: 'system', 
+              content: `${context.systemPrompt || ''}\n\n[Business Info]\n${JSON.stringify(context.businessInfo || {})}\n\n[Sheets Info]\n${JSON.stringify(context.googleSheets || {})}` 
+            },
+            { role: 'user', content: message }
+          ]
         })
       })
 
       if (!response.ok) {
-        throw new Error(`OpenClaw error: ${response.status}`)
+        throw new Error(`OpenClaw error: ${response.status} - ${await response.text()}`)
       }
 
       const data = await response.json()
       return {
         success: true,
-        response: data.response || data.message,
+        response: data.choices?.[0]?.message?.content || 'Sin respuesta',
         session: sessionId
       }
     } catch (error) {

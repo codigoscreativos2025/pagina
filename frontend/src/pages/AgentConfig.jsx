@@ -22,6 +22,7 @@ export default function AgentConfig() {
     },
     system_prompt: '',
     whatsapp_config: {
+      phone: '',
       phone_number_id: '',
       access_token: ''
     },
@@ -338,6 +339,16 @@ export default function AgentConfig() {
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
+                <label className="block text-slate-600 text-sm font-medium mb-2">Número de Teléfono (Tal como sale en Meta)</label>
+                <input
+                  type="text"
+                  value={formData.whatsapp_config?.phone || ''}
+                  onChange={(e) => handleChange('whatsapp_config', 'phone', e.target.value)}
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-brand-500"
+                  placeholder="Ej: 15556433397"
+                />
+              </div>
+              <div>
                 <label className="block text-slate-600 text-sm font-medium mb-2">Phone Number ID</label>
                 <input
                   type="text"
@@ -347,7 +358,7 @@ export default function AgentConfig() {
                   placeholder="Ej: 1045231415252..."
                 />
               </div>
-              <div>
+              <div className="md:col-span-2">
                 <label className="block text-slate-600 text-sm font-medium mb-2">Access Token Permanente</label>
                 <input
                   type="password"

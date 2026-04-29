@@ -1,6 +1,7 @@
 class OpenClawService {
   constructor(openclawUrl) {
     this.openclawUrl = openclawUrl || process.env.OPENCLAW_URL || 'http://openclaw:18789'
+    this.token = process.env.OPENCLAW_GATEWAY_TOKEN
   }
 
   async sendMessage(userId, message, agentConfig) {
@@ -13,11 +14,16 @@ class OpenClawService {
     }
 
     try {
+      const headers = {
+        'Content-Type': 'application/json'
+      }
+      if (this.token) {
+        headers['Authorization'] = `Bearer ${this.token}`
+      }
+
       const response = await fetch(`${this.openclawUrl}/api/chat`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: headers,
         body: JSON.stringify({
           session: sessionId,
           message: message,
@@ -50,11 +56,16 @@ class OpenClawService {
     const sessionId = `user_${userId}_session`
 
     try {
+      const headers = {
+        'Content-Type': 'application/json'
+      }
+      if (this.token) {
+        headers['Authorization'] = `Bearer ${this.token}`
+      }
+
       const response = await fetch(`${this.openclawUrl}/api/chat`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: headers,
         body: JSON.stringify({
           session: sessionId,
           message: message,
@@ -87,8 +98,14 @@ class OpenClawService {
     const sessionId = `user_${userId}_session`
 
     try {
+      const headers = {}
+      if (this.token) {
+        headers['Authorization'] = `Bearer ${this.token}`
+      }
+
       await fetch(`${this.openclawUrl}/api/session/${sessionId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: headers
       })
       return { success: true }
     } catch (error) {
@@ -101,7 +118,12 @@ class OpenClawService {
     const sessionId = `user_${userId}_session`
 
     try {
-      const response = await fetch(`${this.openclawUrl}/api/session/${sessionId}`)
+      const headers = {}
+      if (this.token) {
+        headers['Authorization'] = `Bearer ${this.token}`
+      }
+
+      const response = await fetch(`${this.openclawUrl}/api/session/${sessionId}`, { headers })
       const data = await response.json()
       return { success: true, session: data }
     } catch (error) {
@@ -111,7 +133,11 @@ class OpenClawService {
 
   async testConnection() {
     try {
-      const response = await fetch(`${this.openclawUrl}/health`)
+      const headers = {}
+      if (this.token) {
+        headers['Authorization'] = `Bearer ${this.token}`
+      }
+      const response = await fetch(`${this.openclawUrl}/health`, { headers })
       return { success: response.ok }
     } catch (error) {
       return { success: false, error: error.message }

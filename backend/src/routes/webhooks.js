@@ -252,7 +252,11 @@ async function sendWhatsAppMessage(to, agentPhone, message) {
     )
 
     const data = await response.json()
-    console.log('[WhatsApp] Message sent to', to)
+    if (data.error) {
+      console.error('[WhatsApp] Meta API Error:', JSON.stringify(data.error, null, 2))
+    } else {
+      console.log('[WhatsApp] Message sent to', to, 'Message ID:', data.messages?.[0]?.id)
+    }
     return data
   } catch (error) {
     console.error('[WhatsApp] Send error:', error)

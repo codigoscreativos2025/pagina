@@ -24,9 +24,14 @@ global.pool = pool
 let redisClient;
 
 async function initRedis() {
-  redisClient = redis.createClient({
+  const redisOptions = {
     url: process.env.REDIS_URL || 'redis://localhost:6379'
-  });
+  };
+  if (process.env.REDIS_PASSWORD) {
+    redisOptions.password = process.env.REDIS_PASSWORD;
+  }
+  
+  redisClient = redis.createClient(redisOptions);
   redisClient.on('error', (err) => console.log('Redis error:', err));
   await redisClient.connect();
   global.redisClient = redisClient

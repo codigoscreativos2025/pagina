@@ -112,6 +112,16 @@ export default function AgentConfig() {
     }
   }
 
+  const parseJSON = (data, defaultData) => {
+    if (!data) return defaultData;
+    if (typeof data === 'object') return data;
+    try {
+      return JSON.parse(data);
+    } catch (e) {
+      return defaultData;
+    }
+  };
+
   const loadAgent = async () => {
     try {
       const res = await api.get('/agents')
@@ -120,10 +130,10 @@ export default function AgentConfig() {
         setAgent(existingAgent)
         setFormData({
           name: existingAgent.name || '',
-          business_info: existingAgent.business_info ? JSON.parse(existingAgent.business_info) : formData.business_info,
+          business_info: parseJSON(existingAgent.business_info, formData.business_info),
           system_prompt: existingAgent.system_prompt || '',
-          whatsapp_config: existingAgent.whatsapp_config ? JSON.parse(existingAgent.whatsapp_config) : formData.whatsapp_config,
-          google_sheets_config: existingAgent.google_sheets_config ? JSON.parse(existingAgent.google_sheets_config) : formData.google_sheets_config,
+          whatsapp_config: parseJSON(existingAgent.whatsapp_config, formData.whatsapp_config),
+          google_sheets_config: parseJSON(existingAgent.google_sheets_config, formData.google_sheets_config),
           is_active: existingAgent.is_active
         })
       }

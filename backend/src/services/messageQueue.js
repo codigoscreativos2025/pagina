@@ -10,11 +10,13 @@ class MessageQueue {
     const queueKey = `${this.queuePrefix}${phoneNumber}`
     const existingQueue = await this.redis.get(queueKey)
 
+    const ttl = Math.ceil(this.debounceTime / 1000) + 60; // 60s buffer to prevent race conditions
+
     if (existingQueue) {
       const updatedQueue = existingQueue + '\n' + message
-      await this.redis.setEx(queueKey, Math.ceil(this.debounceTime / 1000), updatedQueue)
+      await this.redis.setEx(queueKey, ttl, updatedQueue)
     } else {
-      await this.redis.setEx(queueKey, Math.ceil(this.debounceTime / 1000), message)
+      await this.redis.setEx(queueKey, ttl, message)
       this.scheduleFlush(phoneNumber)
     }
 

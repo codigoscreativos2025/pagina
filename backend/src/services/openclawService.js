@@ -7,10 +7,16 @@ class OpenClawService {
   async sendMessage(userId, message, agentConfig) {
     const sessionId = `user_${userId}_session`
 
+    const parseJSON = (data) => {
+      if (!data) return {};
+      if (typeof data === 'object') return data;
+      try { return JSON.parse(data); } catch (e) { return {}; }
+    }
+
     const context = {
       systemPrompt: agentConfig.system_prompt,
-      businessInfo: agentConfig.business_info ? JSON.parse(agentConfig.business_info) : {},
-      googleSheets: agentConfig.google_sheets_config ? JSON.parse(agentConfig.google_sheets_config) : {}
+      businessInfo: parseJSON(agentConfig.business_info),
+      googleSheets: parseJSON(agentConfig.google_sheets_config)
     }
 
     try {

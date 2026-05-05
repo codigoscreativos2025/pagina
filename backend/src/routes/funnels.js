@@ -41,7 +41,50 @@ router.get('/', auth, async (req, res) => {
     res.status(500).json({ error: 'Internal server error' })
   }
 })
+// Update funnel
+router.put('/:id', auth, async (req, res) => {
+  try {
+    const pool = req.pool
+    const userId = req.user.id
+    const { name } = req.body
+    await pool.query('UPDATE funnels SET name = $1 WHERE id = $2 AND user_id = $3', [name, req.params.id, userId])
+    res.json({ success: true })
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
 
+// Create new funnel
+router.post('/', auth, async (req, res) => {
+  try {
+    const pool = req.pool
+    const userId = req.user.id
+    const { name } = req.body
+    const newFunnel = await pool.query('INSERT INTO funnels (user_id, name) VALUES ($1, $2) RETURNING *', [userId, name])
+    res.json({ success: true, funnel: newFunnel.rows[0] })
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// Delete funnel
+router.delete('/:id', auth, async (req, res) => {
+  try {
+    const pool = req.pool
+    const userId = req.user.id
+    const funnelId = req.params.id
+    // Verify ownership
+    const check = await pool.query('SELECT id FROM funnels WHERE id = $1 AND user_id = $2', [funnelId, userId])
+    if (check.rows.length === 0) return res.status(403).json({ error: 'Unauthorized' })
+    
+    // Cascading delete might be needed depending on FK constraints, let's delete stages first
+    await pool.query('DELETE FROM stages WHERE funnel_id = $1', [funnelId])
+    await pool.query('DELETE FROM funnels WHERE id = $1', [funnelId])
+    res.json({ success: true })
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
 // Update a stage
 router.put('/stages/:id', auth, async (req, res) => {
   try {
@@ -70,7 +113,49 @@ router.put('/stages/:id', auth, async (req, res) => {
     res.status(500).json({ error: 'Internal server error' })
   }
 })
+// Create a stage
+router.post('/stages', auth, async (req, res) => {
+  try {
+    const pool = req.pool
+    const userId = req.user.id
+    const { funnel_id, name, color, ai_enabled, order_index } = req.body
 
+    const check = await pool.query('SELECT id FROM funnels WHERE id = $1 AND user_id = $2', [funnel_id, userId])
+    if (check.rows.length === 0) return res.status(403).json({ error: 'Unauthorized funnel' })
+
+    const result = await pool.query(`
+      INSERT INTO stages (funnel_id, name, color, ai_enabled, order_index) 
+      VALUES ($1, $2, $3, $4, $5) RETURNING *
+    `, [funnel_id, name, color || 'bg-gray-100 text-gray-800', ai_enabled || false, order_index || 0])
+
+    res.json({ success: true, stage: result.rows[0] })
+  } catch (error) {
+    console.error('Error creating stage:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// Delete a stage
+router.delete('/stages/:id', auth, async (req, res) => {
+  try {
+    const pool = req.pool
+    const userId = req.user.id
+    const stageId = req.params.id
+
+    const check = await pool.query(`
+      SELECT s.id FROM stages s
+      JOIN funnels f ON s.funnel_id = f.id
+      WHERE s.id = $1 AND f.user_id = $2
+    `, [stageId, userId])
+
+    if (check.rows.length === 0) return res.status(403).json({ error: 'Unauthorized stage' })
+
+    await pool.query('DELETE FROM stages WHERE id = $1', [stageId])
+    res.json({ success: true })
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
 // Tags CRUD
 router.get('/tags', auth, async (req, res) => {
   try {

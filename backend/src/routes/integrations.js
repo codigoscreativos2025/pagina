@@ -27,7 +27,7 @@ router.put('/:type', auth, async (req, res) => {
     const type = req.params.type // 'whatsapp', 'instagram', 'google', 'telegram'
     const config = req.body
     
-    const allowedTypes = ['whatsapp', 'instagram', 'google', 'telegram']
+    const allowedTypes = ['whatsapp', 'instagram', 'google', 'telegram', 'meta_ads']
     if (!allowedTypes.includes(type)) {
       return res.status(400).json({ error: 'Invalid integration type' })
     }

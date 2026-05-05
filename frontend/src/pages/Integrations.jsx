@@ -38,6 +38,8 @@ export default function Integrations() {
       initialData = { sheet_id: configData.sheet_id || '', credentials_json: configData.credentials_json || '' }
     } else if (type === 'telegram') {
       initialData = { bot_token: configData.bot_token || '' }
+    } else if (type === 'meta_ads') {
+      initialData = { ad_account_id: configData.ad_account_id || '', access_token: configData.access_token || '' }
     }
     
     setFormData(initialData)
@@ -198,6 +200,33 @@ export default function Integrations() {
             </div>
           </div>
 
+          {/* Meta Ads */}
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <div className="p-6 border-b border-slate-100 flex items-start justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center text-2xl">
+                  📣
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900">Meta Ads</h2>
+                  <p className="text-slate-500 text-sm">Conecta tu cuenta publicitaria para ver métricas</p>
+                </div>
+              </div>
+              <div className={`px-3 py-1 rounded-full text-xs font-bold ${integrations.meta_ads_config?.ad_account_id ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+                {integrations.meta_ads_config?.ad_account_id ? 'Conectado' : 'Inactivo'}
+              </div>
+            </div>
+            <div className="p-6 bg-slate-50">
+              <p className="text-xs text-slate-500 mb-3">Ingresa tu ID de Cuenta Publicitaria y un token de acceso con permisos <code className="bg-slate-200 px-1 rounded">ads_read</code>.</p>
+              <button 
+                onClick={() => openModal('meta_ads')}
+                className="w-full px-4 py-2 bg-brand-600 text-white rounded-lg font-medium hover:bg-brand-700"
+              >
+                Configurar Meta Ads
+              </button>
+            </div>
+          </div>
+
         </div>
       </div>
 
@@ -257,6 +286,21 @@ export default function Integrations() {
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Google Service Account JSON (Credenciales)</label>
                     <textarea rows="4" value={formData.credentials_json} onChange={e => setFormData({...formData, credentials_json: e.target.value})} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:border-brand-500 focus:outline-none font-mono text-xs" placeholder='{ "type": "service_account", ... }'></textarea>
+                  </div>
+                </>
+              )}
+
+              {activeModal === 'meta_ads' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">ID de Cuenta Publicitaria</label>
+                    <input type="text" value={formData.ad_account_id || ''} onChange={e => setFormData({...formData, ad_account_id: e.target.value})} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:border-brand-500 focus:outline-none" placeholder="Ej: act_1234567890" />
+                    <p className="text-xs text-slate-400 mt-1">Lo encuentras en Meta Business Suite → Cuentas publicitarias.</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Access Token (con permiso ads_read)</label>
+                    <input type="password" value={formData.access_token || ''} onChange={e => setFormData({...formData, access_token: e.target.value})} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:border-brand-500 focus:outline-none" />
+                    <p className="text-xs text-slate-400 mt-1">Genera un token en <strong>developers.facebook.com</strong> → Graph API Explorer.</p>
                   </div>
                 </>
               )}

@@ -18,6 +18,10 @@ export default function Automations() {
   const [edges, setEdges] = useState([])
 
   const [newTag, setNewTag] = useState({ name: '', color: 'bg-slate-100 text-slate-800' })
+  
+  // PIBots state
+  const [pibots, setPibots] = useState([])
+  const [newBot, setNewBot] = useState({ name: '', schedule_cron: '0 10 * * *', is_active: true })
 
   useEffect(() => {
     loadData()
@@ -25,13 +29,17 @@ export default function Automations() {
 
   const loadData = async () => {
     try {
-      const [funnelRes, tagsRes] = await Promise.all([
+      const [funnelRes, tagsRes, botsRes] = await Promise.all([
         api.get('/funnels'),
-        api.get('/funnels/tags')
+        api.get('/funnels/tags'),
+        api.get('/automations/pibots')
       ])
       setFunnel(funnelRes.data.funnel)
       setStages(funnelRes.data.stages)
       setTags(tagsRes.data.tags)
+      if (botsRes.data.success) {
+        setPibots(botsRes.data.bots)
+      }
     } catch (err) {
       console.error(err)
     } finally {
@@ -112,6 +120,30 @@ export default function Automations() {
     }
   }
 
+  const handleCreatePIBot = async (e) => {
+    e.preventDefault()
+    if (!newBot.name || !newBot.schedule_cron) return
+    
+    try {
+      const res = await api.post('/automations/pibots', { ...newBot, trigger_type: 'schedule', conditions: [], actions: [] })
+      setPibots([...pibots, res.data.bot])
+      setNewBot({ name: '', schedule_cron: '0 10 * * *', is_active: true })
+    } catch (err) {
+      console.error(err)
+      alert('Error creando PIBot')
+    }
+  }
+
+  const toggleBot = async (bot) => {
+    try {
+      const updated = { ...bot, is_active: !bot.is_active }
+      await api.put(`/automations/pibots/${bot.id}`, updated)
+      setPibots(pibots.map(b => b.id === bot.id ? updated : b))
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center">Cargando automatizaciones...</div>
   }
@@ -163,6 +195,70 @@ export default function Automations() {
               <Background color="#cbd5e1" gap={16} />
               <Controls />
             </ReactFlow>
+          </div>
+        </section>
+
+        {/* PIBots Config */}
+        <section className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-8">
+          <div className="p-6 border-b border-slate-200 bg-brand-50">
+            <h2 className="text-xl font-bold text-brand-900 flex items-center gap-2">🤖 PIBots (Cron Engine)</h2>
+            <p className="text-brand-600 mt-1">Configura bots que se ejecutan automáticamente por horarios.</p>
+          </div>
+          
+          <div className="p-6 border-b border-slate-100 bg-white">
+            <form onSubmit={handleCreatePIBot} className="flex flex-wrap items-end gap-4">
+              <div className="flex-1 min-w-[200px]">
+                <label className="block text-sm font-medium text-slate-700 mb-1">Nombre del Bot</label>
+                <input 
+                  type="text" 
+                  value={newBot.name}
+                  onChange={e => setNewBot({...newBot, name: e.target.value})}
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-brand-500"
+                  placeholder="Ej: Seguimiento Diario"
+                  required
+                />
+              </div>
+              <div className="w-48">
+                <label className="block text-sm font-medium text-slate-700 mb-1">Expresión Cron</label>
+                <input 
+                  type="text" 
+                  value={newBot.schedule_cron}
+                  onChange={e => setNewBot({...newBot, schedule_cron: e.target.value})}
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-brand-500 font-mono text-sm"
+                  placeholder="0 10 * * *"
+                  required
+                />
+                <p className="text-[10px] text-gray-500 mt-1">Ej: 0 10 * * * = Todos los días a las 10AM</p>
+              </div>
+              <button type="submit" className="px-6 py-2 bg-brand-600 text-white font-bold rounded-lg hover:bg-brand-700 h-[42px] mb-5">
+                Crear PIBot
+              </button>
+            </form>
+          </div>
+
+          <div className="p-6">
+            {pibots.length === 0 ? (
+              <p className="text-slate-500 text-sm">No hay PIBots configurados.</p>
+            ) : (
+              <div className="space-y-3">
+                {pibots.map(bot => (
+                  <div key={bot.id} className="flex justify-between items-center p-4 border border-slate-200 rounded-lg hover:border-brand-300 transition-colors">
+                    <div>
+                      <h4 className="font-bold text-slate-800">{bot.name}</h4>
+                      <p className="text-xs text-slate-500 font-mono mt-1">Cron: {bot.schedule_cron}</p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className={`text-xs px-2 py-1 rounded-full font-bold ${bot.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                        {bot.is_active ? 'ACTIVO' : 'PAUSADO'}
+                      </span>
+                      <button onClick={() => toggleBot(bot)} className="text-brand-600 hover:text-brand-800 text-sm font-bold border border-brand-200 px-3 py-1 rounded">
+                        {bot.is_active ? 'Pausar' : 'Reactivar'}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </section>
 

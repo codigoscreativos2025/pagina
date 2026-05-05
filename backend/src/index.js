@@ -14,6 +14,9 @@ const adminRoutes = require('./routes/admin');
 const crmRoutes = require('./routes/crm');
 const funnelRoutes = require('./routes/funnels');
 const integrationRoutes = require('./routes/integrations');
+const automationRoutes = require('./routes/automations');
+const analyticsRoutes = require('./routes/analytics');
+const cronEngine = require('./services/cronEngine');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -66,6 +69,8 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/crm', crmRoutes);
 app.use('/api/funnels', funnelRoutes);
 app.use('/api/integrations', integrationRoutes);
+app.use('/api/automations', automationRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
@@ -75,6 +80,7 @@ app.use((err, req, res, next) => {
 async function start() {
   try {
     await initRedis();
+    cronEngine.startEngine();
     
     const client = await pool.connect();
     await client.query(`
@@ -188,6 +194,35 @@ async function start() {
         instagram_config JSONB,
         google_config JSONB,
         telegram_config JSONB,
+        meta_ads_config JSONB,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS automation_flows (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        funnel_id INTEGER REFERENCES funnels(id),
+        name VARCHAR(255) NOT NULL,
+        nodes JSONB DEFAULT '[]'::jsonb,
+        edges JSONB DEFAULT '[]'::jsonb,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS pi_bots (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        name VARCHAR(255) NOT NULL,
+        trigger_type VARCHAR(50) DEFAULT 'schedule',
+        schedule_cron VARCHAR(50),
+        conditions JSONB DEFAULT '[]'::jsonb,
+        actions JSONB DEFAULT '[]'::jsonb,
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
@@ -198,6 +233,8 @@ async function start() {
     try { await client.query('ALTER TABLE leads ADD COLUMN stage_id INTEGER REFERENCES stages(id)'); } catch (e) {}
     try { await client.query('ALTER TABLE agents ADD COLUMN instagram_config JSONB'); } catch (e) {}
     try { await client.query("ALTER TABLE agents ADD COLUMN permissions JSONB DEFAULT '[]'::jsonb"); } catch (e) {}
+    try { await client.query("ALTER TABLE leads ADD COLUMN custom_fields JSONB DEFAULT '{}'::jsonb"); } catch (e) {}
+    try { await client.query('ALTER TABLE user_integrations ADD COLUMN meta_ads_config JSONB'); } catch (e) {}
     
     const plans = await client.query('SELECT COUNT(*) FROM plans');
     if (parseInt(plans.rows[0].count) === 0) {

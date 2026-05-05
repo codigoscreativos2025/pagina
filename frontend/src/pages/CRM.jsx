@@ -15,6 +15,8 @@ export default function CRM() {
   const [messageInput, setMessageInput] = useState('')
   const [sending, setSending] = useState(false)
   const [viewMode, setViewMode] = useState('chat') // 'chat' or 'kanban'
+  const [showCustomFields, setShowCustomFields] = useState(false)
+  const [customFieldInput, setCustomFieldInput] = useState({ name: '', type: 'text', value: '' })
   const messagesEndRef = useRef(null)
 
   useEffect(() => {
@@ -77,11 +79,35 @@ export default function CRM() {
       const res = await api.put(`/crm/leads/${leadId}/stage`, { stage_id })
       setLeads(prevLeads => prevLeads.map(l => l.id === leadId ? { ...l, stage_id, is_ai_active: res.data.aiDisabled ? false : l.is_ai_active } : l))
       if (activeLead?.id === leadId) {
-        setActiveLead({ ...activeLead, stage_id, is_ai_active: res.data.aiDisabled ? false : activeLead.is_ai_active })
+        setActiveLead(prev => ({ ...prev, stage_id, is_ai_active: res.data.aiDisabled ? false : prev.is_ai_active }))
       }
     } catch (err) {
       console.error(err)
     }
+  }
+
+  const saveCustomField = async () => {
+    if (!activeLead || !customFieldInput.name) return;
+    try {
+      // In a real app we'd have a specific endpoint or update the lead completely
+      // For now we simulate saving it locally in activeLead's state
+      const currentFields = activeLead.custom_fields || {};
+      const newFields = { ...currentFields, [customFieldInput.name]: { type: customFieldInput.type, value: customFieldInput.value } };
+      
+      setActiveLead({ ...activeLead, custom_fields: newFields });
+      setCustomFieldInput({ name: '', type: 'text', value: '' });
+      // TODO: Add API call `api.put(/crm/leads/${activeLead.id}/custom-fields, newFields)`
+    } catch (err) {
+      console.error('Error saving custom field:', err)
+    }
+  }
+
+  const toggleCustomFieldBoolean = (fieldName, currentValue) => {
+    if (!activeLead) return;
+    const currentFields = activeLead.custom_fields || {};
+    const newFields = { ...currentFields, [fieldName]: { type: 'boolean', value: !currentValue } };
+    setActiveLead({ ...activeLead, custom_fields: newFields });
+    // TODO: API Call
   }
 
   // Kanban Drag & Drop Handlers
@@ -294,8 +320,12 @@ export default function CRM() {
                     {activeLead.is_ai_active ? 'ON' : 'OFF'}
                   </span>
                 </div>
+              <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-gray-200 cursor-pointer hover:border-brand-300" onClick={() => setShowCustomFields(!showCustomFields)}>
+                <span className="text-xs font-semibold text-gray-600">Variables</span>
+                <span className={`text-xs font-bold ${showCustomFields ? 'text-brand-600' : 'text-gray-400'}`}>{showCustomFields ? 'ON' : 'OFF'}</span>
+              </div>
 
-              <div className="flex flex-col items-end gap-2">
+            <div className="flex flex-col items-end gap-2">
                 {/* CRM Status Dropdown */}
                 <div className="flex items-center gap-2">
                   <select 
@@ -338,8 +368,10 @@ export default function CRM() {
               </div>
             </div>
 
-            {/* Chat Messages */}
-            <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-4">
+            <div className="flex-1 flex overflow-hidden">
+              <div className={`flex flex-col h-full ${showCustomFields ? 'w-2/3' : 'w-full'}`}>
+                {/* Chat Messages */}
+                <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-4">
               {messages.length === 0 ? (
                 <div className="flex justify-center">
                   <div className="bg-[#fff5c4] text-gray-700 text-xs px-3 py-1 rounded-lg shadow-sm">
@@ -376,9 +408,79 @@ export default function CRM() {
                 disabled={!messageInput.trim() || sending || calculateTimeLeft(activeLead.last_client_message_at) === 'Expirado'}
                 className="bg-brand-600 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {sending ? '...' : '➤'}
-              </button>
-            </form>
+                  {sending ? '...' : '➤'}
+                </button>
+              </form>
+            </div>
+            
+            {/* Custom Fields Sidebar */}
+            {showCustomFields && (
+              <div className="w-1/3 bg-white border-l border-gray-200 flex flex-col shrink-0">
+                <div className="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
+                  <div>
+                    <h3 className="font-bold text-gray-800">Variables Dinámicas</h3>
+                    <p className="text-[10px] text-gray-500">Datos extraídos o manuales.</p>
+                  </div>
+                  <button onClick={() => setShowCustomFields(false)} className="text-gray-400 hover:text-gray-600">✖</button>
+                </div>
+                <div className="p-4 flex-1 overflow-y-auto space-y-4">
+                  {/* Render existing custom fields */}
+                  {activeLead.custom_fields && Object.entries(activeLead.custom_fields).map(([key, field]) => (
+                    <div key={key} className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">{key}</label>
+                      {field.type === 'boolean' ? (
+                        <label className="relative inline-flex items-center cursor-pointer mt-1">
+                          <input type="checkbox" className="sr-only peer" checked={field.value} onChange={() => toggleCustomFieldBoolean(key, field.value)} />
+                          <div className="w-9 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand-600"></div>
+                        </label>
+                      ) : field.type === 'number' ? (
+                        <div className="font-mono text-gray-800 bg-white px-2 py-1 rounded border border-gray-200 text-sm">{field.value}</div>
+                      ) : (
+                        <div className="text-sm text-gray-800 bg-white px-2 py-1 rounded border border-gray-200">{field.value}</div>
+                      )}
+                    </div>
+                  ))}
+
+                  {/* Add new custom field */}
+                  <div className="mt-6 border-t border-gray-200 pt-4">
+                    <h4 className="text-xs font-bold text-gray-700 mb-3">+ Añadir Variable</h4>
+                    <div className="space-y-2">
+                      <input 
+                        type="text" 
+                        placeholder="Nombre (ej. Presupuesto)" 
+                        className="w-full text-xs border border-gray-300 rounded px-2 py-1.5 focus:ring-1 focus:ring-brand-500"
+                        value={customFieldInput.name}
+                        onChange={e => setCustomFieldInput({...customFieldInput, name: e.target.value})}
+                      />
+                      <div className="flex gap-2">
+                        <select 
+                          className="w-1/2 text-xs border border-gray-300 rounded px-2 py-1.5 bg-white"
+                          value={customFieldInput.type}
+                          onChange={e => setCustomFieldInput({...customFieldInput, type: e.target.value})}
+                        >
+                          <option value="text">Texto</option>
+                          <option value="number">Número</option>
+                          <option value="boolean">Toggle</option>
+                        </select>
+                        {customFieldInput.type !== 'boolean' && (
+                          <input 
+                            type="text" 
+                            placeholder="Valor" 
+                            className="w-1/2 text-xs border border-gray-300 rounded px-2 py-1.5 focus:ring-1 focus:ring-brand-500"
+                            value={customFieldInput.value}
+                            onChange={e => setCustomFieldInput({...customFieldInput, value: e.target.value})}
+                          />
+                        )}
+                      </div>
+                      <button onClick={saveCustomField} className="w-full bg-gray-800 text-white text-xs font-bold py-1.5 rounded-md hover:bg-gray-900 transition-colors">
+                        Guardar Variable
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            </div>
           </>
         ) : (
           <div className="flex-1 flex items-center justify-center flex-col text-center border-l border-gray-300 bg-[#f0f2f5]">
@@ -432,12 +534,15 @@ export default function CRM() {
                     onDragOver={handleDragOver}
                     onDrop={(e) => handleDrop(e, stage.id)}
                   >
-                    <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-white rounded-t-xl">
+                    <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-white rounded-t-xl group">
                       <div className="flex items-center gap-2">
                         <div className={`w-3 h-3 rounded-full ${stage.color?.split(' ')[0] || 'bg-gray-400'}`}></div>
-                        <h3 className="font-bold text-gray-800">{stage.name}</h3>
+                        <h3 className="font-bold text-gray-800 group-hover:hidden">{stage.name}</h3>
+                        <input type="text" defaultValue={stage.name} className="hidden group-hover:block w-32 px-2 py-1 text-sm border border-gray-300 rounded" />
                       </div>
-                      <span className="bg-gray-100 text-gray-600 text-xs font-bold px-2 py-1 rounded-full">{stageLeads.length}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="bg-gray-100 text-gray-600 text-xs font-bold px-2 py-1 rounded-full">{stageLeads.length}</span>
+                      </div>
                     </div>
                     <div className="flex-1 overflow-y-auto p-3 space-y-3">
                       {stageLeads.map(lead => (

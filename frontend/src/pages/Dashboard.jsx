@@ -8,7 +8,11 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const [agents, setAgents] = useState([])
   const [stats, setStats] = useState({ messages: 0, conversations: 0 })
+  const [analytics, setAnalytics] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [creatingAgent, setCreatingAgent] = useState(false)
+  const [newAgentName, setNewAgentName] = useState('')
+  const [showCreateModal, setShowCreateModal] = useState(false)
 
   useEffect(() => {
     loadData()
@@ -22,6 +26,13 @@ export default function Dashboard() {
       ])
       setAgents(agentRes.data)
       setStats(statsRes.data)
+      
+      // Load analytics separately (may fail if not connected)
+      try {
+        const analyticsRes = await api.get('/analytics/meta-ads')
+        if (analyticsRes.data.success) setAnalytics(analyticsRes.data.metrics)
+      } catch (e) { /* Analytics optional */ }
+      
     } catch (err) {
       console.error(err)
     } finally {
@@ -29,16 +40,21 @@ export default function Dashboard() {
     }
   }
 
-  const handleCreateAgent = async () => {
+  const handleCreateAgent = async (e) => {
+    e.preventDefault()
+    if (!newAgentName.trim()) return
     try {
-      setLoading(true)
-      const res = await api.post('/agents', { name: `Nuevo Agente ${agents.length + 1}` })
+      setCreatingAgent(true)
+      const res = await api.post('/agents', { name: newAgentName.trim() })
       navigate(`/config/${res.data.id}`)
     } catch (err) {
       console.error('Error creando agente', err)
-      setLoading(false)
+      setCreatingAgent(false)
     }
   }
+
+  const conversionRate = analytics?.crm?.conversion_rate || '—'
+  const metaConnected = analytics?.meta?.connected
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -58,7 +74,7 @@ export default function Dashboard() {
               <span>🔌</span> Integraciones
             </Link>
             <span className="text-slate-300">|</span>
-            <span className="text-slate-600">{user?.name}</span>
+            <span className="text-slate-600 text-sm">{user?.name}</span>
             <button onClick={logout} className="text-slate-500 hover:text-slate-700 text-sm">
               Cerrar Sesión
             </button>
@@ -67,108 +83,215 @@ export default function Dashboard() {
       </nav>
 
       <div className="max-w-6xl mx-auto px-6 py-8">
+        {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 mb-2">Dashboard</h1>
-            <p className="text-slate-600">Gestiona tus agentes de IA</p>
+            <h1 className="text-2xl font-bold text-slate-900 mb-1">Dashboard</h1>
+            <p className="text-slate-500 text-sm">Bienvenido, {user?.name}. Aquí tienes un resumen de tu operación.</p>
           </div>
-          <button 
-            onClick={handleCreateAgent}
-            disabled={loading}
-            className="px-6 py-3 bg-brand-600 text-white rounded-lg font-semibold hover:bg-brand-700 disabled:opacity-50"
+          <button
+            onClick={() => { setNewAgentName(''); setShowCreateModal(true) }}
+            className="px-5 py-2.5 bg-brand-600 text-white rounded-lg font-semibold hover:bg-brand-700 transition-colors flex items-center gap-2 text-sm shadow-sm"
           >
-            + Crear Nuevo Agente
+            <span className="text-lg leading-none">+</span> Nuevo Agente
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-xl p-6 border border-slate-200">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-lg bg-brand-100 flex items-center justify-center text-2xl">💬</div>
-              <div>
-                <p className="text-slate-500 text-sm">Mensajes Totales</p>
-                <p className="text-2xl font-bold text-slate-900">{stats.messages}</p>
-              </div>
+        {/* KPI Stats Row */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <div className="bg-white rounded-xl p-5 border border-slate-200 flex items-center gap-4">
+            <div className="w-10 h-10 rounded-lg bg-brand-100 flex items-center justify-center text-xl">💬</div>
+            <div>
+              <p className="text-slate-500 text-xs">Mensajes</p>
+              <p className="text-2xl font-bold text-slate-900">{stats.messages}</p>
             </div>
           </div>
-
-          <div className="bg-white rounded-xl p-6 border border-slate-200">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-lg bg-accent/10 flex items-center justify-center text-2xl">👥</div>
-              <div>
-                <p className="text-slate-500 text-sm">Conversaciones Totales</p>
-                <p className="text-2xl font-bold text-slate-900">{stats.conversations}</p>
-              </div>
+          <div className="bg-white rounded-xl p-5 border border-slate-200 flex items-center gap-4">
+            <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center text-xl">👥</div>
+            <div>
+              <p className="text-slate-500 text-xs">Contactos</p>
+              <p className="text-2xl font-bold text-slate-900">{stats.conversations}</p>
             </div>
           </div>
-          
-          <div className="bg-white rounded-xl p-6 border border-slate-200">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center text-2xl">🤖</div>
-              <div>
-                <p className="text-slate-500 text-sm">Agentes Creados</p>
-                <p className="text-2xl font-bold text-slate-900">{agents.length}</p>
-              </div>
+          <div className="bg-white rounded-xl p-5 border border-slate-200 flex items-center gap-4">
+            <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-xl">🤖</div>
+            <div>
+              <p className="text-slate-500 text-xs">Agentes</p>
+              <p className="text-2xl font-bold text-slate-900">{agents.length}</p>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl p-5 border border-slate-200 flex items-center gap-4">
+            <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center text-xl">📈</div>
+            <div>
+              <p className="text-slate-500 text-xs">Conversión</p>
+              <p className="text-2xl font-bold text-slate-900">{conversionRate}</p>
             </div>
           </div>
         </div>
 
-        <h2 className="text-xl font-bold text-slate-900 mb-4">Mis Agentes</h2>
+        {/* Meta Ads Analytics Banner */}
+        {analytics ? (
+          <div className={`rounded-xl border p-6 mb-8 ${metaConnected ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200' : 'bg-slate-100 border-slate-200'}`}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center text-white text-xl">📣</div>
+                <div>
+                  <h2 className="font-bold text-slate-900">Rendimiento Meta Ads</h2>
+                  <p className="text-xs text-slate-500">{metaConnected ? 'Campaña activa · Datos en tiempo real' : 'Sin conexión · Configura Meta Ads en Integraciones'}</p>
+                </div>
+              </div>
+              {!metaConnected && (
+                <Link to="/integrations" className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-blue-700 transition-colors">
+                  Conectar →
+                </Link>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              {[
+                { label: 'Alcance', value: metaConnected ? analytics.meta.reach.toLocaleString() : '—', icon: '👁️', color: 'text-blue-700' },
+                { label: 'Impresiones', value: metaConnected ? analytics.meta.impressions.toLocaleString() : '—', icon: '🔁', color: 'text-indigo-700' },
+                { label: 'Clics', value: metaConnected ? analytics.meta.clicks.toLocaleString() : '—', icon: '🖱️', color: 'text-purple-700' },
+                { label: 'Gasto', value: metaConnected ? `$${analytics.meta.spend}` : '—', icon: '💰', color: 'text-rose-700' },
+                { label: 'Leads CRM', value: analytics.crm.total_leads.toLocaleString(), icon: '📋', color: 'text-emerald-700' },
+              ].map(item => (
+                <div key={item.label} className="bg-white/80 rounded-lg p-3 text-center border border-white/50">
+                  <div className="text-xl mb-1">{item.icon}</div>
+                  <div className={`text-xl font-bold ${item.color}`}>{item.value}</div>
+                  <div className="text-[10px] text-slate-500 font-medium uppercase tracking-wide mt-0.5">{item.label}</div>
+                </div>
+              ))}
+            </div>
+
+            {metaConnected && (
+              <div className="mt-4 flex items-center gap-2 text-xs text-slate-600 bg-white/60 rounded-lg p-3 border border-white/50">
+                <span className="text-emerald-500 font-bold text-base">↗</span>
+                <span>De <strong>{analytics.meta.reach.toLocaleString()}</strong> personas alcanzadas, <strong>{analytics.crm.total_leads}</strong> se convirtieron en leads en tu CRM ({conversionRate} de conversión sobre clics).</span>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="bg-slate-100 border border-slate-200 rounded-xl p-5 mb-8 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">📣</span>
+              <div>
+                <p className="font-medium text-slate-700 text-sm">Conecta Meta Ads para ver métricas de tus campañas</p>
+                <p className="text-xs text-slate-400">Ve a Integraciones y configura tu cuenta publicitaria.</p>
+              </div>
+            </div>
+            <Link to="/integrations" className="text-xs bg-blue-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-blue-700 transition-colors shrink-0">
+              Configurar →
+            </Link>
+          </div>
+        )}
+
+        {/* Agents Section */}
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold text-slate-900">Mis Agentes de IA</h2>
+          <span className="text-sm text-slate-500">{agents.length} agente{agents.length !== 1 ? 's' : ''}</span>
+        </div>
         
         {agents.length === 0 ? (
           <div className="bg-white border border-slate-200 border-dashed rounded-2xl p-12 text-center">
             <div className="text-4xl mb-4">🤖</div>
             <h2 className="text-xl font-bold text-slate-900 mb-2">No tienes agentes todavía</h2>
-            <p className="text-slate-600 mb-6 max-w-md mx-auto">Crea tu primer asistente de IA personalizado para comenzar a atender clientes automáticamente.</p>
-            <button 
-              onClick={handleCreateAgent}
-              disabled={loading}
+            <p className="text-slate-600 mb-6 max-w-md mx-auto text-sm">Crea tu primer asistente de IA personalizado para comenzar a atender clientes automáticamente.</p>
+            <button
+              onClick={() => { setNewAgentName(''); setShowCreateModal(true) }}
               className="px-6 py-3 bg-brand-600 text-white rounded-lg font-semibold hover:bg-brand-700"
             >
               Crear mi primer Agente
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {agents.map(agent => (
-              <div key={agent.id} className="bg-white rounded-xl p-6 border border-slate-200 hover:border-brand-300 transition-colors flex flex-col">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-bold text-slate-900 text-lg">{agent.name || 'Agente sin nombre'}</h3>
-                  <div className={`w-3 h-3 rounded-full ${agent.is_active ? 'bg-green-500' : 'bg-red-500'}`} title={agent.is_active ? 'Activo' : 'Inactivo'}></div>
+              <div key={agent.id} className="bg-white rounded-xl p-5 border border-slate-200 hover:border-brand-300 hover:shadow-md transition-all flex flex-col">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-brand-100 rounded-full flex items-center justify-center text-brand-600 font-bold text-lg">
+                      {agent.name?.charAt(0)?.toUpperCase() || '🤖'}
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-slate-900">{agent.name || 'Agente sin nombre'}</h3>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className={`w-2 h-2 rounded-full ${agent.is_active ? 'bg-green-500' : 'bg-red-400'}`}></span>
+                        <span className="text-xs text-slate-500">{agent.is_active ? 'Activo' : 'Inactivo'}</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                
-                <div className="space-y-3 flex-1 mb-6">
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-500">WhatsApp</span>
-                    <span className="font-medium text-slate-900">
-                      {agent.whatsapp_config?.phone ? '✅ Conectado' : '❌ No'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-500">Google Sheets</span>
-                    <span className="font-medium text-slate-900">
-                      {agent.google_sheets_config?.sheet_id ? '✅ Conectado' : '❌ No'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-500">Instagram</span>
-                    <span className="font-medium text-slate-900">
-                      {agent.instagram_config?.page_id ? '✅ Conectado' : '❌ No'}
-                    </span>
-                  </div>
+
+                <div className="space-y-2 flex-1 mb-5">
+                  {[
+                    { label: 'WhatsApp', ok: agent.whatsapp_config?.phone },
+                    { label: 'Google Sheets', ok: agent.google_sheets_config?.sheet_id },
+                    { label: 'Instagram', ok: agent.instagram_config?.page_id },
+                  ].map(item => (
+                    <div key={item.label} className="flex justify-between items-center text-xs">
+                      <span className="text-slate-500">{item.label}</span>
+                      <span className={`font-semibold ${item.ok ? 'text-green-600' : 'text-slate-400'}`}>
+                        {item.ok ? '✅ Conectado' : '○ No configurado'}
+                      </span>
+                    </div>
+                  ))}
                 </div>
                 
                 <Link 
-                  to={`/config/${agent.id}`} 
-                  className="w-full block text-center py-2 bg-slate-50 hover:bg-brand-50 border border-slate-200 hover:border-brand-200 text-brand-600 rounded-lg font-medium transition-colors"
+                  to={`/config/${agent.id}`}
+                  className="w-full block text-center py-2 bg-slate-50 hover:bg-brand-50 border border-slate-200 hover:border-brand-200 text-brand-600 rounded-lg font-medium transition-colors text-sm"
                 >
-                  Configurar Agente
+                  Configurar Agente →
                 </Link>
               </div>
             ))}
+            
+            {/* Quick Add Card */}
+            <button
+              onClick={() => { setNewAgentName(''); setShowCreateModal(true) }}
+              className="bg-white rounded-xl p-5 border-2 border-dashed border-slate-300 hover:border-brand-400 hover:bg-brand-50 transition-all flex flex-col items-center justify-center gap-3 text-slate-400 hover:text-brand-600 min-h-[180px] group"
+            >
+              <div className="w-12 h-12 rounded-full border-2 border-current flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">+</div>
+              <span className="font-semibold text-sm">Añadir Agente</span>
+            </button>
           </div>
         )}
       </div>
+
+      {/* Create Agent Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+              <h2 className="text-xl font-bold text-slate-900">Crear Nuevo Agente</h2>
+              <button onClick={() => setShowCreateModal(false)} className="text-slate-400 hover:text-slate-600 text-xl">×</button>
+            </div>
+            <form onSubmit={handleCreateAgent} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Nombre del Agente</label>
+                <input
+                  type="text"
+                  value={newAgentName}
+                  onChange={e => setNewAgentName(e.target.value)}
+                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+                  placeholder="Ej: Agente Ventas, Soporte Premium..."
+                  autoFocus
+                  required
+                />
+                <p className="text-xs text-slate-400 mt-1.5">Podrás cambiar esto en cualquier momento desde su configuración.</p>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setShowCreateModal(false)} className="flex-1 px-4 py-2.5 text-slate-600 hover:bg-slate-100 rounded-xl font-medium transition-colors">
+                  Cancelar
+                </button>
+                <button type="submit" disabled={creatingAgent || !newAgentName.trim()} className="flex-1 px-4 py-2.5 bg-brand-600 text-white rounded-xl font-semibold hover:bg-brand-700 disabled:opacity-50 transition-colors">
+                  {creatingAgent ? 'Creando...' : 'Crear Agente →'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

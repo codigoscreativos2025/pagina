@@ -34,8 +34,6 @@ export default function AgentConfig() {
     is_active: true
   })
 
-  const [saved, setSaved] = useState(false)
-  
   useEffect(() => {
     loadAgent()
   }, [])

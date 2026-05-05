@@ -128,7 +128,7 @@ router.get('/:id', auth, async (req, res) => {
 
 router.put('/:id', auth, async (req, res) => {
   try {
-    const { name, business_info, system_prompt, ai_config, is_active, permissions } = req.body;
+    const { name, business_info, system_prompt, ai_config, is_active, permissions, model_id } = req.body;
     
     const result = await req.pool.query(
       `UPDATE agents SET 
@@ -138,12 +138,14 @@ router.put('/:id', auth, async (req, res) => {
         ai_config = COALESCE($4, ai_config),
         is_active = COALESCE($5, is_active),
         permissions = COALESCE($6, permissions),
+        model_id = COALESCE($7, model_id),
         updated_at = CURRENT_TIMESTAMP
-       WHERE id = $7 AND user_id = $8
+       WHERE id = $8 AND user_id = $9
        RETURNING *`,
       [name, business_info ? JSON.stringify(business_info) : null,
        system_prompt, ai_config ? JSON.stringify(ai_config) : null,
-       is_active, permissions ? JSON.stringify(permissions) : null, req.params.id, req.user.id]
+       is_active, permissions ? JSON.stringify(permissions) : null, 
+       model_id, req.params.id, req.user.id]
     );
     
     if (result.rows.length === 0) {

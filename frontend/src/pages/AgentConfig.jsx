@@ -51,10 +51,11 @@ export default function AgentConfig() {
   const [pickerReady, setPickerReady] = useState(false)
   const [pickerToken, setPickerToken] = useState(null)
   const [pickerClientId, setPickerClientId] = useState(null)
+  const [aiModels, setAiModels] = useState([])
 
   const [formData, setFormData] = useState({
-    name: '', business_info: { nombre: '', horario: '', direccion: '', telefono: '', metodos_pago: [], redes_sociales: '' },
-    system_prompt: '', permissions: [], tools: [], is_active: true
+    name: '', business_info: [],
+    system_prompt: '', permissions: [], tools: [], is_active: true, model_id: ''
   })
 
   useEffect(() => { loadAgent() }, [])
@@ -67,17 +68,36 @@ export default function AgentConfig() {
 
   const loadAgent = async () => {
     try {
-      const [agentRes, agentsRes] = await Promise.all([
+      const [agentRes, agentsRes, modelsRes] = await Promise.all([
         api.get(`/agents/${id}`),
-        api.get('/agents')
+        api.get('/agents'),
+        api.get('/users/models')
       ])
       const a = agentRes.data
       setAgents(agentsRes.data.filter(ag => ag.id !== parseInt(id)))
+      setAiModels(modelsRes.data || [])
+      
+      let bizInfo = []
+      const rawBiz = parseJSON(a.business_info, {})
+      if (Array.isArray(rawBiz)) {
+        bizInfo = rawBiz
+      } else if (typeof rawBiz === 'object' && Object.keys(rawBiz).length > 0) {
+        bizInfo = Object.entries(rawBiz).map(([k, v]) => ({ label: k.charAt(0).toUpperCase() + k.slice(1), value: v }))
+      } else {
+        bizInfo = [
+          { label: 'Empresa', value: '' },
+          { label: 'Horario', value: '' },
+          { label: 'Dirección', value: '' },
+          { label: 'Teléfono', value: '' }
+        ]
+      }
+
       setFormData({
-        name: a.name || '', business_info: parseJSON(a.business_info, formData.business_info),
+        name: a.name || '', business_info: bizInfo,
         system_prompt: a.system_prompt || '', permissions: parseJSON(a.permissions, []),
         tools: parseJSON(a.ai_config, { tools: [] }).tools || [],
-        is_active: a.is_active
+        is_active: a.is_active,
+        model_id: a.model_id || ''
       })
     } catch (err) { if (err.response?.status === 404) navigate('/dashboard') }
   }
@@ -226,19 +246,30 @@ export default function AgentConfig() {
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-brand-500 font-bold" placeholder="Ej: Asistente de Ventas" />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {[
-                { key: 'nombre', label: 'Empresa', ph: 'Mi Negocio C.A.' },
-                { key: 'horario', label: 'Horario', ph: 'Lun-Vie 9am-6pm' },
-                { key: 'direccion', label: 'Dirección', ph: 'Av. Principal #123' },
-                { key: 'telefono', label: 'Teléfono', ph: '+584120000000' },
-              ].map(f => (
-                <div key={f.key}>
-                  <label className="block text-slate-600 text-sm font-medium mb-2">{f.label}</label>
-                  <input type="text" value={formData.business_info[f.key] || ''} onChange={e => handleChange('business_info', f.key, e.target.value)}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-brand-500" placeholder={f.ph} />
+              {formData.business_info.map((f, i) => (
+                <div key={i} className="flex flex-col relative group">
+                  <div className="flex items-center justify-between mb-2">
+                    <input type="text" value={f.label} onChange={e => {
+                      const newB = [...formData.business_info];
+                      newB[i].label = e.target.value;
+                      setFormData(p => ({ ...p, business_info: newB }));
+                    }} className="text-slate-600 text-sm font-bold bg-transparent border-b border-transparent hover:border-slate-300 focus:border-brand-500 focus:outline-none px-1 py-0.5 w-2/3" placeholder="Nombre del campo" />
+                    <button type="button" onClick={() => {
+                      const newB = formData.business_info.filter((_, idx) => idx !== i);
+                      setFormData(p => ({ ...p, business_info: newB }));
+                    }} className="text-red-400 hover:text-red-600 text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity">✕ Eliminar</button>
+                  </div>
+                  <input type="text" value={f.value} onChange={e => {
+                    const newB = [...formData.business_info];
+                    newB[i].value = e.target.value;
+                    setFormData(p => ({ ...p, business_info: newB }));
+                  }} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-brand-500" placeholder={`Valor para ${f.label || 'este campo'}`} />
                 </div>
               ))}
             </div>
+            <button type="button" onClick={() => {
+              setFormData(p => ({ ...p, business_info: [...p.business_info, { label: 'Nuevo Campo', value: '' }] }))
+            }} className="mt-4 text-sm text-brand-600 font-bold hover:text-brand-800 flex items-center gap-1">+ Agregar campo</button>
           </section>
 
           {/* Prompt */}
@@ -318,6 +349,19 @@ export default function AgentConfig() {
                 )
               })}
             </div>
+          </section>
+
+          {/* Modelo IA */}
+          <section className="bg-white rounded-xl p-6 border border-slate-200">
+            <h2 className="text-lg font-bold text-slate-900 mb-2">🧠 Modelo de IA</h2>
+            <p className="text-slate-500 text-sm mb-4">Selecciona qué motor de inteligencia artificial usará este agente para pensar.</p>
+            <select value={formData.model_id} onChange={e => setFormData(p => ({ ...p, model_id: e.target.value }))}
+              className="w-full max-w-md px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:border-brand-500 font-medium text-slate-800">
+              <option value="">-- Modelo por defecto --</option>
+              {aiModels.map(m => (
+                <option key={m.id} value={m.id}>{m.name} ({m.api_provider})</option>
+              ))}
+            </select>
           </section>
 
           {/* Estado */}

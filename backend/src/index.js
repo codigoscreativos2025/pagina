@@ -235,6 +235,18 @@ async function start() {
     try { await client.query("ALTER TABLE agents ADD COLUMN permissions JSONB DEFAULT '[]'::jsonb"); } catch (e) {}
     try { await client.query("ALTER TABLE leads ADD COLUMN custom_fields JSONB DEFAULT '{}'::jsonb"); } catch (e) {}
     try { await client.query('ALTER TABLE user_integrations ADD COLUMN meta_ads_config JSONB'); } catch (e) {}
+    try { await client.query('ALTER TABLE agents ADD COLUMN model_id INTEGER'); } catch (e) {}
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS ai_models (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        api_model VARCHAR(255) NOT NULL,
+        api_provider VARCHAR(100) DEFAULT 'openai',
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
     
     const plans = await client.query('SELECT COUNT(*) FROM plans');
     if (parseInt(plans.rows[0].count) === 0) {
@@ -246,6 +258,29 @@ async function start() {
         ('Business', 99.99, 10000, '{"api_access": true}'),
         ('Enterprise', 299.99, 999999, '{"priority": true, "support": true}')
       `);
+    }
+
+    // Seed ai_models
+    const models = await client.query('SELECT COUNT(*) FROM ai_models');
+    if (parseInt(models.rows[0].count) === 0) {
+      await client.query(`
+        INSERT INTO ai_models (name, api_model, api_provider) VALUES
+        ('Pivot Lite', 'gpt-4o-mini', 'openai'),
+        ('Pivot Pro', 'gpt-4o', 'openai'),
+        ('Pivot Max', 'gpt-4-turbo', 'openai')
+      `);
+    }
+
+    // Seed admin user
+    const bcrypt = require('bcryptjs');
+    const adminExists = await client.query("SELECT id FROM users WHERE role = 'admin' LIMIT 1");
+    if (adminExists.rows.length === 0) {
+      const hash = await bcrypt.hash('PivotAdmin2024!', 10);
+      await client.query(
+        "INSERT INTO users (email, password_hash, name, role) VALUES ('admin@pivotsoluciones.com', $1, 'Administrador', 'admin') ON CONFLICT (email) DO UPDATE SET role = 'admin'",
+        [hash]
+      );
+      console.log('Admin user created: admin@pivotsoluciones.com / PivotAdmin2024!');
     }
     
     client.release();

@@ -79,7 +79,9 @@ export default function Dashboard() {
               </Link>
             )}
             <span className="text-slate-300">|</span>
-            <span className="text-slate-600 text-sm">{user?.name}</span>
+            <Link to="/account" className="text-slate-600 font-medium hover:text-brand-600 transition-colors text-sm flex items-center gap-2">
+              <span className="bg-slate-100 px-2 py-1 rounded text-xs">👤</span> {user?.name}
+            </Link>
             <button onClick={logout} className="text-slate-500 hover:text-slate-700 text-sm">
               Cerrar Sesión
             </button>

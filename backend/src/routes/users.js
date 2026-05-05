@@ -63,4 +63,31 @@ router.get('/my-agent', auth, async (req, res) => {
   }
 });
 
+// Get available AI models (for agent config)
+router.get('/models', auth, async (req, res) => {
+  try {
+    const result = await req.pool.query('SELECT id, name, api_provider FROM ai_models WHERE is_active = true ORDER BY id');
+    res.json(result.rows);
+  } catch (error) {
+    res.json([]);
+  }
+});
+
+// Get integrations status
+router.get('/integrations-status', auth, async (req, res) => {
+  try {
+    const result = await req.pool.query('SELECT whatsapp_config, instagram_config, google_config, meta_ads_config FROM user_integrations WHERE user_id = $1', [req.user.id]);
+    if (result.rows.length === 0) return res.json({});
+    const r = result.rows[0];
+    res.json({
+      whatsapp: !!r.whatsapp_config,
+      instagram: !!r.instagram_config,
+      google: !!r.google_config,
+      meta_ads: !!r.meta_ads_config
+    });
+  } catch (error) {
+    res.json({});
+  }
+});
+
 module.exports = router;

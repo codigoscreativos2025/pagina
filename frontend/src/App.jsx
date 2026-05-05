@@ -11,6 +11,7 @@ import Automations from './pages/Automations'
 import Integrations from './pages/Integrations'
 import MetaAds from './pages/MetaAds'
 import PrivacyPolicy from './pages/PrivacyPolicy'
+import Account from './pages/Account'
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth()
@@ -40,6 +41,7 @@ function AppRoutes() {
           <Route path="/integrations" element={<PrivateRoute><Integrations /></PrivateRoute>} />
           <Route path="/meta-ads" element={<PrivateRoute><MetaAds /></PrivateRoute>} />
           <Route path="/plans" element={<PrivateRoute><Plans /></PrivateRoute>} />
+          <Route path="/account" element={<PrivateRoute><Account /></PrivateRoute>} />
           <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
           <Route path="/privacyPolicy" element={<PrivacyPolicy />} />
           <Route path="/" element={<Navigate to="/dashboard" />} />

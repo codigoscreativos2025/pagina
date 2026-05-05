@@ -12,6 +12,7 @@ const planRoutes = require('./routes/plans');
 const webhookRoutes = require('./routes/webhooks');
 const adminRoutes = require('./routes/admin');
 const crmRoutes = require('./routes/crm');
+const funnelRoutes = require('./routes/funnels');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -62,6 +63,7 @@ app.use('/api/plans', planRoutes);
 app.use('/api/webhooks', webhookRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/crm', crmRoutes);
+app.use('/api/funnels', funnelRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
@@ -138,10 +140,49 @@ async function start() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS funnels (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        name VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS stages (
+        id SERIAL PRIMARY KEY,
+        funnel_id INTEGER REFERENCES funnels(id),
+        name VARCHAR(255) NOT NULL,
+        color VARCHAR(50) DEFAULT 'bg-gray-100 text-gray-800',
+        ai_enabled BOOLEAN DEFAULT true,
+        ai_timeout_hours INTEGER DEFAULT 0,
+        order_index INTEGER DEFAULT 0
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tags (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        name VARCHAR(255) NOT NULL,
+        color VARCHAR(50) DEFAULT 'bg-gray-100 text-gray-800'
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS lead_tags (
+        lead_id INTEGER REFERENCES leads(id),
+        tag_id INTEGER REFERENCES tags(id),
+        PRIMARY KEY (lead_id, tag_id)
+      )
+    `);
     
     // Migrations seguras
     try { await client.query('ALTER TABLE leads ADD COLUMN is_ai_active BOOLEAN DEFAULT true'); } catch (e) {}
     try { await client.query('ALTER TABLE leads ADD COLUMN last_client_message_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP'); } catch (e) {}
+    try { await client.query('ALTER TABLE leads ADD COLUMN stage_id INTEGER REFERENCES stages(id)'); } catch (e) {}
     
     const plans = await client.query('SELECT COUNT(*) FROM plans');
     if (parseInt(plans.rows[0].count) === 0) {

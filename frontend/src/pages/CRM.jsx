@@ -3,18 +3,13 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import api from '../services/api'
 
-const STAGES = [
-  { id: 'nuevo', label: 'Nuevo', color: 'bg-blue-100 text-blue-800' },
-  { id: 'contactado', label: 'Contactado', color: 'bg-yellow-100 text-yellow-800' },
-  { id: 'calificado', label: 'Calificado', color: 'bg-purple-100 text-purple-800' },
-  { id: 'cerrado', label: 'Cerrado', color: 'bg-green-100 text-green-800' }
-]
-
 export default function CRM() {
   const { user } = useAuth()
   const [leads, setLeads] = useState([])
   const [activeLead, setActiveLead] = useState(null)
   const [messages, setMessages] = useState([])
+  const [stages, setStages] = useState([])
+  const [tags, setTags] = useState([])
   const [loading, setLoading] = useState(true)
   const [selectedStage, setSelectedStage] = useState('all')
   const [messageInput, setMessageInput] = useState('')
@@ -22,7 +17,7 @@ export default function CRM() {
   const messagesEndRef = useRef(null)
 
   useEffect(() => {
-    loadLeads()
+    loadInitialData()
     const interval = setInterval(loadLeads, 10000) // Poll every 10s
     return () => clearInterval(interval)
   }, [])
@@ -43,6 +38,20 @@ export default function CRM() {
     scrollToBottom()
   }, [messages])
 
+  const loadInitialData = async () => {
+    try {
+      const [funnelRes, tagsRes] = await Promise.all([
+        api.get('/funnels'),
+        api.get('/funnels/tags')
+      ])
+      setStages(funnelRes.data.stages || [])
+      setTags(tagsRes.data.tags || [])
+      await loadLeads()
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
   const loadLeads = async () => {
     try {
       const res = await api.get('/crm/leads')
@@ -62,12 +71,32 @@ export default function CRM() {
     }
   }
 
-  const updateLeadStatus = async (leadId, status) => {
+  const updateLeadStatus = async (leadId, stage_id) => {
     try {
-      await api.put(`/crm/leads/${leadId}/status`, { status })
-      setLeads(leads.map(l => l.id === leadId ? { ...l, status } : l))
+      const res = await api.put(`/crm/leads/${leadId}/stage`, { stage_id })
+      setLeads(leads.map(l => l.id === leadId ? { ...l, stage_id, is_ai_active: res.data.aiDisabled ? false : l.is_ai_active } : l))
       if (activeLead?.id === leadId) {
-        setActiveLead({ ...activeLead, status })
+        setActiveLead({ ...activeLead, stage_id, is_ai_active: res.data.aiDisabled ? false : activeLead.is_ai_active })
+      }
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const toggleTag = async (tag) => {
+    if (!activeLead) return
+    const hasTag = activeLead.tags?.find(t => t.id === tag.id)
+    try {
+      if (hasTag) {
+        await api.delete(`/crm/leads/${activeLead.id}/tags/${tag.id}`)
+        const newTags = activeLead.tags.filter(t => t.id !== tag.id)
+        setActiveLead({ ...activeLead, tags: newTags })
+        setLeads(leads.map(l => l.id === activeLead.id ? { ...l, tags: newTags } : l))
+      } else {
+        await api.post(`/crm/leads/${activeLead.id}/tags`, { tag_id: tag.id })
+        const newTags = [...(activeLead.tags || []), tag]
+        setActiveLead({ ...activeLead, tags: newTags })
+        setLeads(leads.map(l => l.id === activeLead.id ? { ...l, tags: newTags } : l))
       }
     } catch (err) {
       console.error(err)
@@ -120,7 +149,7 @@ export default function CRM() {
 
   const filteredLeads = selectedStage === 'all' 
     ? leads 
-    : leads.filter(l => l.status === selectedStage)
+    : leads.filter(l => String(l.stage_id) === String(selectedStage))
 
   return (
     <div className="flex h-screen bg-[#f0f2f5] overflow-hidden font-sans">
@@ -143,8 +172,8 @@ export default function CRM() {
             onChange={(e) => setSelectedStage(e.target.value)}
           >
             <option value="all">Todas las Etapas</option>
-            {STAGES.map(s => (
-              <option key={s.id} value={s.id}>{s.label}</option>
+            {stages.map(s => (
+              <option key={s.id} value={s.id}>{s.name}</option>
             ))}
           </select>
         </div>
@@ -186,8 +215,8 @@ export default function CRM() {
                   </div>
                   <div className="text-sm text-gray-500 truncate flex justify-between">
                     <span>{lead.client_phone}</span>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full ${STAGES.find(s => s.id === lead.status)?.color || 'bg-gray-100'}`}>
-                      {lead.status}
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full ${stages.find(s => s.id === lead.stage_id)?.color || 'bg-gray-100 text-gray-800'}`}>
+                      {stages.find(s => s.id === lead.stage_id)?.name || lead.status || 'Nuevo'}
                     </span>
                   </div>
                 </div>
@@ -235,18 +264,46 @@ export default function CRM() {
                   </span>
                 </div>
 
+              <div className="flex flex-col items-end gap-2">
                 {/* CRM Status Dropdown */}
                 <div className="flex items-center gap-2">
                   <select 
-                    className={`text-sm rounded-full px-3 py-1 font-semibold outline-none border-none cursor-pointer ${STAGES.find(s => s.id === activeLead.status)?.color}`}
-                    value={activeLead.status}
+                    className={`text-sm rounded-full px-3 py-1 font-semibold outline-none border-none cursor-pointer ${stages.find(s => s.id === activeLead.stage_id)?.color || 'bg-gray-100 text-gray-800'}`}
+                    value={activeLead.stage_id || ''}
                     onChange={(e) => updateLeadStatus(activeLead.id, e.target.value)}
                   >
-                    {STAGES.map(s => (
-                      <option key={s.id} value={s.id} className="bg-white text-gray-900">{s.label}</option>
+                    <option value="" disabled>Seleccionar etapa</option>
+                    {stages.map(s => (
+                      <option key={s.id} value={s.id} className="bg-white text-gray-900">{s.name}</option>
                     ))}
                   </select>
                 </div>
+                
+                {/* Tags Dropdown/List */}
+                {tags.length > 0 && (
+                  <div className="flex gap-1 relative group items-center">
+                    {activeLead.tags?.map(t => (
+                      <span key={t.id} className={`text-[10px] px-2 py-0.5 rounded-full ${t.color}`}>{t.name}</span>
+                    ))}
+                    <span className="text-[10px] text-gray-500 cursor-pointer bg-white px-2 py-0.5 rounded border border-gray-200">➕</span>
+                    <div className="hidden group-hover:block absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-2 z-50 w-48 max-h-48 overflow-y-auto">
+                      {tags.map(t => {
+                        const isSelected = activeLead.tags?.find(at => at.id === t.id)
+                        return (
+                          <div 
+                            key={t.id} 
+                            onClick={() => toggleTag(t)}
+                            className={`px-2 py-1 text-xs cursor-pointer rounded mb-1 flex items-center gap-2 ${isSelected ? 'bg-brand-50' : 'hover:bg-gray-50'}`}
+                          >
+                            <input type="checkbox" checked={!!isSelected} readOnly className="rounded text-brand-600 focus:ring-0" />
+                            <span className={`px-2 py-0.5 rounded-full ${t.color}`}>{t.name}</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
               </div>
             </div>
 

@@ -6,38 +6,13 @@ router.post('/', auth, async (req, res) => {
   try {
     const { name, business_info, system_prompt, ai_config, whatsapp_config, google_sheets_config } = req.body;
     
-    const userPlan = await req.pool.query(
-      'SELECT p.* FROM users u LEFT JOIN plans p ON u.plan_id = p.id WHERE u.id = $1',
-      [req.user.id]
-    );
-    
-    const existingAgent = await req.pool.query(
-      'SELECT id FROM agents WHERE user_id = $1',
-      [req.user.id]
-    );
-    
-    if (existingAgent.rows.length > 0) {
-      const result = await req.pool.query(
-        `UPDATE agents SET 
-          name = $1, business_info = $2, system_prompt = $3, 
-          ai_config = $4, whatsapp_config = $5, google_sheets_config = $6,
-          updated_at = CURRENT_TIMESTAMP
-         WHERE user_id = $7
-         RETURNING *`,
-        [name, JSON.stringify(business_info), system_prompt, 
-         JSON.stringify(ai_config), JSON.stringify(whatsapp_config), 
-         JSON.stringify(google_sheets_config), req.user.id]
-      );
-      return res.json(result.rows[0]);
-    }
-    
     const result = await req.pool.query(
       `INSERT INTO agents (user_id, name, business_info, system_prompt, ai_config, whatsapp_config, google_sheets_config)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,
-      [req.user.id, name, JSON.stringify(business_info), system_prompt,
-       JSON.stringify(ai_config), JSON.stringify(whatsapp_config),
-       JSON.stringify(google_sheets_config)]
+      [req.user.id, name || 'Nuevo Agente', JSON.stringify(business_info || {}), system_prompt || '',
+       JSON.stringify(ai_config || {}), JSON.stringify(whatsapp_config || {}),
+       JSON.stringify(google_sheets_config || {})]
     );
     
     res.json(result.rows[0]);

@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import api from '../services/api'
 
 export default function AgentConfig() {
   const { user } = useAuth()
+  const { id } = useParams()
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
   const [agent, setAgent] = useState(null)
@@ -50,21 +51,20 @@ export default function AgentConfig() {
 
   const loadAgent = async () => {
     try {
-      const res = await api.get('/agents')
-      if (res.data.length > 0) {
-        const existingAgent = res.data[0]
-        setAgent(existingAgent)
-        setFormData({
-          name: existingAgent.name || '',
-          business_info: parseJSON(existingAgent.business_info, formData.business_info),
-          system_prompt: existingAgent.system_prompt || '',
-          whatsapp_config: parseJSON(existingAgent.whatsapp_config, formData.whatsapp_config),
-          google_sheets_config: parseJSON(existingAgent.google_sheets_config, formData.google_sheets_config),
-          is_active: existingAgent.is_active
-        })
-      }
+      const res = await api.get(`/agents/${id}`)
+      const existingAgent = res.data
+      setAgent(existingAgent)
+      setFormData({
+        name: existingAgent.name || '',
+        business_info: parseJSON(existingAgent.business_info, formData.business_info),
+        system_prompt: existingAgent.system_prompt || '',
+        whatsapp_config: parseJSON(existingAgent.whatsapp_config, formData.whatsapp_config),
+        google_sheets_config: parseJSON(existingAgent.google_sheets_config, formData.google_sheets_config),
+        is_active: existingAgent.is_active
+      })
     } catch (err) {
       console.error(err)
+      if (err.response?.status === 404) navigate('/dashboard')
     }
   }
 
@@ -73,7 +73,7 @@ export default function AgentConfig() {
     setLoading(true)
     setSaved(false)
     try {
-      await api.post('/agents', formData)
+      await api.put(`/agents/${id}`, formData)
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)
     } catch (err) {
@@ -132,9 +132,19 @@ export default function AgentConfig() {
           {/* Información del Negocio */}
           <section className="bg-white rounded-xl p-6 border border-slate-200">
             <h2 className="text-lg font-bold text-slate-900 mb-4">🏢 Información del Negocio</h2>
+            <div className="mb-4">
+              <label className="block text-slate-600 text-sm font-medium mb-2">Nombre del Agente en el CRM</label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => handleChange(null, 'name', e.target.value)}
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-brand-500 font-bold"
+                placeholder="Ej: Agente Principal"
+              />
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-slate-600 text-sm font-medium mb-2">Nombre del Negocio</label>
+                <label className="block text-slate-600 text-sm font-medium mb-2">Nombre de la Empresa</label>
                 <input
                   type="text"
                   value={formData.business_info.nombre}
@@ -220,24 +230,56 @@ export default function AgentConfig() {
             />
           </section>
 
-          {/* Meta Integrations Banner */}
-          <section className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100 flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-bold text-slate-900 mb-1">🔗 Conectar con WhatsApp e Instagram</h2>
-              <p className="text-slate-600 text-sm">Gestiona tus cuentas de Meta en el nuevo Centro de Integraciones.</p>
+          {/* Integraciones de Canales */}
+          <section className="bg-white rounded-xl p-6 border border-slate-200">
+            <h2 className="text-lg font-bold text-slate-900 mb-4">💬 Integraciones de Canales</h2>
+            
+            <div className="mb-6 pb-6 border-b border-slate-100">
+              <h3 className="font-bold text-slate-800 mb-2 flex items-center gap-2"><span>📱</span> WhatsApp Business (Manual)</h3>
+              <p className="text-slate-500 text-sm mb-4">Configura las credenciales obtenidas en Meta for Developers.</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-slate-600 text-sm font-medium mb-2">WhatsApp: Número de Teléfono</label>
+                  <input
+                    type="text"
+                    value={formData.whatsapp_config?.phone || ''}
+                    onChange={(e) => handleChange('whatsapp_config', 'phone', e.target.value)}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-brand-500"
+                    placeholder="Ej: 15556433397"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-600 text-sm font-medium mb-2">WhatsApp: Phone Number ID</label>
+                  <input
+                    type="text"
+                    value={formData.whatsapp_config?.phone_number_id || ''}
+                    onChange={(e) => handleChange('whatsapp_config', 'phone_number_id', e.target.value)}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-brand-500"
+                    placeholder="Ej: 1045231415252..."
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-slate-600 text-sm font-medium mb-2">Meta: Access Token</label>
+                  <input
+                    type="password"
+                    value={formData.whatsapp_config?.access_token || ''}
+                    onChange={(e) => handleChange('whatsapp_config', 'access_token', e.target.value)}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-brand-500 font-mono text-sm"
+                    placeholder="EAXXXX..."
+                  />
+                </div>
+              </div>
             </div>
-            <button
-              type="button"
-              onClick={() => navigate('/integrations')}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700"
-            >
-              Ir a Integraciones →
-            </button>
+
+            <div>
+              <h3 className="font-bold text-slate-800 mb-2 flex items-center gap-2"><span>📸</span> Instagram (Próximamente)</h3>
+              <p className="text-slate-500 text-sm mb-4">La conexión oficial de Instagram estará disponible en breve para este agente.</p>
+            </div>
           </section>
 
-          {/* Google Sheets */}
+          {/* Google Workspace */}
           <section className="bg-white rounded-xl p-6 border border-slate-200">
-            <h2 className="text-lg font-bold text-slate-900 mb-4">📊 Google Sheets</h2>
+            <h2 className="text-lg font-bold text-slate-900 mb-4">📊 Integración con Google Workspace (Sheets)</h2>
             <p className="text-slate-600 text-sm mb-4">
               Conecta una hoja de cálculo con tus productos o servicios para que el agente pueda consultarlos.
             </p>

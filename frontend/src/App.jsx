@@ -7,7 +7,7 @@ import AgentConfig from './pages/AgentConfig'
 import Plans from './pages/Plans'
 import Admin from './pages/Admin'
 import CRM from './pages/CRM'
-import Integrations from './pages/Integrations'
+import Automations from './pages/Automations'
 import PrivacyPolicy from './pages/PrivacyPolicy'
 
 function PrivateRoute({ children }) {
@@ -31,9 +31,10 @@ function AppRoutes() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-          <Route path="/config" element={<PrivateRoute><AgentConfig /></PrivateRoute>} />
+          <Route path="/config/:id" element={<PrivateRoute><AgentConfig /></PrivateRoute>} />
+          <Route path="/config" element={<Navigate to="/dashboard" />} />
           <Route path="/crm" element={<PrivateRoute><CRM /></PrivateRoute>} />
-          <Route path="/integrations" element={<PrivateRoute><Integrations /></PrivateRoute>} />
+          <Route path="/automations" element={<PrivateRoute><Automations /></PrivateRoute>} />
           <Route path="/plans" element={<PrivateRoute><Plans /></PrivateRoute>} />
           <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
           <Route path="/privacyPolicy" element={<PrivacyPolicy />} />
@@ -47,8 +48,8 @@ function AppRoutes() {
             &copy; {new Date().getFullYear()} Pivot Soluciones. Todos los derechos reservados.
           </p>
           <div className="flex space-x-6">
-            <Link to="/integrations" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">
-              Integraciones
+            <Link to="/automations" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">
+              Automatizaciones
             </Link>
             <a href="/privacyPolicy" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">
               Política de Privacidad

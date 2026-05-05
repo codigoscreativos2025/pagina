@@ -9,6 +9,7 @@ import Admin from './pages/Admin'
 import CRM from './pages/CRM'
 import Automations from './pages/Automations'
 import Integrations from './pages/Integrations'
+import MetaAds from './pages/MetaAds'
 import PrivacyPolicy from './pages/PrivacyPolicy'
 
 function PrivateRoute({ children }) {
@@ -37,6 +38,7 @@ function AppRoutes() {
           <Route path="/crm" element={<PrivateRoute><CRM /></PrivateRoute>} />
           <Route path="/automations" element={<PrivateRoute><Automations /></PrivateRoute>} />
           <Route path="/integrations" element={<PrivateRoute><Integrations /></PrivateRoute>} />
+          <Route path="/meta-ads" element={<PrivateRoute><MetaAds /></PrivateRoute>} />
           <Route path="/plans" element={<PrivateRoute><Plans /></PrivateRoute>} />
           <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
           <Route path="/privacyPolicy" element={<PrivacyPolicy />} />

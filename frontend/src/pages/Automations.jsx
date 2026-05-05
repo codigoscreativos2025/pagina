@@ -1,137 +1,138 @@
-import { useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import api from '../services/api'
-import { ReactFlow, Controls, Background, applyNodeChanges, applyEdgeChanges, addEdge } from '@xyflow/react'
+import { ReactFlow, Controls, Background, MiniMap, applyNodeChanges, applyEdgeChanges, addEdge, Handle, Position } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
+
+const NODE_TYPES_CATALOG = [
+  { type: 'trigger_stage', icon: '⚡', label: 'Lead entra a etapa', color: '#3b82f6', category: 'Disparadores' },
+  { type: 'trigger_message', icon: '💬', label: 'Mensaje recibido', color: '#8b5cf6', category: 'Disparadores' },
+  { type: 'trigger_timer', icon: '⏰', label: 'Temporizador', color: '#f59e0b', category: 'Disparadores' },
+  { type: 'condition_field', icon: '🔀', label: 'Si campo = valor', color: '#06b6d4', category: 'Condiciones' },
+  { type: 'condition_tag', icon: '🏷️', label: 'Si tiene etiqueta', color: '#14b8a6', category: 'Condiciones' },
+  { type: 'action_message', icon: '📩', label: 'Enviar mensaje', color: '#10b981', category: 'Acciones' },
+  { type: 'action_move', icon: '➡️', label: 'Mover a etapa', color: '#6366f1', category: 'Acciones' },
+  { type: 'action_tag', icon: '🏷️', label: 'Asignar etiqueta', color: '#ec4899', category: 'Acciones' },
+  { type: 'action_notify', icon: '🔔', label: 'Notificar equipo', color: '#f97316', category: 'Acciones' },
+  { type: 'action_wait', icon: '⏳', label: 'Esperar tiempo', color: '#78716c', category: 'Acciones' },
+]
+
+// Custom node component
+function FlowNode({ data, selected }) {
+  const cat = NODE_TYPES_CATALOG.find(n => n.type === data.nodeType) || {}
+  return (
+    <div className={`px-4 py-3 rounded-xl border-2 shadow-lg min-w-[180px] bg-white transition-all ${selected ? 'ring-2 ring-blue-400 scale-105' : ''}`}
+      style={{ borderColor: cat.color || '#94a3b8' }}>
+      {data.nodeType?.startsWith('trigger') ? null : <Handle type="target" position={Position.Top} className="!w-3 !h-3 !bg-slate-400" />}
+      <div className="flex items-center gap-2 mb-1">
+        <span className="text-lg">{cat.icon}</span>
+        <span className="text-xs font-bold uppercase tracking-wide" style={{ color: cat.color }}>{cat.label}</span>
+      </div>
+      {data.label && <p className="text-sm text-slate-700 font-medium">{data.label}</p>}
+      {data.nodeType?.startsWith('trigger') ? null : null}
+      <Handle type="source" position={Position.Bottom} className="!w-3 !h-3 !bg-slate-400" />
+    </div>
+  )
+}
+
+const nodeTypes = { flowNode: FlowNode }
 
 export default function Automations() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const [loading, setLoading] = useState(true)
-  const [funnel, setFunnel] = useState(null)
+  const [tab, setTab] = useState('flows') // flows | bots
+  const [flows, setFlows] = useState([])
+  const [pibots, setPibots] = useState([])
   const [stages, setStages] = useState([])
   const [tags, setTags] = useState([])
-  
-  // React Flow state
+
+  // Editor state
+  const [editingFlow, setEditingFlow] = useState(null)
   const [nodes, setNodes] = useState([])
   const [edges, setEdges] = useState([])
+  const [selectedNode, setSelectedNode] = useState(null)
+  const [nodeConfig, setNodeConfig] = useState({})
+  const reactFlowRef = useRef(null)
 
-  const [newTag, setNewTag] = useState({ name: '', color: 'bg-slate-100 text-slate-800' })
-  
-  // PIBots state
-  const [pibots, setPibots] = useState([])
-  const [newBot, setNewBot] = useState({ name: '', schedule_cron: '0 10 * * *', is_active: true })
+  // Bot editor
+  const [editingBot, setEditingBot] = useState(null)
+  const [botForm, setBotForm] = useState({ name: '', trigger_type: 'schedule', is_active: true, conditions: [], actions: [] })
 
-  useEffect(() => {
-    loadData()
-  }, [])
+  useEffect(() => { loadData() }, [])
 
   const loadData = async () => {
     try {
       const [funnelRes, tagsRes, botsRes] = await Promise.all([
-        api.get('/funnels'),
-        api.get('/funnels/tags'),
-        api.get('/automations/pibots')
+        api.get('/funnels'), api.get('/funnels/tags'), api.get('/automations/pibots')
       ])
-      setFunnel(funnelRes.data.funnel)
-      setStages(funnelRes.data.stages)
-      setTags(tagsRes.data.tags)
-      if (botsRes.data.success) {
-        setPibots(botsRes.data.bots)
-      }
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setLoading(false)
-    }
+      setStages(funnelRes.data.stages || [])
+      setTags(tagsRes.data.tags || [])
+      if (botsRes.data.success) setPibots(botsRes.data.bots || [])
+      // Generate sample flows from stages
+      const autoFlows = (funnelRes.data.stages || []).map((st, i) => ({
+        id: `flow-${st.id}`, name: `Flujo: ${st.name}`, stage_id: st.id,
+        is_active: st.ai_enabled, updated_at: new Date().toISOString(),
+        nodes_count: 2
+      }))
+      setFlows(autoFlows)
+    } catch (err) { console.error(err) }
+    finally { setLoading(false) }
   }
 
-  const handleUpdateStage = async (stageId, field, value) => {
-    const stage = stages.find(s => s.id === stageId)
-    if (!stage) return
-
-    const updatedStage = { ...stage, [field]: value }
-    setStages(stages.map(s => s.id === stageId ? updatedStage : s))
-
-    try {
-      await api.put(`/funnels/stages/${stageId}`, updatedStage)
-    } catch (err) {
-      console.error('Error actualizando etapa', err)
-      alert('Error guardando los cambios de la etapa')
-      loadData()
-    }
+  // Flow editor handlers
+  const openFlowEditor = (flow) => {
+    const stage = stages.find(s => s.id === flow.stage_id)
+    const initNodes = [
+      { id: 'trigger-1', type: 'flowNode', position: { x: 250, y: 50 }, data: { nodeType: 'trigger_stage', label: stage?.name || 'Lead entra' } },
+      { id: 'action-1', type: 'flowNode', position: { x: 250, y: 200 }, data: { nodeType: stage?.ai_enabled ? 'action_message' : 'action_notify', label: stage?.ai_enabled ? 'Responder con IA' : 'Notificar al equipo' } },
+    ]
+    const initEdges = [{ id: 'e1', source: 'trigger-1', target: 'action-1', animated: true, style: { stroke: '#3b82f6', strokeWidth: 2 } }]
+    setNodes(initNodes); setEdges(initEdges); setEditingFlow(flow); setSelectedNode(null)
   }
 
-  // Generate initial nodes and edges based on stages
-  useEffect(() => {
-    if (stages.length > 0) {
-      const initialNodes = []
-      const initialEdges = []
-      
-      stages.forEach((stage, index) => {
-        // Trigger Node
-        initialNodes.push({
-          id: `trigger-${stage.id}`,
-          type: 'input',
-          position: { x: 100, y: index * 150 },
-          data: { label: `⚡ Lead entra a: ${stage.name}` },
-          style: { border: '2px solid #3b82f6', borderRadius: '8px', background: '#eff6ff', padding: '10px', fontWeight: 'bold' }
-        })
-        
-        // Action Node
-        initialNodes.push({
-          id: `action-${stage.id}`,
-          position: { x: 400, y: index * 150 },
-          data: { label: stage.ai_enabled ? '🤖 IA Activa: Responder automáticamente' : '👤 Asignar a Humano (Pausar IA)' },
-          style: { border: `2px solid ${stage.ai_enabled ? '#10b981' : '#f59e0b'}`, borderRadius: '8px', background: stage.ai_enabled ? '#ecfdf5' : '#fef3c7', padding: '10px' }
-        })
+  const onNodesChange = useCallback((ch) => setNodes(n => applyNodeChanges(ch, n)), [])
+  const onEdgesChange = useCallback((ch) => setEdges(e => applyEdgeChanges(ch, e)), [])
+  const onConnect = useCallback((p) => setEdges(e => addEdge({ ...p, animated: true, style: { stroke: '#3b82f6', strokeWidth: 2 } }, e)), [])
 
-        // Edge
-        initialEdges.push({
-          id: `e-${stage.id}`,
-          source: `trigger-${stage.id}`,
-          target: `action-${stage.id}`,
-          animated: stage.ai_enabled,
-          style: { stroke: stage.ai_enabled ? '#10b981' : '#94a3b8', strokeWidth: 2 }
-        })
-      })
-
-      setNodes(initialNodes)
-      setEdges(initialEdges)
+  const addNode = (catalogItem) => {
+    const id = `node-${Date.now()}`
+    const newNode = {
+      id, type: 'flowNode',
+      position: { x: 200 + Math.random() * 200, y: 100 + nodes.length * 80 },
+      data: { nodeType: catalogItem.type, label: '' }
     }
-  }, [stages])
-
-  const onNodesChange = (changes) => setNodes((nds) => applyNodeChanges(changes, nds))
-  const onEdgesChange = (changes) => setEdges((eds) => applyEdgeChanges(changes, eds))
-  const onConnect = (params) => setEdges((eds) => addEdge(params, eds))
-
-  const handleCreateTag = async (e) => {
-    e.preventDefault()
-    if (!newTag.name) return
-    
-    try {
-      const res = await api.post('/funnels/tags', newTag)
-      setTags([...tags, res.data.tag])
-      setNewTag({ name: '', color: 'bg-slate-100 text-slate-800' })
-    } catch (err) {
-      console.error(err)
-      alert('Error creando etiqueta')
-    }
+    setNodes(n => [...n, newNode])
   }
 
-  const handleCreatePIBot = async (e) => {
-    e.preventDefault()
-    if (!newBot.name || !newBot.schedule_cron) return
-    
+  const onNodeClick = (_, node) => {
+    setSelectedNode(node)
+    setNodeConfig(node.data || {})
+  }
+
+  const updateNodeConfig = () => {
+    if (!selectedNode) return
+    setNodes(ns => ns.map(n => n.id === selectedNode.id ? { ...n, data: { ...n.data, ...nodeConfig } } : n))
+    setSelectedNode(null)
+  }
+
+  const deleteSelectedNode = () => {
+    if (!selectedNode) return
+    setNodes(ns => ns.filter(n => n.id !== selectedNode.id))
+    setEdges(es => es.filter(e => e.source !== selectedNode.id && e.target !== selectedNode.id))
+    setSelectedNode(null)
+  }
+
+  // PIBot handlers
+  const handleCreateBot = async () => {
+    if (!botForm.name) return
     try {
-      const res = await api.post('/automations/pibots', { ...newBot, trigger_type: 'schedule', conditions: [], actions: [] })
+      const res = await api.post('/automations/pibots', { ...botForm, trigger_type: botForm.trigger_type || 'schedule', conditions: botForm.conditions, actions: botForm.actions })
       setPibots([...pibots, res.data.bot])
-      setNewBot({ name: '', schedule_cron: '0 10 * * *', is_active: true })
-    } catch (err) {
-      console.error(err)
-      alert('Error creando PIBot')
-    }
+      setBotForm({ name: '', trigger_type: 'schedule', is_active: true, conditions: [], actions: [] })
+      setEditingBot(null)
+    } catch (err) { alert('Error creando bot') }
   }
 
   const toggleBot = async (bot) => {
@@ -139,183 +140,296 @@ export default function Automations() {
       const updated = { ...bot, is_active: !bot.is_active }
       await api.put(`/automations/pibots/${bot.id}`, updated)
       setPibots(pibots.map(b => b.id === bot.id ? updated : b))
-    } catch (err) {
-      console.error(err)
-    }
+    } catch (err) { console.error(err) }
   }
 
-  if (loading) {
-    return <div className="min-h-screen flex items-center justify-center">Cargando automatizaciones...</div>
+  if (loading) return <div className="min-h-screen flex items-center justify-center text-slate-500">Cargando automatizaciones...</div>
+
+  // ===================== FLOW EDITOR VIEW =====================
+  if (editingFlow) {
+    const categories = [...new Set(NODE_TYPES_CATALOG.map(n => n.category))]
+    return (
+      <div className="h-screen flex flex-col bg-slate-900">
+        {/* Top bar */}
+        <div className="bg-slate-800 border-b border-slate-700 px-4 py-3 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3">
+            <button onClick={() => setEditingFlow(null)} className="text-slate-400 hover:text-white text-sm">← Volver</button>
+            <span className="text-white font-bold">{editingFlow.name}</span>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={() => alert('Flujo guardado!')} className="px-4 py-1.5 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700">💾 Guardar</button>
+          </div>
+        </div>
+
+        <div className="flex flex-1 overflow-hidden">
+          {/* Left Panel - Node Catalog */}
+          <div className="w-64 bg-slate-800 border-r border-slate-700 overflow-y-auto shrink-0">
+            <div className="p-3">
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Nodos disponibles</p>
+              {categories.map(cat => (
+                <div key={cat} className="mb-4">
+                  <p className="text-[10px] font-bold text-slate-500 uppercase mb-2">{cat}</p>
+                  <div className="space-y-1.5">
+                    {NODE_TYPES_CATALOG.filter(n => n.category === cat).map(item => (
+                      <button key={item.type} onClick={() => addNode(item)}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left hover:bg-slate-700 transition-colors group">
+                        <span className="text-lg">{item.icon}</span>
+                        <span className="text-xs text-slate-300 font-medium group-hover:text-white">{item.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Canvas */}
+          <div className="flex-1" ref={reactFlowRef}>
+            <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes}
+              onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect}
+              onNodeClick={onNodeClick} fitView
+              style={{ background: '#0f172a' }}>
+              <Controls className="!bg-slate-700 !border-slate-600 !text-white [&_button]:!bg-slate-600 [&_button]:!border-slate-500 [&_button]:!text-white" />
+              <MiniMap className="!bg-slate-800" nodeColor="#3b82f6" />
+              <Background color="#1e293b" gap={20} />
+            </ReactFlow>
+          </div>
+
+          {/* Right Panel - Node Config */}
+          {selectedNode && (
+            <div className="w-72 bg-slate-800 border-l border-slate-700 overflow-y-auto shrink-0">
+              <div className="p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-sm font-bold text-white">Configurar nodo</p>
+                  <button onClick={() => setSelectedNode(null)} className="text-slate-400 hover:text-white">✕</button>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">Etiqueta</label>
+                    <input value={nodeConfig.label || ''} onChange={e => setNodeConfig(p => ({ ...p, label: e.target.value }))}
+                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm" placeholder="Nombre del nodo" />
+                  </div>
+                  {nodeConfig.nodeType === 'action_message' && (
+                    <div>
+                      <label className="block text-xs text-slate-400 mb-1">Mensaje</label>
+                      <textarea rows="3" value={nodeConfig.message || ''} onChange={e => setNodeConfig(p => ({ ...p, message: e.target.value }))}
+                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm" placeholder="Escribe el mensaje..." />
+                    </div>
+                  )}
+                  {nodeConfig.nodeType === 'action_move' && (
+                    <div>
+                      <label className="block text-xs text-slate-400 mb-1">Mover a etapa</label>
+                      <select value={nodeConfig.stage_id || ''} onChange={e => setNodeConfig(p => ({ ...p, stage_id: e.target.value }))}
+                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm">
+                        <option value="">Seleccionar...</option>
+                        {stages.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                      </select>
+                    </div>
+                  )}
+                  {nodeConfig.nodeType === 'action_wait' && (
+                    <div>
+                      <label className="block text-xs text-slate-400 mb-1">Esperar (minutos)</label>
+                      <input type="number" value={nodeConfig.wait_minutes || 30} onChange={e => setNodeConfig(p => ({ ...p, wait_minutes: e.target.value }))}
+                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm" />
+                    </div>
+                  )}
+                  {nodeConfig.nodeType === 'trigger_timer' && (
+                    <div>
+                      <label className="block text-xs text-slate-400 mb-1">Cada cuántas horas</label>
+                      <input type="number" value={nodeConfig.hours || 24} onChange={e => setNodeConfig(p => ({ ...p, hours: e.target.value }))}
+                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm" />
+                    </div>
+                  )}
+                  {nodeConfig.nodeType === 'condition_field' && (
+                    <>
+                      <div>
+                        <label className="block text-xs text-slate-400 mb-1">Campo</label>
+                        <input value={nodeConfig.field || ''} onChange={e => setNodeConfig(p => ({ ...p, field: e.target.value }))}
+                          className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm" placeholder="Ej: ciudad" />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-slate-400 mb-1">Valor</label>
+                        <input value={nodeConfig.value || ''} onChange={e => setNodeConfig(p => ({ ...p, value: e.target.value }))}
+                          className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm" placeholder="Ej: Bogotá" />
+                      </div>
+                    </>
+                  )}
+                  <div className="pt-3 flex gap-2">
+                    <button onClick={updateNodeConfig} className="flex-1 px-3 py-2 bg-brand-600 text-white rounded-lg text-sm font-bold hover:bg-brand-700">Aplicar</button>
+                    <button onClick={deleteSelectedNode} className="px-3 py-2 bg-red-600 text-white rounded-lg text-sm font-bold hover:bg-red-700">🗑️</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    )
   }
 
-  const colorOptions = [
-    { value: 'bg-slate-100 text-slate-800', label: 'Gris' },
-    { value: 'bg-blue-100 text-blue-800', label: 'Azul' },
-    { value: 'bg-green-100 text-green-800', label: 'Verde' },
-    { value: 'bg-yellow-100 text-yellow-800', label: 'Amarillo' },
-    { value: 'bg-red-100 text-red-800', label: 'Rojo' },
-    { value: 'bg-purple-100 text-purple-800', label: 'Morado' },
-    { value: 'bg-pink-100 text-pink-800', label: 'Rosa' }
+  // ===================== MAIN LIST VIEW =====================
+  const TABS = [
+    { id: 'flows', label: '⚡ Flujos', count: flows.length },
+    { id: 'bots', label: '🤖 PIBots', count: pibots.length },
+  ]
+
+  // Schedule options for bots
+  const SCHEDULE_OPTIONS = [
+    { value: 'every_hour', label: 'Cada hora' },
+    { value: 'every_4h', label: 'Cada 4 horas' },
+    { value: 'daily_9am', label: 'Diario a las 9 AM' },
+    { value: 'daily_2pm', label: 'Diario a las 2 PM' },
+    { value: 'weekly_mon', label: 'Cada lunes' },
+  ]
+
+  const TRIGGER_OPTIONS = [
+    { value: 'schedule', label: '⏰ Por horario', desc: 'Se ejecuta automáticamente según un horario' },
+    { value: 'stage_change', label: '📊 Cambio de etapa', desc: 'Cuando un lead cambia de etapa en el embudo' },
+    { value: 'new_lead', label: '🆕 Nuevo lead', desc: 'Cuando entra un nuevo lead al CRM' },
+    { value: 'custom_field', label: '📝 Campo personalizado', desc: 'Cuando un campo del lead cambia de valor' },
   ]
 
   return (
     <div className="min-h-screen bg-slate-50">
       <nav className="bg-white border-b border-slate-200 px-6 py-4">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <button onClick={() => navigate('/dashboard')} className="text-slate-600 hover:text-slate-900 flex items-center gap-2">
-            ← Volver al Dashboard
-          </button>
-          <h1 className="text-xl font-bold text-slate-800">Embudos y Automatizaciones</h1>
-          <div className="w-20"></div>
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <button onClick={() => navigate('/dashboard')} className="text-slate-600 hover:text-slate-900 flex items-center gap-2">← Dashboard</button>
+          <h1 className="text-xl font-bold text-slate-800">⚙️ Automatizaciones</h1>
+          <div />
         </div>
       </nav>
 
-      <div className="max-w-6xl mx-auto px-6 py-8">
-        
-        {/* Visual Automation Builder */}
-        <section className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-8 flex flex-col h-[600px]">
-          <div className="p-6 border-b border-slate-200 shrink-0 flex justify-between items-center bg-white z-10">
-            <div>
-              <h2 className="text-xl font-bold text-slate-900">Flujos de Automatización ({funnel?.name})</h2>
-              <p className="text-slate-500 mt-1 text-sm">Visualiza y conecta las reglas de tu CRM (Drag & Drop).</p>
-            </div>
-            <button className="px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-bold hover:bg-brand-700">
-              Guardar Flujo
+      <div className="max-w-5xl mx-auto px-6 py-8">
+        {/* Tabs */}
+        <div className="flex gap-1 bg-slate-200 p-1 rounded-xl mb-8 max-w-md">
+          {TABS.map(t => (
+            <button key={t.id} onClick={() => setTab(t.id)}
+              className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-bold transition-all ${tab === t.id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+              {t.label} <span className="ml-1 text-xs opacity-60">({t.count})</span>
             </button>
-          </div>
-          <div className="flex-1 bg-slate-50 relative">
-            <ReactFlow 
-              nodes={nodes}
-              edges={edges}
-              onNodesChange={onNodesChange}
-              onEdgesChange={onEdgesChange}
-              onConnect={onConnect}
-              fitView
-            >
-              <Background color="#cbd5e1" gap={16} />
-              <Controls />
-            </ReactFlow>
-          </div>
-        </section>
+          ))}
+        </div>
 
-        {/* PIBots Config */}
-        <section className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-8">
-          <div className="p-6 border-b border-slate-200 bg-brand-50">
-            <h2 className="text-xl font-bold text-brand-900 flex items-center gap-2">🤖 PIBots (Cron Engine)</h2>
-            <p className="text-brand-600 mt-1">Configura bots que se ejecutan automáticamente por horarios.</p>
-          </div>
-          
-          <div className="p-6 border-b border-slate-100 bg-white">
-            <form onSubmit={handleCreatePIBot} className="flex flex-wrap items-end gap-4">
-              <div className="flex-1 min-w-[200px]">
-                <label className="block text-sm font-medium text-slate-700 mb-1">Nombre del Bot</label>
-                <input 
-                  type="text" 
-                  value={newBot.name}
-                  onChange={e => setNewBot({...newBot, name: e.target.value})}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-brand-500"
-                  placeholder="Ej: Seguimiento Diario"
-                  required
-                />
-              </div>
-              <div className="w-48">
-                <label className="block text-sm font-medium text-slate-700 mb-1">Expresión Cron</label>
-                <input 
-                  type="text" 
-                  value={newBot.schedule_cron}
-                  onChange={e => setNewBot({...newBot, schedule_cron: e.target.value})}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-brand-500 font-mono text-sm"
-                  placeholder="0 10 * * *"
-                  required
-                />
-                <p className="text-[10px] text-gray-500 mt-1">Ej: 0 10 * * * = Todos los días a las 10AM</p>
-              </div>
-              <button type="submit" className="px-6 py-2 bg-brand-600 text-white font-bold rounded-lg hover:bg-brand-700 h-[42px] mb-5">
-                Crear PIBot
-              </button>
-            </form>
-          </div>
-
-          <div className="p-6">
-            {pibots.length === 0 ? (
-              <p className="text-slate-500 text-sm">No hay PIBots configurados.</p>
-            ) : (
-              <div className="space-y-3">
-                {pibots.map(bot => (
-                  <div key={bot.id} className="flex justify-between items-center p-4 border border-slate-200 rounded-lg hover:border-brand-300 transition-colors">
-                    <div>
-                      <h4 className="font-bold text-slate-800">{bot.name}</h4>
-                      <p className="text-xs text-slate-500 font-mono mt-1">Cron: {bot.schedule_cron}</p>
+        {/* FLOWS TAB */}
+        {tab === 'flows' && (
+          <div className="grid gap-4">
+            {flows.map(flow => (
+              <div key={flow.id} onClick={() => openFlowEditor(flow)}
+                className="bg-white rounded-xl border border-slate-200 p-5 hover:border-brand-300 hover:shadow-md cursor-pointer transition-all group">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${flow.is_active ? 'bg-emerald-50' : 'bg-slate-100'}`}>
+                      {flow.is_active ? '⚡' : '⏸️'}
                     </div>
-                    <div className="flex items-center gap-4">
-                      <span className={`text-xs px-2 py-1 rounded-full font-bold ${bot.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                        {bot.is_active ? 'ACTIVO' : 'PAUSADO'}
-                      </span>
-                      <button onClick={() => toggleBot(bot)} className="text-brand-600 hover:text-brand-800 text-sm font-bold border border-brand-200 px-3 py-1 rounded">
-                        {bot.is_active ? 'Pausar' : 'Reactivar'}
-                      </button>
+                    <div>
+                      <h3 className="font-bold text-slate-800 group-hover:text-brand-600 transition-colors">{flow.name}</h3>
+                      <p className="text-xs text-slate-400">{flow.nodes_count} nodos</p>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* Tags Config */}
-        <section className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="p-6 border-b border-slate-200">
-            <h2 className="text-xl font-bold text-slate-900">Gestor de Etiquetas</h2>
-            <p className="text-slate-500 mt-1">Crea etiquetas para clasificar y organizar tus leads en el CRM.</p>
-          </div>
-          
-          <div className="p-6 border-b border-slate-100 bg-slate-50">
-            <form onSubmit={handleCreateTag} className="flex flex-wrap items-end gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Nombre de la etiqueta</label>
-                <input 
-                  type="text" 
-                  value={newTag.name}
-                  onChange={e => setNewTag({...newTag, name: e.target.value})}
-                  className="px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-brand-500"
-                  placeholder="Ej: Cliente VIP"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Color</label>
-                <select 
-                  value={newTag.color}
-                  onChange={e => setNewTag({...newTag, color: e.target.value})}
-                  className="px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-brand-500"
-                >
-                  {colorOptions.map(opt => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
-              </div>
-              <button 
-                type="submit"
-                className="px-6 py-2 bg-slate-800 text-white font-medium rounded-lg hover:bg-slate-900"
-              >
-                + Añadir Etiqueta
-              </button>
-            </form>
-          </div>
-
-          <div className="p-6 flex flex-wrap gap-3">
-            {tags.length === 0 ? (
-              <p className="text-slate-500 italic">No hay etiquetas creadas aún.</p>
-            ) : (
-              tags.map(tag => (
-                <div key={tag.id} className={`px-3 py-1 rounded-full text-sm font-medium border border-white/20 shadow-sm ${tag.color}`}>
-                  {tag.name}
+                  <div className="flex items-center gap-3">
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${flow.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                      {flow.is_active ? 'Activo' : 'Inactivo'}
+                    </span>
+                    <span className="text-slate-400 group-hover:text-brand-600 text-lg">→</span>
+                  </div>
                 </div>
-              ))
+              </div>
+            ))}
+            {flows.length === 0 && <p className="text-center text-slate-400 py-12">No hay flujos creados aún</p>}
+          </div>
+        )}
+
+        {/* BOTS TAB */}
+        {tab === 'bots' && (
+          <div>
+            <div className="flex justify-end mb-4">
+              <button onClick={() => setEditingBot(true)}
+                className="px-4 py-2 bg-brand-600 text-white rounded-lg font-bold text-sm hover:bg-brand-700">+ Crear PIBot</button>
+            </div>
+
+            <div className="grid gap-4">
+              {pibots.map(bot => (
+                <div key={bot.id} className="bg-white rounded-xl border border-slate-200 p-5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${bot.is_active ? 'bg-blue-50' : 'bg-slate-100'}`}>🤖</div>
+                      <div>
+                        <h3 className="font-bold text-slate-800">{bot.name}</h3>
+                        <p className="text-xs text-slate-400">Tipo: {bot.trigger_type}</p>
+                      </div>
+                    </div>
+                    <button onClick={() => toggleBot(bot)}
+                      className={`relative w-12 h-6 rounded-full transition-colors ${bot.is_active ? 'bg-emerald-500' : 'bg-slate-300'}`}>
+                      <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${bot.is_active ? 'left-6' : 'left-0.5'}`} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {pibots.length === 0 && !editingBot && <p className="text-center text-slate-400 py-12">No hay PIBots creados aún</p>}
+            </div>
+
+            {/* Bot creation modal */}
+            {editingBot && (
+              <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl">
+                  <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+                    <h2 className="text-lg font-bold text-slate-900">🤖 Nuevo PIBot</h2>
+                    <button onClick={() => setEditingBot(null)} className="text-slate-400 hover:text-slate-600 text-xl">×</button>
+                  </div>
+                  <div className="p-6 space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Nombre del bot</label>
+                      <input value={botForm.name} onChange={e => setBotForm(p => ({ ...p, name: e.target.value }))}
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg text-sm" placeholder="Ej: Bot de seguimiento" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">Disparador</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {TRIGGER_OPTIONS.map(t => (
+                          <button key={t.value} onClick={() => setBotForm(p => ({ ...p, trigger_type: t.value }))}
+                            className={`p-3 rounded-xl border-2 text-left transition-all ${botForm.trigger_type === t.value ? 'border-brand-500 bg-brand-50' : 'border-slate-200 hover:border-slate-300'}`}>
+                            <div className="text-sm font-bold">{t.label}</div>
+                            <div className="text-xs text-slate-400 mt-0.5">{t.desc}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    {botForm.trigger_type === 'schedule' && (
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">Frecuencia</label>
+                        <div className="flex flex-wrap gap-2">
+                          {SCHEDULE_OPTIONS.map(s => (
+                            <button key={s.value} onClick={() => setBotForm(p => ({ ...p, schedule_cron: s.value }))}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-bold border-2 ${botForm.schedule_cron === s.value ? 'bg-brand-600 text-white border-brand-600' : 'bg-white border-slate-200'}`}>
+                              {s.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {botForm.trigger_type === 'stage_change' && (
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">Etapa</label>
+                        <div className="flex flex-wrap gap-2">
+                          {stages.map(s => (
+                            <button key={s.id} onClick={() => setBotForm(p => ({ ...p, conditions: [{ stage_id: s.id }] }))}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-bold border-2 ${botForm.conditions?.[0]?.stage_id === s.id ? 'bg-brand-600 text-white border-brand-600' : 'bg-white border-slate-200'}`}>
+                              {s.name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-6 border-t border-slate-100 flex justify-end gap-3">
+                    <button onClick={() => setEditingBot(null)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">Cancelar</button>
+                    <button onClick={handleCreateBot} className="px-6 py-2 bg-brand-600 text-white rounded-lg font-medium hover:bg-brand-700">Crear PIBot</button>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
-        </section>
-
+        )}
       </div>
     </div>
   )

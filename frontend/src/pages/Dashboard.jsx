@@ -73,6 +73,11 @@ export default function Dashboard() {
             <Link to="/integrations" className="text-slate-600 hover:text-brand-600 font-medium transition-colors text-sm flex items-center gap-2">
               <span>🔌</span> Integraciones
             </Link>
+            {metaConnected && (
+              <Link to="/meta-ads" className="text-slate-600 hover:text-brand-600 font-medium transition-colors text-sm flex items-center gap-2">
+                <span>📣</span> Meta Ads
+              </Link>
+            )}
             <span className="text-slate-300">|</span>
             <span className="text-slate-600 text-sm">{user?.name}</span>
             <button onClick={logout} className="text-slate-500 hover:text-slate-700 text-sm">

@@ -276,4 +276,79 @@ router.get('/google/callback', async (req, res) => {
   }
 })
 
+// ============================================
+// META ADS: Get campaigns with metrics
+// ============================================
+router.get('/meta-ads/campaigns', auth, async (req, res) => {
+  try {
+    const pool = req.pool || global.pool
+    const result = await pool.query(
+      'SELECT meta_ads_config FROM user_integrations WHERE user_id = $1',
+      [req.user.id]
+    )
+    if (result.rows.length === 0 || !result.rows[0].meta_ads_config) {
+      return res.json({ success: false, error: 'Meta Ads no conectado' })
+    }
+    const config = typeof result.rows[0].meta_ads_config === 'string'
+      ? JSON.parse(result.rows[0].meta_ads_config)
+      : result.rows[0].meta_ads_config
+
+    const { ad_account_id, access_token } = config
+    if (!ad_account_id || !access_token) {
+      return res.json({ success: false, error: 'Faltan credenciales de Meta Ads' })
+    }
+
+    // Fetch campaigns with insights
+    const campaignsUrl = `https://graph.facebook.com/v18.0/${ad_account_id}/campaigns?fields=id,name,status,objective,daily_budget,lifetime_budget,start_time,stop_time&access_token=${access_token}&limit=50`
+    const campaignsRes = await fetch(campaignsUrl)
+    const campaignsData = await campaignsRes.json()
+
+    if (campaignsData.error) {
+      return res.json({ success: false, error: campaignsData.error.message })
+    }
+
+    // Fetch insights for account level (last 30 days)
+    const insightsUrl = `https://graph.facebook.com/v18.0/${ad_account_id}/insights?fields=reach,impressions,clicks,ctr,cpc,cpm,spend,actions&date_preset=last_30d&access_token=${access_token}`
+    const insightsRes = await fetch(insightsUrl)
+    const insightsData = await insightsRes.json()
+
+    // Fetch per-campaign insights
+    const campaignsWithInsights = []
+    for (const campaign of (campaignsData.data || []).slice(0, 20)) {
+      try {
+        const cInsUrl = `https://graph.facebook.com/v18.0/${campaign.id}/insights?fields=reach,impressions,clicks,ctr,cpc,spend,actions&date_preset=last_30d&access_token=${access_token}`
+        const cInsRes = await fetch(cInsUrl)
+        const cInsData = await cInsRes.json()
+        campaignsWithInsights.push({
+          ...campaign,
+          insights: cInsData.data?.[0] || null
+        })
+      } catch (e) {
+        campaignsWithInsights.push({ ...campaign, insights: null })
+      }
+    }
+
+    // Count CRM leads
+    let crmLeads = 0
+    try {
+      const leadsRes = await pool.query(
+        `SELECT COUNT(*) as total FROM leads l JOIN agents a ON l.agent_id = a.id WHERE a.user_id = $1 AND l.created_at > NOW() - INTERVAL '30 days'`,
+        [req.user.id]
+      )
+      crmLeads = parseInt(leadsRes.rows[0].total) || 0
+    } catch (e) { /* optional */ }
+
+    res.json({
+      success: true,
+      account: { id: ad_account_id, name: config.ad_account_name },
+      summary: insightsData.data?.[0] || null,
+      campaigns: campaignsWithInsights,
+      crm_leads_30d: crmLeads
+    })
+  } catch (error) {
+    console.error('[Meta Ads Campaigns Error]:', error)
+    res.status(500).json({ success: false, error: 'Error obteniendo campañas' })
+  }
+})
+
 module.exports = router

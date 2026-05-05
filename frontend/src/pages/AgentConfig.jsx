@@ -6,14 +6,14 @@ import api from '../services/api'
 const TOOL_CATALOG = [
   { id: 'google_sheets', icon: '📊', label: 'Google Sheets', desc: 'Leer y escribir hojas de cálculo', color: 'bg-green-50 border-green-200',
     fields: [
-      { key: 'file_id', label: 'ID o URL del archivo', placeholder: 'https://docs.google.com/spreadsheets/d/...' },
+      { key: 'file_id', label: 'Archivo', placeholder: 'Selecciona desde Drive', picker: true, mimeFilter: 'application/vnd.google-apps.spreadsheet' },
       { key: 'description', label: 'Descripción para la IA', placeholder: 'Ej: Tabla de proveedores con precios y stock', type: 'textarea' },
     ],
     accessOptions: ['Leer', 'Escribir', 'Editar', 'Borrar']
   },
   { id: 'google_docs', icon: '📝', label: 'Google Docs', desc: 'Consultar documentos de texto', color: 'bg-blue-50 border-blue-200',
     fields: [
-      { key: 'file_id', label: 'ID o URL del documento', placeholder: 'https://docs.google.com/document/d/...' },
+      { key: 'file_id', label: 'Documento', placeholder: 'Selecciona desde Drive', picker: true, mimeFilter: 'application/vnd.google-apps.document' },
       { key: 'description', label: 'Descripción para la IA', placeholder: 'Ej: Estrategia de ventas con precios y ofertas', type: 'textarea' },
     ],
     accessOptions: ['Leer', 'Escribir', 'Editar']
@@ -45,8 +45,12 @@ export default function AgentConfig() {
   const [loading, setLoading] = useState(false)
   const [saved, setSaved] = useState(false)
   const [agents, setAgents] = useState([])
-  const [toolModal, setToolModal] = useState(null) // { toolId, editIndex }
+  const [toolModal, setToolModal] = useState(null)
   const [resourceForm, setResourceForm] = useState({})
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [pickerReady, setPickerReady] = useState(false)
+  const [pickerToken, setPickerToken] = useState(null)
+  const [pickerClientId, setPickerClientId] = useState(null)
 
   const [formData, setFormData] = useState({
     name: '', business_info: { nombre: '', horario: '', direccion: '', telefono: '', metodos_pago: [], redes_sociales: '' },
@@ -76,6 +80,57 @@ export default function AgentConfig() {
         is_active: a.is_active
       })
     } catch (err) { if (err.response?.status === 404) navigate('/dashboard') }
+  }
+
+  // Load Google Picker API script
+  useEffect(() => {
+    if (!document.getElementById('google-picker-script')) {
+      const s = document.createElement('script')
+      s.id = 'google-picker-script'
+      s.src = 'https://apis.google.com/js/api.js'
+      s.onload = () => { window.gapi.load('picker', () => setPickerReady(true)) }
+      document.head.appendChild(s)
+    } else if (window.gapi?.picker) {
+      setPickerReady(true)
+    }
+    // Pre-load picker token
+    api.get('/agents/google-picker-token').then(res => {
+      if (res.data.success) {
+        setPickerToken(res.data.access_token)
+        setPickerClientId(res.data.client_id)
+      }
+    }).catch(() => {})
+  }, [])
+
+  const openPicker = (mimeFilter) => {
+    if (!pickerReady || !pickerToken) {
+      alert('Google Drive no disponible. Asegúrate de tener Google conectado en Integraciones.')
+      return
+    }
+    const view = new window.google.picker.DocsView()
+    if (mimeFilter) view.setMimeTypes(mimeFilter)
+    view.setIncludeFolders(true)
+    const picker = new window.google.picker.PickerBuilder()
+      .addView(view)
+      .setOAuthToken(pickerToken)
+      .setCallback((data) => {
+        if (data.action === 'picked' && data.docs?.[0]) {
+          const doc = data.docs[0]
+          setResourceForm(p => ({ ...p, file_id: doc.id, file_name: doc.name }))
+        }
+      })
+      .setTitle('Seleccionar archivo de Google Drive')
+      .build()
+    picker.setVisible(true)
+  }
+
+  const deleteAgent = async () => {
+    try {
+      await api.delete(`/agents/${id}`)
+      navigate('/dashboard')
+    } catch (err) {
+      alert('Error eliminando agente')
+    }
   }
 
   const handleSubmit = async (e) => {
@@ -242,7 +297,7 @@ export default function AgentConfig() {
                           <div key={idx} className="flex items-center justify-between px-4 py-3 bg-white/60">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
-                                <span className="font-semibold text-sm text-slate-800 truncate">{res.file_id || res.agent_name || res.calendar_id || 'Sin nombre'}</span>
+                                <span className="font-semibold text-sm text-slate-800 truncate">{res.file_name || res.file_id || res.agent_name || res.calendar_id || 'Sin nombre'}</span>
                               </div>
                               {res.description && <p className="text-xs text-slate-500 truncate">{res.description}</p>}
                               {res.access?.length > 0 && (
@@ -281,6 +336,22 @@ export default function AgentConfig() {
             </button>
           </div>
         </form>
+
+        {/* Danger Zone */}
+        <section className="bg-white rounded-xl p-6 border-2 border-red-200 mt-8">
+          <h2 className="text-lg font-bold text-red-700 mb-2">⚠️ Zona de Peligro</h2>
+          <p className="text-slate-500 text-sm mb-4">Esta acción es irreversible. Se eliminarán todos los datos del agente.</p>
+          {!showDeleteConfirm ? (
+            <button type="button" onClick={() => setShowDeleteConfirm(true)}
+              className="px-6 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700">Eliminar Agente</button>
+          ) : (
+            <div className="flex items-center gap-3">
+              <span className="text-red-600 font-bold text-sm">¿Estás seguro?</span>
+              <button type="button" onClick={deleteAgent} className="px-4 py-2 bg-red-700 text-white rounded-lg font-bold hover:bg-red-800">Sí, eliminar</button>
+              <button type="button" onClick={() => setShowDeleteConfirm(false)} className="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg font-medium">Cancelar</button>
+            </div>
+          )}
+        </section>
       </div>
 
       {/* Resource Modal */}
@@ -304,7 +375,17 @@ export default function AgentConfig() {
                 {catalog.fields.map(f => (
                   <div key={f.key}>
                     <label className="block text-sm font-medium text-slate-700 mb-1">{f.label}</label>
-                    {f.type === 'textarea' ? (
+                    {f.picker ? (
+                      <div className="flex gap-2">
+                        <div className="flex-1 px-4 py-2 border border-slate-300 rounded-lg text-sm bg-slate-50 truncate">
+                          {resourceForm.file_name || resourceForm[f.key] || <span className="text-slate-400">Ningún archivo seleccionado</span>}
+                        </div>
+                        <button type="button" onClick={() => openPicker(f.mimeFilter)}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 text-sm whitespace-nowrap">
+                          📂 Seleccionar de Drive
+                        </button>
+                      </div>
+                    ) : f.type === 'textarea' ? (
                       <textarea rows="2" value={resourceForm[f.key] || ''} onChange={e => setResourceForm(p => ({ ...p, [f.key]: e.target.value }))}
                         className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:border-brand-500 focus:outline-none text-sm" placeholder={f.placeholder} />
                     ) : (

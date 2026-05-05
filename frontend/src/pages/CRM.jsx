@@ -17,6 +17,7 @@ export default function CRM() {
   const [viewMode, setViewMode] = useState('chat') // 'chat' or 'kanban'
   const [showCustomFields, setShowCustomFields] = useState(false)
   const [customFieldInput, setCustomFieldInput] = useState({ name: '', type: 'text', value: '' })
+  const [dragOverStage, setDragOverStage] = useState(null)
   const messagesEndRef = useRef(null)
 
   useEffect(() => {
@@ -113,14 +114,25 @@ export default function CRM() {
   // Kanban Drag & Drop Handlers
   const handleDragStart = (e, leadId) => {
     e.dataTransfer.setData('leadId', leadId)
+    e.dataTransfer.effectAllowed = 'move'
   }
 
-  const handleDragOver = (e) => {
+  const handleDragOver = (e, stageId) => {
     e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    if (stageId !== dragOverStage) setDragOverStage(stageId)
+  }
+
+  const handleDragLeave = (e) => {
+    // Only clear if leaving the column container itself
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      setDragOverStage(null)
+    }
   }
 
   const handleDrop = (e, stageId) => {
     e.preventDefault()
+    setDragOverStage(null)
     const leadId = e.dataTransfer.getData('leadId')
     if (leadId) {
       updateLeadStatus(parseInt(leadId), stageId)
@@ -530,8 +542,13 @@ export default function CRM() {
                 return (
                   <div 
                     key={stage.id} 
-                    className="w-[320px] shrink-0 bg-gray-100/50 rounded-xl border border-gray-200 flex flex-col max-h-full"
-                    onDragOver={handleDragOver}
+                    className={`w-[320px] shrink-0 rounded-xl border-2 flex flex-col max-h-full transition-all duration-200 ${
+                      dragOverStage === stage.id 
+                        ? 'bg-brand-50 border-brand-400 shadow-lg scale-[1.02]' 
+                        : 'bg-gray-100/50 border-gray-200'
+                    }`}
+                    onDragOver={(e) => handleDragOver(e, stage.id)}
+                    onDragLeave={handleDragLeave}
                     onDrop={(e) => handleDrop(e, stage.id)}
                   >
                     <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-white rounded-t-xl group">

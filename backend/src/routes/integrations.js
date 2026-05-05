@@ -1,8 +1,11 @@
 const express = require('express')
 const router = express.Router()
 const auth = require('../middleware/auth')
+const { google } = require('googleapis')
 
-// Get user integrations
+// ============================================
+// GET: User integrations
+// ============================================
 router.get('/', auth, async (req, res) => {
   try {
     const pool = req.pool
@@ -19,12 +22,14 @@ router.get('/', auth, async (req, res) => {
   }
 })
 
-// Update integration
+// ============================================
+// PUT: Update single integration manually
+// ============================================
 router.put('/:type', auth, async (req, res) => {
   try {
     const pool = req.pool
     const userId = req.user.id
-    const type = req.params.type // 'whatsapp', 'instagram', 'google', 'telegram'
+    const type = req.params.type
     const config = req.body
     
     const allowedTypes = ['whatsapp', 'instagram', 'google', 'telegram', 'meta_ads']
@@ -34,7 +39,6 @@ router.put('/:type', auth, async (req, res) => {
 
     const column = `${type}_config`
 
-    // Check if exists
     const check = await pool.query('SELECT user_id FROM user_integrations WHERE user_id = $1', [userId])
     
     if (check.rows.length === 0) {
@@ -53,6 +57,222 @@ router.put('/:type', auth, async (req, res) => {
   } catch (error) {
     console.error('Error updating integration:', error)
     res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// ============================================
+// GET: Meta Configuration IDs for frontend SDK
+// ============================================
+router.get('/meta/config-ids', auth, (req, res) => {
+  res.json({
+    success: true,
+    app_id: process.env.FACEBOOK_APP_ID || '',
+    configs: {
+      whatsapp: process.env.META_CONFIG_WHATSAPP || '',
+      instagram: process.env.META_CONFIG_INSTAGRAM || '',
+      meta_ads: process.env.META_CONFIG_ADS || ''
+    }
+  })
+})
+
+// ============================================
+// POST: Meta OAuth Onboarding (Instagram / Meta Ads)
+// Receives access_token from FB.login() popup
+// ============================================
+router.post('/meta/onboarding', auth, async (req, res) => {
+  try {
+    const { access_token, type } = req.body
+    if (!access_token || !type) {
+      return res.status(400).json({ error: 'Missing access_token or type' })
+    }
+
+    const APP_ID = process.env.FACEBOOK_APP_ID
+    const APP_SECRET = process.env.FACEBOOK_APP_SECRET
+    if (!APP_ID || !APP_SECRET) {
+      return res.status(500).json({ error: 'Missing FACEBOOK_APP_ID or FACEBOOK_APP_SECRET in server config' })
+    }
+
+    const pool = req.pool
+    const userId = req.user.id
+
+    if (type === 'instagram') {
+      // 1. Get user's Facebook Pages
+      const pagesRes = await fetch(`https://graph.facebook.com/v18.0/me/accounts?access_token=${access_token}`)
+      const pagesData = await pagesRes.json()
+      
+      if (!pagesData.data || pagesData.data.length === 0) {
+        return res.status(400).json({ error: 'No se encontraron Páginas de Facebook asociadas. Tu cuenta de Instagram profesional debe estar vinculada a una Página de Facebook.' })
+      }
+
+      // 2. For each page, try to find the connected Instagram Business Account
+      let igAccountId = null
+      let pageName = null
+      let pageAccessToken = null
+
+      for (const page of pagesData.data) {
+        const igRes = await fetch(`https://graph.facebook.com/v18.0/${page.id}?fields=instagram_business_account,name&access_token=${page.access_token}`)
+        const igData = await igRes.json()
+        
+        if (igData.instagram_business_account) {
+          igAccountId = igData.instagram_business_account.id
+          pageName = igData.name
+          pageAccessToken = page.access_token
+          break
+        }
+      }
+
+      if (!igAccountId) {
+        return res.status(400).json({ error: 'No se encontró una cuenta de Instagram Business vinculada a ninguna de tus Páginas de Facebook.' })
+      }
+
+      // 3. Save to user_integrations
+      const igConfig = {
+        page_id: igAccountId,
+        page_name: pageName,
+        access_token: pageAccessToken,
+        connected_at: new Date().toISOString()
+      }
+
+      const check = await pool.query('SELECT user_id FROM user_integrations WHERE user_id = $1', [userId])
+      if (check.rows.length === 0) {
+        await pool.query('INSERT INTO user_integrations (user_id, instagram_config) VALUES ($1, $2)', [userId, JSON.stringify(igConfig)])
+      } else {
+        await pool.query('UPDATE user_integrations SET instagram_config = $1, updated_at = CURRENT_TIMESTAMP WHERE user_id = $2', [JSON.stringify(igConfig), userId])
+      }
+
+      console.log(`[Instagram Onboarding] User ${userId} connected IG account ${igAccountId} (${pageName})`)
+      return res.json({ success: true, ig_account_id: igAccountId, page_name: pageName })
+
+    } else if (type === 'meta_ads') {
+      // 1. Get user's ad accounts
+      const adAccountsRes = await fetch(`https://graph.facebook.com/v18.0/me/adaccounts?fields=id,name,account_status&access_token=${access_token}`)
+      const adAccountsData = await adAccountsRes.json()
+
+      if (!adAccountsData.data || adAccountsData.data.length === 0) {
+        return res.status(400).json({ error: 'No se encontraron cuentas publicitarias asociadas a tu cuenta de Facebook.' })
+      }
+
+      // Pick the first active ad account
+      const adAccount = adAccountsData.data.find(a => a.account_status === 1) || adAccountsData.data[0]
+
+      const adsConfig = {
+        ad_account_id: adAccount.id,
+        ad_account_name: adAccount.name,
+        access_token: access_token,
+        connected_at: new Date().toISOString()
+      }
+
+      const check = await pool.query('SELECT user_id FROM user_integrations WHERE user_id = $1', [userId])
+      if (check.rows.length === 0) {
+        await pool.query('INSERT INTO user_integrations (user_id, meta_ads_config) VALUES ($1, $2)', [userId, JSON.stringify(adsConfig)])
+      } else {
+        await pool.query('UPDATE user_integrations SET meta_ads_config = $1, updated_at = CURRENT_TIMESTAMP WHERE user_id = $2', [JSON.stringify(adsConfig), userId])
+      }
+
+      console.log(`[Meta Ads Onboarding] User ${userId} connected ad account ${adAccount.id} (${adAccount.name})`)
+      return res.json({ success: true, ad_account_id: adAccount.id, ad_account_name: adAccount.name })
+    }
+
+    return res.status(400).json({ error: 'Invalid type. Use "instagram" or "meta_ads".' })
+  } catch (error) {
+    console.error('[Meta Onboarding Error]:', error)
+    res.status(500).json({ error: 'Error interno al procesar la conexión con Meta.' })
+  }
+})
+
+// ============================================
+// GOOGLE OAUTH 2.0
+// ============================================
+function getGoogleOAuth2Client() {
+  return new google.auth.OAuth2(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET,
+    process.env.GOOGLE_REDIRECT_URI
+  )
+}
+
+// GET: Generate Google Auth URL
+router.get('/google/auth-url', auth, (req, res) => {
+  try {
+    const oauth2Client = getGoogleOAuth2Client()
+    
+    // We encode the user ID in the state param so we know who to save the token for
+    const state = Buffer.from(JSON.stringify({ userId: req.user.id })).toString('base64')
+    
+    const url = oauth2Client.generateAuthUrl({
+      access_type: 'offline',
+      prompt: 'consent',
+      scope: [
+        'https://www.googleapis.com/auth/spreadsheets',
+        'https://www.googleapis.com/auth/drive.readonly',
+        'https://www.googleapis.com/auth/calendar',
+        'https://www.googleapis.com/auth/userinfo.email'
+      ],
+      state: state
+    })
+
+    res.json({ success: true, url })
+  } catch (error) {
+    console.error('Error generating Google auth URL:', error)
+    res.status(500).json({ error: 'Could not generate Google auth URL' })
+  }
+})
+
+// GET: Google OAuth Callback (receives authorization code)
+// This is NOT auth-protected because Google redirects to it directly
+router.get('/google/callback', async (req, res) => {
+  try {
+    const { code, state } = req.query
+    
+    if (!code || !state) {
+      return res.redirect((process.env.FRONTEND_URL || 'https://agents.pivotsoluciones.com') + '/integrations?google=error&reason=missing_params')
+    }
+
+    // Decode user ID from state
+    let userId
+    try {
+      const decoded = JSON.parse(Buffer.from(state, 'base64').toString())
+      userId = decoded.userId
+    } catch (e) {
+      return res.redirect((process.env.FRONTEND_URL || 'https://agents.pivotsoluciones.com') + '/integrations?google=error&reason=invalid_state')
+    }
+
+    const oauth2Client = getGoogleOAuth2Client()
+    const { tokens } = await oauth2Client.getToken(code)
+    
+    // Get user email for display
+    oauth2Client.setCredentials(tokens)
+    const oauth2 = google.oauth2({ version: 'v2', auth: oauth2Client })
+    let userEmail = ''
+    try {
+      const userInfo = await oauth2.userinfo.get()
+      userEmail = userInfo.data.email || ''
+    } catch (e) { /* optional */ }
+
+    const googleConfig = {
+      access_token: tokens.access_token,
+      refresh_token: tokens.refresh_token,
+      token_type: tokens.token_type,
+      expiry_date: tokens.expiry_date,
+      email: userEmail,
+      connected_at: new Date().toISOString()
+    }
+
+    const pool = global.pool
+    const check = await pool.query('SELECT user_id FROM user_integrations WHERE user_id = $1', [userId])
+    if (check.rows.length === 0) {
+      await pool.query('INSERT INTO user_integrations (user_id, google_config) VALUES ($1, $2)', [userId, JSON.stringify(googleConfig)])
+    } else {
+      await pool.query('UPDATE user_integrations SET google_config = $1, updated_at = CURRENT_TIMESTAMP WHERE user_id = $2', [JSON.stringify(googleConfig), userId])
+    }
+
+    console.log(`[Google OAuth] User ${userId} connected Google account: ${userEmail}`)
+    
+    // Redirect back to frontend integrations page with success
+    res.redirect((process.env.FRONTEND_URL || 'https://agents.pivotsoluciones.com') + '/integrations?google=success')
+  } catch (error) {
+    console.error('[Google OAuth Callback Error]:', error)
+    res.redirect((process.env.FRONTEND_URL || 'https://agents.pivotsoluciones.com') + '/integrations?google=error&reason=token_exchange_failed')
   }
 })
 

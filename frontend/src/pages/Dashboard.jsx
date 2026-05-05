@@ -134,61 +134,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Meta Ads Analytics Banner */}
-        {analytics ? (
-          <div className={`rounded-xl border p-6 mb-8 ${metaConnected ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200' : 'bg-slate-100 border-slate-200'}`}>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center text-white text-xl">📣</div>
-                <div>
-                  <h2 className="font-bold text-slate-900">Rendimiento Meta Ads</h2>
-                  <p className="text-xs text-slate-500">{metaConnected ? 'Campaña activa · Datos en tiempo real' : 'Sin conexión · Configura Meta Ads en Integraciones'}</p>
-                </div>
-              </div>
-              {!metaConnected && (
-                <Link to="/integrations" className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-blue-700 transition-colors">
-                  Conectar →
-                </Link>
-              )}
-            </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              {[
-                { label: 'Alcance', value: metaConnected ? analytics.meta.reach.toLocaleString() : '—', icon: '👁️', color: 'text-blue-700' },
-                { label: 'Impresiones', value: metaConnected ? analytics.meta.impressions.toLocaleString() : '—', icon: '🔁', color: 'text-indigo-700' },
-                { label: 'Clics', value: metaConnected ? analytics.meta.clicks.toLocaleString() : '—', icon: '🖱️', color: 'text-purple-700' },
-                { label: 'Gasto', value: metaConnected ? `$${analytics.meta.spend}` : '—', icon: '💰', color: 'text-rose-700' },
-                { label: 'Leads CRM', value: analytics.crm.total_leads.toLocaleString(), icon: '📋', color: 'text-emerald-700' },
-              ].map(item => (
-                <div key={item.label} className="bg-white/80 rounded-lg p-3 text-center border border-white/50">
-                  <div className="text-xl mb-1">{item.icon}</div>
-                  <div className={`text-xl font-bold ${item.color}`}>{item.value}</div>
-                  <div className="text-[10px] text-slate-500 font-medium uppercase tracking-wide mt-0.5">{item.label}</div>
-                </div>
-              ))}
-            </div>
-
-            {metaConnected && (
-              <div className="mt-4 flex items-center gap-2 text-xs text-slate-600 bg-white/60 rounded-lg p-3 border border-white/50">
-                <span className="text-emerald-500 font-bold text-base">↗</span>
-                <span>De <strong>{analytics.meta.reach.toLocaleString()}</strong> personas alcanzadas, <strong>{analytics.crm.total_leads}</strong> se convirtieron en leads en tu CRM ({conversionRate} de conversión sobre clics).</span>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="bg-slate-100 border border-slate-200 rounded-xl p-5 mb-8 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">📣</span>
-              <div>
-                <p className="font-medium text-slate-700 text-sm">Conecta Meta Ads para ver métricas de tus campañas</p>
-                <p className="text-xs text-slate-400">Ve a Integraciones y configura tu cuenta publicitaria.</p>
-              </div>
-            </div>
-            <Link to="/integrations" className="text-xs bg-blue-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-blue-700 transition-colors shrink-0">
-              Configurar →
-            </Link>
-          </div>
-        )}
 
         {/* Agents Section */}
         <div className="flex items-center justify-between mb-4">

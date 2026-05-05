@@ -156,7 +156,7 @@ async function handleIncomingMessage(req, clientPhone, messageText, agentPhone, 
     );
     if (agentIdResult.rows.length > 0) {
       const agentId = agentIdResult.rows[0].id;
-      const leadId = await getOrCreateLead(pool, agentId, clientPhone, clientName);
+      const leadId = await getOrCreateLeadAndUpdateTimestamp(pool, agentId, clientPhone, clientName);
       await saveMessage(pool, leadId, 'client', messageText);
     }
   } catch (e) {
@@ -190,6 +190,16 @@ async function processWithAgent(clientPhone, agentPhone, messageText) {
 
     const agent = agentResult.rows[0]
     const userId = agent.user_id
+
+    // Check if AI is active for this lead
+    const leadCheck = await pool.query('SELECT is_ai_active FROM leads WHERE agent_id = $1 AND client_phone = $2 LIMIT 1', [agent.id, clientPhone]);
+    const isAiActive = leadCheck.rows.length > 0 ? leadCheck.rows[0].is_ai_active : true;
+
+    if (!isAiActive) {
+      console.log(`[Queue] IA desactivada para el lead ${clientPhone}. Ignorando generacion de IA.`);
+      return;
+    }
+
     console.log(`[Queue] Agente encontrado (ID: ${agent.id}, User: ${userId}). Enviando a OpenClaw...`);
 
     if (!openclawService) {
@@ -236,18 +246,19 @@ async function checkAgentExists(pool, agentPhone) {
   return result.rows.length > 0;
 }
 
-async function getOrCreateLead(pool, agentId, clientPhone, clientName) {
+async function getOrCreateLeadAndUpdateTimestamp(pool, agentId, clientPhone, clientName) {
   const result = await pool.query(
     'SELECT id FROM leads WHERE agent_id = $1 AND client_phone = $2',
     [agentId, clientPhone]
   );
   
   if (result.rows.length > 0) {
+    await pool.query('UPDATE leads SET last_client_message_at = CURRENT_TIMESTAMP WHERE id = $1', [result.rows[0].id]);
     return result.rows[0].id;
   }
   
   const insert = await pool.query(
-    'INSERT INTO leads (agent_id, client_phone, name) VALUES ($1, $2, $3) RETURNING id',
+    'INSERT INTO leads (agent_id, client_phone, name, last_client_message_at) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) RETURNING id',
     [agentId, clientPhone, clientName]
   );
   return insert.rows[0].id;
@@ -328,3 +339,5 @@ async function updateMessageCount(userId) {
 }
 
 module.exports = router
+module.exports.sendWhatsAppMessage = sendWhatsAppMessage
+module.exports.saveMessage = saveMessage

@@ -17,6 +17,8 @@ export default function CRM() {
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(true)
   const [selectedStage, setSelectedStage] = useState('all')
+  const [messageInput, setMessageInput] = useState('')
+  const [sending, setSending] = useState(false)
   const messagesEndRef = useRef(null)
 
   useEffect(() => {
@@ -70,6 +72,50 @@ export default function CRM() {
     } catch (err) {
       console.error(err)
     }
+  }
+
+  const toggleAI = async (leadId, currentStatus) => {
+    try {
+      const newStatus = !currentStatus
+      await api.put(`/crm/leads/${leadId}/ai_status`, { is_ai_active: newStatus })
+      setLeads(leads.map(l => l.id === leadId ? { ...l, is_ai_active: newStatus } : l))
+      if (activeLead?.id === leadId) {
+        setActiveLead({ ...activeLead, is_ai_active: newStatus })
+      }
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const sendManualMessage = async (e) => {
+    e.preventDefault()
+    if (!messageInput.trim() || sending) return
+    setSending(true)
+    try {
+      const res = await api.post(`/crm/leads/${activeLead.id}/messages`, { content: messageInput })
+      setMessages([...messages, res.data.message])
+      setMessageInput('')
+      
+      // Update local state to reflect AI was disabled
+      setLeads(leads.map(l => l.id === activeLead.id ? { ...l, is_ai_active: false } : l))
+      setActiveLead({ ...activeLead, is_ai_active: false })
+    } catch (err) {
+      console.error(err)
+      alert('Error enviando mensaje: ' + (err.response?.data?.details?.message || err.message))
+    } finally {
+      setSending(false)
+    }
+  }
+
+  const calculateTimeLeft = (lastMessageDate) => {
+    if (!lastMessageDate) return null;
+    const end = new Date(lastMessageDate).getTime() + (24 * 60 * 60 * 1000);
+    const now = new Date().getTime();
+    const diff = end - now;
+    if (diff <= 0) return 'Expirado';
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    return `${hours}h ${minutes}m`;
   }
 
   const filteredLeads = selectedStage === 'all' 
@@ -136,6 +182,7 @@ export default function CRM() {
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-baseline mb-1">
                     <h3 className="text-base text-gray-900 truncate">{lead.name || lead.client_phone}</h3>
+                    {!lead.is_ai_active && <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded ml-2">IA ⏸️</span>}
                   </div>
                   <div className="text-sm text-gray-500 truncate flex justify-between">
                     <span>{lead.client_phone}</span>
@@ -162,22 +209,44 @@ export default function CRM() {
                 </div>
                 <div>
                   <h2 className="text-base font-medium text-gray-900">{activeLead.name || activeLead.client_phone}</h2>
-                  <p className="text-xs text-gray-500">{activeLead.client_phone} • Agente: {activeLead.agent_name}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs text-gray-500">{activeLead.client_phone}</p>
+                    {activeLead.last_client_message_at && (
+                      <span className={`text-[10px] px-1.5 rounded ${calculateTimeLeft(activeLead.last_client_message_at) === 'Expirado' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'}`}>
+                        ⏱️ {calculateTimeLeft(activeLead.last_client_message_at)}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
               
-              {/* CRM Status Dropdown */}
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600 font-medium">Etapa:</span>
-                <select 
-                  className={`text-sm rounded-full px-3 py-1 font-semibold outline-none border-none cursor-pointer ${STAGES.find(s => s.id === activeLead.status)?.color}`}
-                  value={activeLead.status}
-                  onChange={(e) => updateLeadStatus(activeLead.id, e.target.value)}
-                >
-                  {STAGES.map(s => (
-                    <option key={s.id} value={s.id} className="bg-white text-gray-900">{s.label}</option>
-                  ))}
-                </select>
+              <div className="flex items-center gap-4">
+                {/* AI Toggle Switch */}
+                <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-gray-200">
+                  <span className="text-xs font-semibold text-gray-600">IA:</span>
+                  <button 
+                    onClick={() => toggleAI(activeLead.id, activeLead.is_ai_active)}
+                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${activeLead.is_ai_active ? 'bg-brand-500' : 'bg-gray-300'}`}
+                  >
+                    <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${activeLead.is_ai_active ? 'translate-x-5' : 'translate-x-1'}`} />
+                  </button>
+                  <span className={`text-[10px] font-bold ${activeLead.is_ai_active ? 'text-brand-600' : 'text-gray-400'}`}>
+                    {activeLead.is_ai_active ? 'ON' : 'OFF'}
+                  </span>
+                </div>
+
+                {/* CRM Status Dropdown */}
+                <div className="flex items-center gap-2">
+                  <select 
+                    className={`text-sm rounded-full px-3 py-1 font-semibold outline-none border-none cursor-pointer ${STAGES.find(s => s.id === activeLead.status)?.color}`}
+                    value={activeLead.status}
+                    onChange={(e) => updateLeadStatus(activeLead.id, e.target.value)}
+                  >
+                    {STAGES.map(s => (
+                      <option key={s.id} value={s.id} className="bg-white text-gray-900">{s.label}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -204,12 +273,24 @@ export default function CRM() {
               <div ref={messagesEndRef} />
             </div>
             
-            {/* Chat Input (Readonly for now as AI replies) */}
-            <div className="h-16 bg-[#f0f2f5] flex items-center px-4 z-10">
-              <div className="flex-1 bg-white rounded-lg px-4 py-2 text-gray-400 text-sm">
-                La IA está atendiendo a este lead automáticamente. La intervención manual llegará pronto.
-              </div>
-            </div>
+            {/* Chat Input */}
+            <form onSubmit={sendManualMessage} className="bg-[#f0f2f5] px-4 py-3 flex items-center gap-3 z-10">
+              <input 
+                type="text" 
+                value={messageInput}
+                onChange={e => setMessageInput(e.target.value)}
+                placeholder="Escribe un mensaje..." 
+                className="flex-1 rounded-lg border-none px-4 py-2.5 focus:ring-0 text-sm outline-none bg-white"
+                disabled={sending || calculateTimeLeft(activeLead.last_client_message_at) === 'Expirado'}
+              />
+              <button 
+                type="submit" 
+                disabled={!messageInput.trim() || sending || calculateTimeLeft(activeLead.last_client_message_at) === 'Expirado'}
+                className="bg-brand-600 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {sending ? '...' : '➤'}
+              </button>
+            </form>
           </>
         ) : (
           <div className="flex-1 flex items-center justify-center flex-col text-center border-l border-gray-300 bg-[#f0f2f5]">

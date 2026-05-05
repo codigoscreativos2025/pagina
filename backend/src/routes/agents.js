@@ -4,15 +4,14 @@ const router = express.Router();
 
 router.post('/', auth, async (req, res) => {
   try {
-    const { name, business_info, system_prompt, ai_config, whatsapp_config, google_sheets_config } = req.body;
+    const { name, business_info, system_prompt, ai_config, permissions } = req.body;
     
     const result = await req.pool.query(
-      `INSERT INTO agents (user_id, name, business_info, system_prompt, ai_config, whatsapp_config, google_sheets_config)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO agents (user_id, name, business_info, system_prompt, ai_config, permissions)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
       [req.user.id, name || 'Nuevo Agente', JSON.stringify(business_info || {}), system_prompt || '',
-       JSON.stringify(ai_config || {}), JSON.stringify(whatsapp_config || {}),
-       JSON.stringify(google_sheets_config || {})]
+       JSON.stringify(ai_config || {}), JSON.stringify(permissions || [])]
     );
     
     res.json(result.rows[0]);
@@ -79,7 +78,7 @@ router.get('/:id', auth, async (req, res) => {
 
 router.put('/:id', auth, async (req, res) => {
   try {
-    const { name, business_info, system_prompt, ai_config, whatsapp_config, google_sheets_config, is_active } = req.body;
+    const { name, business_info, system_prompt, ai_config, is_active, permissions } = req.body;
     
     const result = await req.pool.query(
       `UPDATE agents SET 
@@ -87,17 +86,14 @@ router.put('/:id', auth, async (req, res) => {
         business_info = COALESCE($2, business_info),
         system_prompt = COALESCE($3, system_prompt),
         ai_config = COALESCE($4, ai_config),
-        whatsapp_config = COALESCE($5, whatsapp_config),
-        google_sheets_config = COALESCE($6, google_sheets_config),
-        is_active = COALESCE($7, is_active),
+        is_active = COALESCE($5, is_active),
+        permissions = COALESCE($6, permissions),
         updated_at = CURRENT_TIMESTAMP
-       WHERE id = $8 AND user_id = $9
+       WHERE id = $7 AND user_id = $8
        RETURNING *`,
       [name, business_info ? JSON.stringify(business_info) : null,
        system_prompt, ai_config ? JSON.stringify(ai_config) : null,
-       whatsapp_config ? JSON.stringify(whatsapp_config) : null,
-       google_sheets_config ? JSON.stringify(google_sheets_config) : null,
-       is_active, req.params.id, req.user.id]
+       is_active, permissions ? JSON.stringify(permissions) : null, req.params.id, req.user.id]
     );
     
     if (result.rows.length === 0) {

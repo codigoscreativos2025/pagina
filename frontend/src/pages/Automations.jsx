@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import api from '../services/api'
+import { ReactFlow, Controls, Background, applyNodeChanges, applyEdgeChanges, addEdge } from '@xyflow/react'
+import '@xyflow/react/dist/style.css'
 
 export default function Automations() {
   const navigate = useNavigate()
@@ -10,6 +12,10 @@ export default function Automations() {
   const [funnel, setFunnel] = useState(null)
   const [stages, setStages] = useState([])
   const [tags, setTags] = useState([])
+  
+  // React Flow state
+  const [nodes, setNodes] = useState([])
+  const [edges, setEdges] = useState([])
 
   const [newTag, setNewTag] = useState({ name: '', color: 'bg-slate-100 text-slate-800' })
 
@@ -48,6 +54,49 @@ export default function Automations() {
       loadData()
     }
   }
+
+  // Generate initial nodes and edges based on stages
+  useEffect(() => {
+    if (stages.length > 0) {
+      const initialNodes = []
+      const initialEdges = []
+      
+      stages.forEach((stage, index) => {
+        // Trigger Node
+        initialNodes.push({
+          id: `trigger-${stage.id}`,
+          type: 'input',
+          position: { x: 100, y: index * 150 },
+          data: { label: `⚡ Lead entra a: ${stage.name}` },
+          style: { border: '2px solid #3b82f6', borderRadius: '8px', background: '#eff6ff', padding: '10px', fontWeight: 'bold' }
+        })
+        
+        // Action Node
+        initialNodes.push({
+          id: `action-${stage.id}`,
+          position: { x: 400, y: index * 150 },
+          data: { label: stage.ai_enabled ? '🤖 IA Activa: Responder automáticamente' : '👤 Asignar a Humano (Pausar IA)' },
+          style: { border: `2px solid ${stage.ai_enabled ? '#10b981' : '#f59e0b'}`, borderRadius: '8px', background: stage.ai_enabled ? '#ecfdf5' : '#fef3c7', padding: '10px' }
+        })
+
+        // Edge
+        initialEdges.push({
+          id: `e-${stage.id}`,
+          source: `trigger-${stage.id}`,
+          target: `action-${stage.id}`,
+          animated: stage.ai_enabled,
+          style: { stroke: stage.ai_enabled ? '#10b981' : '#94a3b8', strokeWidth: 2 }
+        })
+      })
+
+      setNodes(initialNodes)
+      setEdges(initialEdges)
+    }
+  }, [stages])
+
+  const onNodesChange = (changes) => setNodes((nds) => applyNodeChanges(changes, nds))
+  const onEdgesChange = (changes) => setEdges((eds) => applyEdgeChanges(changes, eds))
+  const onConnect = (params) => setEdges((eds) => addEdge(params, eds))
 
   const handleCreateTag = async (e) => {
     e.preventDefault()
@@ -91,43 +140,29 @@ export default function Automations() {
 
       <div className="max-w-6xl mx-auto px-6 py-8">
         
-        {/* Stages Config */}
-        <section className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-8">
-          <div className="p-6 border-b border-slate-200">
-            <h2 className="text-xl font-bold text-slate-900">Etapas del Embudo ({funnel?.name})</h2>
-            <p className="text-slate-500 mt-1">Configura en qué etapas interviene la Inteligencia Artificial automáticamente.</p>
+        {/* Visual Automation Builder */}
+        <section className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-8 flex flex-col h-[600px]">
+          <div className="p-6 border-b border-slate-200 shrink-0 flex justify-between items-center bg-white z-10">
+            <div>
+              <h2 className="text-xl font-bold text-slate-900">Flujos de Automatización ({funnel?.name})</h2>
+              <p className="text-slate-500 mt-1 text-sm">Visualiza y conecta las reglas de tu CRM (Drag & Drop).</p>
+            </div>
+            <button className="px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-bold hover:bg-brand-700">
+              Guardar Flujo
+            </button>
           </div>
-          <div className="divide-y divide-slate-100">
-            {stages.map((stage) => (
-              <div key={stage.id} className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-slate-50 transition-colors">
-                <div className="flex items-center gap-4">
-                  <div className={`px-3 py-1 rounded-full text-sm font-medium ${stage.color}`}>
-                    {stage.name}
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-6 bg-slate-50 p-4 rounded-lg border border-slate-200">
-                  <div className="flex items-center gap-3">
-                    <label className="text-sm font-medium text-slate-700">IA Activa en esta etapa:</label>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        className="sr-only peer" 
-                        checked={stage.ai_enabled}
-                        onChange={(e) => handleUpdateStage(stage.id, 'ai_enabled', e.target.checked)}
-                      />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-600"></div>
-                    </label>
-                  </div>
-                  
-                  <div className="text-sm text-slate-500 max-w-xs">
-                    {stage.ai_enabled 
-                      ? '🤖 El agente contestará automáticamente a los leads que estén en esta etapa.' 
-                      : '👤 Intervención Manual: La IA ignorará a los leads en esta etapa.'}
-                  </div>
-                </div>
-              </div>
-            ))}
+          <div className="flex-1 bg-slate-50 relative">
+            <ReactFlow 
+              nodes={nodes}
+              edges={edges}
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              onConnect={onConnect}
+              fitView
+            >
+              <Background color="#cbd5e1" gap={16} />
+              <Controls />
+            </ReactFlow>
           </div>
         </section>
 

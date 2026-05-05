@@ -14,6 +14,7 @@ export default function CRM() {
   const [selectedStage, setSelectedStage] = useState('all')
   const [messageInput, setMessageInput] = useState('')
   const [sending, setSending] = useState(false)
+  const [viewMode, setViewMode] = useState('chat') // 'chat' or 'kanban'
   const messagesEndRef = useRef(null)
 
   useEffect(() => {
@@ -74,12 +75,29 @@ export default function CRM() {
   const updateLeadStatus = async (leadId, stage_id) => {
     try {
       const res = await api.put(`/crm/leads/${leadId}/stage`, { stage_id })
-      setLeads(leads.map(l => l.id === leadId ? { ...l, stage_id, is_ai_active: res.data.aiDisabled ? false : l.is_ai_active } : l))
+      setLeads(prevLeads => prevLeads.map(l => l.id === leadId ? { ...l, stage_id, is_ai_active: res.data.aiDisabled ? false : l.is_ai_active } : l))
       if (activeLead?.id === leadId) {
         setActiveLead({ ...activeLead, stage_id, is_ai_active: res.data.aiDisabled ? false : activeLead.is_ai_active })
       }
     } catch (err) {
       console.error(err)
+    }
+  }
+
+  // Kanban Drag & Drop Handlers
+  const handleDragStart = (e, leadId) => {
+    e.dataTransfer.setData('leadId', leadId)
+  }
+
+  const handleDragOver = (e) => {
+    e.preventDefault()
+  }
+
+  const handleDrop = (e, stageId) => {
+    e.preventDefault()
+    const leadId = e.dataTransfer.getData('leadId')
+    if (leadId) {
+      updateLeadStatus(parseInt(leadId), stageId)
     }
   }
 
@@ -161,7 +179,20 @@ export default function CRM() {
           <Link to="/dashboard" className="text-brand-600 font-semibold hover:text-brand-700">
             ← Volver
           </Link>
-          <div className="font-bold text-gray-700">CRM / Chats</div>
+          <div className="flex bg-gray-200 p-1 rounded-lg">
+            <button 
+              onClick={() => setViewMode('chat')}
+              className={`px-3 py-1 text-xs font-bold rounded-md transition-colors ${viewMode === 'chat' ? 'bg-white shadow-sm text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              Chat
+            </button>
+            <button 
+              onClick={() => setViewMode('kanban')}
+              className={`px-3 py-1 text-xs font-bold rounded-md transition-colors ${viewMode === 'kanban' ? 'bg-white shadow-sm text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              Kanban
+            </button>
+          </div>
         </div>
 
         {/* CRM Stage Filters */}
@@ -364,6 +395,88 @@ export default function CRM() {
           </div>
         )}
       </div>
+
+      {/* Full Screen Kanban Overlay */}
+      {viewMode === 'kanban' && (
+        <div className="absolute inset-0 bg-[#f0f2f5] z-50 flex flex-col h-screen">
+          <div className="bg-white h-16 flex items-center justify-between px-6 border-b border-gray-200 shrink-0 shadow-sm">
+            <div className="flex items-center gap-4">
+              <Link to="/dashboard" className="text-brand-600 font-semibold hover:text-brand-700">
+                ← Dashboard
+              </Link>
+              <h1 className="text-xl font-bold text-gray-800">Vista Kanban</h1>
+            </div>
+            <div className="flex bg-gray-100 p-1 rounded-lg">
+              <button 
+                onClick={() => setViewMode('chat')}
+                className="px-4 py-1.5 text-sm font-bold rounded-md transition-colors text-gray-500 hover:text-gray-700"
+              >
+                Vista Chat
+              </button>
+              <button 
+                className="px-4 py-1.5 text-sm font-bold rounded-md transition-colors bg-white shadow-sm text-gray-800"
+              >
+                Vista Tablero
+              </button>
+            </div>
+          </div>
+          
+          <div className="flex-1 overflow-x-auto overflow-y-hidden p-6">
+            <div className="flex gap-6 h-full items-start">
+              {stages.map(stage => {
+                const stageLeads = leads.filter(l => String(l.stage_id) === String(stage.id))
+                return (
+                  <div 
+                    key={stage.id} 
+                    className="w-[320px] shrink-0 bg-gray-100/50 rounded-xl border border-gray-200 flex flex-col max-h-full"
+                    onDragOver={handleDragOver}
+                    onDrop={(e) => handleDrop(e, stage.id)}
+                  >
+                    <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-white rounded-t-xl">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-3 h-3 rounded-full ${stage.color?.split(' ')[0] || 'bg-gray-400'}`}></div>
+                        <h3 className="font-bold text-gray-800">{stage.name}</h3>
+                      </div>
+                      <span className="bg-gray-100 text-gray-600 text-xs font-bold px-2 py-1 rounded-full">{stageLeads.length}</span>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-3 space-y-3">
+                      {stageLeads.map(lead => (
+                        <div 
+                          key={lead.id}
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, lead.id)}
+                          onClick={() => { setActiveLead(lead); setViewMode('chat'); }}
+                          className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm cursor-grab hover:shadow-md hover:border-brand-300 transition-all active:cursor-grabbing"
+                        >
+                          <div className="flex justify-between items-start mb-2">
+                            <h4 className="font-bold text-gray-900">{lead.name || lead.client_phone}</h4>
+                            {!lead.is_ai_active ? (
+                               <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-bold">IA OFF</span>
+                            ) : (
+                               <span className="text-[10px] bg-brand-100 text-brand-600 px-1.5 py-0.5 rounded font-bold">IA ON</span>
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-500 mb-3">{lead.client_phone}</p>
+                          <div className="flex flex-wrap gap-1">
+                            {lead.tags?.map(t => (
+                              <span key={t.id} className={`text-[9px] px-2 py-0.5 rounded-full ${t.color}`}>{t.name}</span>
+                            ))}
+                          </div>
+                          {lead.last_client_message_at && (
+                            <div className="mt-3 text-[10px] text-gray-400 flex items-center gap-1">
+                              <span>⏱️</span> {calculateTimeLeft(lead.last_client_message_at)}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

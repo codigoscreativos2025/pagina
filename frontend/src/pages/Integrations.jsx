@@ -6,157 +6,60 @@ import api from '../services/api'
 export default function Integrations() {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const [loading, setLoading] = useState(false)
-  const [facebookLoading, setFacebookLoading] = useState(false)
-  const [agent, setAgent] = useState(null)
-  const [formData, setFormData] = useState({
-    whatsapp_config: {
-      phone: '',
-      phone_number_id: '',
-      access_token: ''
-    },
-    instagram_config: {
-      ig_account_id: '',
-      page_id: ''
-    }
-  })
+  const [integrations, setIntegrations] = useState({})
+  const [loading, setLoading] = useState(true)
+  const [activeModal, setActiveModal] = useState(null) // 'whatsapp', 'instagram', 'telegram', 'google'
+  const [formData, setFormData] = useState({})
 
   useEffect(() => {
-    loadAgent()
-    initFacebookSdk()
+    loadData()
   }, [])
 
-  const initFacebookSdk = () => {
-    window.fbAsyncInit = function() {
-      window.FB.init({
-        appId      : '26381123114874501',
-        cookie     : true,
-        xfbml      : true,
-        version    : 'v18.0'
-      });
-    };
-
-    (function(d, s, id){
-       var js, fjs = d.getElementsByTagName(s)[0];
-       if (d.getElementById(id)) {return;}
-       js = d.createElement(s); js.id = id;
-       js.src = "https://connect.facebook.net/es_LA/sdk.js";
-       fjs.parentNode.insertBefore(js, fjs);
-    }(document, 'script', 'facebook-jssdk'));
-  }
-
-  const parseJSON = (data, defaultData) => {
-    if (!data) return defaultData;
-    if (typeof data === 'object') return data;
+  const loadData = async () => {
     try {
-      return JSON.parse(data);
-    } catch (e) {
-      return defaultData;
-    }
-  };
-
-  const loadAgent = async () => {
-    try {
-      const res = await api.get('/agents')
-      if (res.data.length > 0) {
-        const existingAgent = res.data[0]
-        setAgent(existingAgent)
-        setFormData({
-          whatsapp_config: parseJSON(existingAgent.whatsapp_config, formData.whatsapp_config),
-          instagram_config: parseJSON(existingAgent.instagram_config, formData.instagram_config)
-        })
-      }
+      const res = await api.get('/integrations')
+      setIntegrations(res.data.integrations || {})
     } catch (err) {
       console.error(err)
-    }
-  }
-
-  const launchMetaConnect = () => {
-    if (!window.FB) {
-      alert('Error: El sistema de Facebook no pudo cargar. Si tienes un bloqueador de anuncios (AdBlock), desactívalo temporalmente e intenta de nuevo.')
-      return
-    }
-
-    setFacebookLoading(true)
-    
-    // Configuración para pedir WhatsApp e Instagram
-    const configId = '4111992845771305' // Suponiendo que config_id soporta ambos o pediremos genérico
-    
-    try {
-      window.FB.login((response) => {
-        setFacebookLoading(false)
-        if (response.authResponse) {
-          const accessToken = response.authResponse.accessToken
-          exchangeTokenWithBackend(accessToken)
-        } else {
-          alert('Se canceló la vinculación con Facebook.')
-        }
-      }, {
-        config_id: configId,
-        extras: {
-          feature: 'whatsapp_embedded_signup',
-          version: 2
-        },
-        scope: 'whatsapp_business_management, whatsapp_business_messaging'
-      });
-    } catch (err) {
-      setFacebookLoading(false)
-      alert('El botón de Meta fue bloqueado. Asegúrate de tener habilitados los Pop-Ups.')
-    }
-  }
-
-  const exchangeTokenWithBackend = async (accessToken) => {
-    try {
-      setLoading(true)
-      const res = await api.post('/webhooks/onboarding', { access_token: accessToken })
-      
-      // Update local state temporarily
-      const newWaConfig = { ...formData.whatsapp_config, phone_number_id: res.data.phone_number_id, access_token: accessToken }
-      setFormData(prev => ({ ...prev, whatsapp_config: newWaConfig }))
-      
-      // Save to agent
-      if (agent) {
-        await api.post('/agents', { ...agent, whatsapp_config: newWaConfig })
-      }
-      alert('Conexión con Meta (WhatsApp e Instagram) exitosa!')
-      loadAgent()
-    } catch (err) {
-      console.error(err)
-      alert('Error contactando con el Backend para el registro de WhatsApp.')
     } finally {
       setLoading(false)
     }
   }
 
-  const handleChange = (section, field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [section]: {
-        ...prev[section],
-        [field]: value
-      }
-    }))
+  const openModal = (type) => {
+    const configData = integrations[`${type}_config`] || {}
+    let initialData = {}
+    
+    if (type === 'whatsapp') {
+      initialData = { phone: configData.phone || '', phone_number_id: configData.phone_number_id || '', access_token: configData.access_token || '' }
+    } else if (type === 'instagram') {
+      initialData = { page_id: configData.page_id || '', access_token: configData.access_token || '' }
+    } else if (type === 'google') {
+      initialData = { sheet_id: configData.sheet_id || '', credentials_json: configData.credentials_json || '' }
+    } else if (type === 'telegram') {
+      initialData = { bot_token: configData.bot_token || '' }
+    }
+    
+    setFormData(initialData)
+    setActiveModal(type)
   }
 
-  const handleSaveManual = async () => {
-    setLoading(true)
+  const handleSave = async (e) => {
+    e.preventDefault()
     try {
-      if (agent) {
-        await api.post('/agents', { ...agent, whatsapp_config: formData.whatsapp_config, instagram_config: formData.instagram_config })
-        alert('Credenciales guardadas correctamente.')
-      }
+      await api.put(`/integrations/${activeModal}`, formData)
+      loadData()
+      setActiveModal(null)
     } catch (err) {
       console.error(err)
-      alert('Error al guardar credenciales.')
-    } finally {
-      setLoading(false)
+      alert('Error guardando la integración')
     }
   }
 
   return (
     <div className="min-h-screen bg-slate-50">
       <nav className="bg-white border-b border-slate-200 px-6 py-4">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
+        <div className="max-w-6xl mx-auto flex items-center justify-between">
           <button onClick={() => navigate('/dashboard')} className="text-slate-600 hover:text-slate-900 flex items-center gap-2">
             ← Volver al Dashboard
           </button>
@@ -165,110 +68,208 @@ export default function Integrations() {
         </div>
       </nav>
 
-      <div className="max-w-4xl mx-auto px-6 py-8 space-y-8">
-        
-        {/* Conexión Oficial Meta */}
-        <section className="bg-white rounded-xl p-8 border border-slate-200 shadow-sm">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center">
-              <svg className="w-7 h-7" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.469h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.469h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-slate-900">Conexión con Meta (WhatsApp e Instagram)</h2>
-              <p className="text-slate-500 text-sm">Vincula tus cuentas oficiales para recibir mensajes en el CRM automáticamente.</p>
-            </div>
-          </div>
+      <div className="max-w-6xl mx-auto px-6 py-8">
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-slate-900 mb-2">Conexiones Globales</h1>
+          <p className="text-slate-600">Conecta tus cuentas oficiales aquí. Luego podrás darle permiso a tus agentes para usar estas integraciones.</p>
+        </div>
 
-          <div className="flex flex-col md:flex-row items-center gap-6 bg-slate-50 p-6 rounded-xl border border-slate-100">
-            <div className="flex-1 w-full space-y-3">
-              {formData.whatsapp_config?.phone_number_id ? (
-                <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                  <span className="text-xl">✅</span>
-                  <div>
-                    <h3 className="font-semibold text-green-900 text-sm">WhatsApp Conectado</h3>
-                    <p className="text-xs text-green-700">ID: {formData.whatsapp_config.phone_number_id}</p>
-                  </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          
+          {/* WhatsApp */}
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <div className="p-6 border-b border-slate-100 flex items-start justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-green-100 text-green-600 rounded-xl flex items-center justify-center text-2xl">
+                  📱
                 </div>
-              ) : (
-                <div className="flex items-center gap-3 p-3 bg-gray-100 border border-gray-200 rounded-lg">
-                  <span className="text-xl opacity-50">💬</span>
-                  <div>
-                    <h3 className="font-semibold text-gray-700 text-sm">WhatsApp Pendiente</h3>
-                    <p className="text-xs text-gray-500">No hay cuenta vinculada</p>
-                  </div>
-                </div>
-              )}
-              
-              <div className="flex items-center gap-3 p-3 bg-gray-100 border border-gray-200 rounded-lg">
-                <span className="text-xl opacity-50">📸</span>
                 <div>
-                  <h3 className="font-semibold text-gray-700 text-sm">Instagram DMs</h3>
-                  <p className="text-xs text-gray-500">Se vinculará junto con WhatsApp</p>
+                  <h2 className="text-lg font-bold text-slate-900">WhatsApp Business</h2>
+                  <p className="text-slate-500 text-sm">Conecta tu API de WhatsApp Cloud</p>
                 </div>
               </div>
+              <div className={`px-3 py-1 rounded-full text-xs font-bold ${integrations.whatsapp_config?.access_token ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+                {integrations.whatsapp_config?.access_token ? 'Conectado' : 'Inactivo'}
+              </div>
             </div>
-
-            <button
-              type="button"
-              onClick={launchMetaConnect}
-              disabled={facebookLoading || loading}
-              className="w-full md:w-auto px-8 py-4 bg-[#1877F2] text-white font-semibold rounded-xl hover:bg-[#166FE5] transition-colors flex items-center justify-center gap-3 shadow-lg shadow-blue-500/30 whitespace-nowrap disabled:opacity-50"
-            >
-              {facebookLoading ? 'Abriendo Facebook...' : 'Conectar Cuentas con Meta'}
-            </button>
-          </div>
-        </section>
-
-        {/* Conexión Manual */}
-        <section className="bg-white rounded-xl p-8 border border-slate-200 shadow-sm">
-          <h2 className="text-lg font-bold text-slate-900 mb-2">⚙️ Configuración Manual Avanzada</h2>
-          <p className="text-slate-600 text-sm mb-6">Solo usa esta sección si estás en modo desarrollo o usando tokens generados manualmente en Meta for Developers.</p>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-slate-600 text-sm font-medium mb-2">WhatsApp: Número de Teléfono</label>
-              <input
-                type="text"
-                value={formData.whatsapp_config?.phone || ''}
-                onChange={(e) => handleChange('whatsapp_config', 'phone', e.target.value)}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-brand-500"
-                placeholder="Ej: 15556433397"
-              />
-            </div>
-            <div>
-              <label className="block text-slate-600 text-sm font-medium mb-2">WhatsApp: Phone Number ID</label>
-              <input
-                type="text"
-                value={formData.whatsapp_config?.phone_number_id || ''}
-                onChange={(e) => handleChange('whatsapp_config', 'phone_number_id', e.target.value)}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-brand-500"
-                placeholder="Ej: 1045231415252..."
-              />
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-slate-600 text-sm font-medium mb-2">Meta: Access Token Permanente</label>
-              <input
-                type="password"
-                value={formData.whatsapp_config?.access_token || ''}
-                onChange={(e) => handleChange('whatsapp_config', 'access_token', e.target.value)}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-brand-500 font-mono text-sm"
-                placeholder="EAXXXX..."
-              />
+            <div className="p-6 bg-slate-50 flex gap-4">
+              <button 
+                onClick={() => alert("El login nativo está reservado para Business Solution Providers (BSP). Por favor, usa la configuración manual.")}
+                className="flex-1 px-4 py-2 bg-slate-800 text-white rounded-lg font-medium hover:bg-slate-900"
+              >
+                Conectar Oficial
+              </button>
+              <button 
+                onClick={() => openModal('whatsapp')}
+                className="flex-1 px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50"
+              >
+                Configurar Manual
+              </button>
             </div>
           </div>
-          
-          <div className="mt-6 flex justify-end">
-            <button
-              onClick={handleSaveManual}
-              disabled={loading}
-              className="px-6 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-900 font-medium disabled:opacity-50"
-            >
-              Guardar Credenciales Manuales
-            </button>
-          </div>
-        </section>
 
+          {/* Instagram */}
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <div className="p-6 border-b border-slate-100 flex items-start justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-pink-100 text-pink-600 rounded-xl flex items-center justify-center text-2xl">
+                  📸
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900">Instagram</h2>
+                  <p className="text-slate-500 text-sm">Conecta tu cuenta profesional de Instagram</p>
+                </div>
+              </div>
+              <div className={`px-3 py-1 rounded-full text-xs font-bold ${integrations.instagram_config?.access_token ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+                {integrations.instagram_config?.access_token ? 'Conectado' : 'Inactivo'}
+              </div>
+            </div>
+            <div className="p-6 bg-slate-50 flex gap-4">
+              <button 
+                onClick={() => alert("El login nativo de Instagram está en revisión por Meta. Por favor, usa la configuración manual.")}
+                className="flex-1 px-4 py-2 bg-slate-800 text-white rounded-lg font-medium hover:bg-slate-900"
+              >
+                Conectar Oficial
+              </button>
+              <button 
+                onClick={() => openModal('instagram')}
+                className="flex-1 px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50"
+              >
+                Configurar Manual
+              </button>
+            </div>
+          </div>
+
+          {/* Telegram */}
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <div className="p-6 border-b border-slate-100 flex items-start justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center text-2xl">
+                  ✈️
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900">Telegram</h2>
+                  <p className="text-slate-500 text-sm">Conecta un Bot de Telegram</p>
+                </div>
+              </div>
+              <div className={`px-3 py-1 rounded-full text-xs font-bold ${integrations.telegram_config?.bot_token ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+                {integrations.telegram_config?.bot_token ? 'Conectado' : 'Inactivo'}
+              </div>
+            </div>
+            <div className="p-6 bg-slate-50 flex gap-4">
+              <button 
+                onClick={() => openModal('telegram')}
+                className="w-full px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50"
+              >
+                Configurar Token
+              </button>
+            </div>
+          </div>
+
+          {/* Google */}
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <div className="p-6 border-b border-slate-100 flex items-start justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-red-100 text-red-600 rounded-xl flex items-center justify-center text-2xl">
+                  📊
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900">Google Workspace</h2>
+                  <p className="text-slate-500 text-sm">Acceso a Docs, Sheets y Drive</p>
+                </div>
+              </div>
+              <div className={`px-3 py-1 rounded-full text-xs font-bold ${integrations.google_config?.sheet_id ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+                {integrations.google_config?.sheet_id ? 'Conectado' : 'Inactivo'}
+              </div>
+            </div>
+            <div className="p-6 bg-slate-50 flex gap-4">
+              <button 
+                onClick={() => alert("Google OAuth en mantenimiento. Configura mediante ID y JSON de cuenta de servicio.")}
+                className="flex-1 px-4 py-2 bg-slate-800 text-white rounded-lg font-medium hover:bg-slate-900"
+              >
+                Conectar Oficial
+              </button>
+              <button 
+                onClick={() => openModal('google')}
+                className="flex-1 px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50"
+              >
+                Configurar Manual
+              </button>
+            </div>
+          </div>
+
+        </div>
       </div>
+
+      {/* Modals */}
+      {activeModal && (
+        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+              <h2 className="text-xl font-bold text-slate-900 capitalize">Configurar {activeModal}</h2>
+              <button onClick={() => setActiveModal(null)} className="text-slate-400 hover:text-slate-600 text-xl">&times;</button>
+            </div>
+            
+            <form onSubmit={handleSave} className="p-6 space-y-4">
+              {activeModal === 'whatsapp' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">WhatsApp: Número de Teléfono (con código de país)</label>
+                    <input type="text" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:border-brand-500 focus:outline-none" placeholder="Ej: 15556433397" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">WhatsApp: Phone Number ID</label>
+                    <input type="text" value={formData.phone_number_id} onChange={e => setFormData({...formData, phone_number_id: e.target.value})} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:border-brand-500 focus:outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Meta: Access Token Permanente</label>
+                    <input type="password" value={formData.access_token} onChange={e => setFormData({...formData, access_token: e.target.value})} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:border-brand-500 focus:outline-none" />
+                  </div>
+                </>
+              )}
+
+              {activeModal === 'instagram' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Instagram Page ID</label>
+                    <input type="text" value={formData.page_id} onChange={e => setFormData({...formData, page_id: e.target.value})} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:border-brand-500 focus:outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Meta: Access Token Permanente</label>
+                    <input type="password" value={formData.access_token} onChange={e => setFormData({...formData, access_token: e.target.value})} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:border-brand-500 focus:outline-none" />
+                  </div>
+                </>
+              )}
+
+              {activeModal === 'telegram' && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Telegram Bot Token (obtenido de BotFather)</label>
+                  <input type="password" value={formData.bot_token} onChange={e => setFormData({...formData, bot_token: e.target.value})} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:border-brand-500 focus:outline-none" />
+                </div>
+              )}
+
+              {activeModal === 'google' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Google Sheet ID (Principal)</label>
+                    <input type="text" value={formData.sheet_id} onChange={e => setFormData({...formData, sheet_id: e.target.value})} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:border-brand-500 focus:outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Google Service Account JSON (Credenciales)</label>
+                    <textarea rows="4" value={formData.credentials_json} onChange={e => setFormData({...formData, credentials_json: e.target.value})} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:border-brand-500 focus:outline-none font-mono text-xs" placeholder='{ "type": "service_account", ... }'></textarea>
+                  </div>
+                </>
+              )}
+
+              <div className="pt-4 border-t border-slate-100 flex justify-end gap-3">
+                <button type="button" onClick={() => setActiveModal(null)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">Cancelar</button>
+                <button type="submit" className="px-6 py-2 bg-brand-600 text-white rounded-lg font-medium hover:bg-brand-700">Guardar Configuración</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }

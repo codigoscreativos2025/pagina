@@ -54,6 +54,9 @@ export default function Dashboard() {
             <Link to="/crm" className="text-slate-600 hover:text-brand-600 font-medium transition-colors text-sm flex items-center gap-2">
               <span>📊</span> CRM / Chats
             </Link>
+            <Link to="/integrations" className="text-slate-600 hover:text-brand-600 font-medium transition-colors text-sm flex items-center gap-2">
+              <span>🔌</span> Integraciones
+            </Link>
             <span className="text-slate-300">|</span>
             <span className="text-slate-600">{user?.name}</span>
             <button onClick={logout} className="text-slate-500 hover:text-slate-700 text-sm">

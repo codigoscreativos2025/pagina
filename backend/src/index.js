@@ -13,6 +13,7 @@ const webhookRoutes = require('./routes/webhooks');
 const adminRoutes = require('./routes/admin');
 const crmRoutes = require('./routes/crm');
 const funnelRoutes = require('./routes/funnels');
+const integrationRoutes = require('./routes/integrations');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -64,6 +65,7 @@ app.use('/api/webhooks', webhookRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/crm', crmRoutes);
 app.use('/api/funnels', funnelRoutes);
+app.use('/api/integrations', integrationRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
@@ -179,11 +181,23 @@ async function start() {
       )
     `);
     
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS user_integrations (
+        user_id INTEGER PRIMARY KEY REFERENCES users(id),
+        whatsapp_config JSONB,
+        instagram_config JSONB,
+        google_config JSONB,
+        telegram_config JSONB,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    
     // Migrations seguras
     try { await client.query('ALTER TABLE leads ADD COLUMN is_ai_active BOOLEAN DEFAULT true'); } catch (e) {}
     try { await client.query('ALTER TABLE leads ADD COLUMN last_client_message_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP'); } catch (e) {}
     try { await client.query('ALTER TABLE leads ADD COLUMN stage_id INTEGER REFERENCES stages(id)'); } catch (e) {}
     try { await client.query('ALTER TABLE agents ADD COLUMN instagram_config JSONB'); } catch (e) {}
+    try { await client.query("ALTER TABLE agents ADD COLUMN permissions JSONB DEFAULT '[]'::jsonb"); } catch (e) {}
     
     const plans = await client.query('SELECT COUNT(*) FROM plans');
     if (parseInt(plans.rows[0].count) === 0) {

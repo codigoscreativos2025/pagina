@@ -38,6 +38,9 @@ export default function Dashboard() {
             <span className="text-brand-600">Pivot</span><span className="text-accent">.AI</span>
           </Link>
           <div className="flex items-center gap-6">
+            <Link to="/integrations" className="text-slate-600 hover:text-brand-600 font-medium transition-colors text-sm flex items-center gap-2">
+              <span>🔌</span> Integraciones
+            </Link>
             <Link to="/crm" className="text-slate-600 hover:text-brand-600 font-medium transition-colors text-sm flex items-center gap-2">
               <span>📊</span> CRM / Chats
             </Link>

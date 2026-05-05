@@ -34,83 +34,11 @@ export default function AgentConfig() {
     is_active: true
   })
 
-  const [facebookLoading, setFacebookLoading] = useState(false)
-
+  const [saved, setSaved] = useState(false)
+  
   useEffect(() => {
     loadAgent()
-    initFacebookSdk()
   }, [])
-
-  const initFacebookSdk = () => {
-    window.fbAsyncInit = function() {
-      window.FB.init({
-        appId      : '26381123114874501',
-        cookie     : true,
-        xfbml      : true,
-        version    : 'v18.0'
-      });
-    };
-
-    (function(d, s, id){
-       var js, fjs = d.getElementsByTagName(s)[0];
-       if (d.getElementById(id)) {return;}
-       js = d.createElement(s); js.id = id;
-       js.src = "https://connect.facebook.net/es_LA/sdk.js";
-       fjs.parentNode.insertBefore(js, fjs);
-    }(document, 'script', 'facebook-jssdk'));
-  }
-
-  const launchWhatsAppSignup = () => {
-    if (!window.FB) {
-      alert('Error: El sistema de Facebook no pudo cargar. Si tienes un bloqueador de anuncios (AdBlock), desactívalo temporalmente e intenta de nuevo.')
-      return
-    }
-
-    setFacebookLoading(true)
-    
-    // Configuración recomendada para Meta Embedded Signup
-    const configId = '4111992845771305'
-    
-    try {
-      window.FB.login((response) => {
-        setFacebookLoading(false)
-        if (response.authResponse) {
-          const accessToken = response.authResponse.accessToken
-          // Enviar el token corto al backend para completar onboard
-          exchangeTokenWithBackend(accessToken)
-        } else {
-          alert('Se canceló la vinculación con Facebook.')
-        }
-      }, {
-        config_id: configId,
-        extras: {
-          feature: 'whatsapp_embedded_signup',
-          version: 2
-        },
-        scope: 'whatsapp_business_management, whatsapp_business_messaging'
-      });
-    } catch (err) {
-      setFacebookLoading(false)
-      alert('El botón de Meta fue bloqueado. Asegúrate de configurar bien tu VITE_FACEBOOK_APP_ID y tener habilitados los Pop-Ups.')
-    }
-  }
-
-  const exchangeTokenWithBackend = async (accessToken) => {
-    try {
-      setLoading(true)
-      const res = await api.post('/webhooks/onboarding', { access_token: accessToken })
-      handleChange('whatsapp_config', 'phone_number_id', res.data.phone_number_id)
-      
-      // Guardar status actualizado
-      setSaved(true)
-      setTimeout(() => setSaved(false), 3000)
-    } catch (err) {
-      console.error(err)
-      alert('Error contactando con el Backend para el registro de WhatsApp.')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const parseJSON = (data, defaultData) => {
     if (!data) return defaultData;
@@ -294,95 +222,19 @@ export default function AgentConfig() {
             />
           </section>
 
-          {/* WhatsApp / Meta Embedded Signup */}
-          <section className="bg-white rounded-xl p-6 border border-slate-200">
-            <h2 className="text-lg font-bold text-slate-900 mb-4">💬 Conexión con WhatsApp Business</h2>
-            
-            <p className="text-slate-700 font-semibold mb-2">Opción 1: Conexión Automática Oficial</p>
-            <p className="text-slate-600 text-sm mb-4">
-              Requiere que tu aplicación de Meta for Developers tenga Verificación de Negocio aprobada.
-            </p>
-            <div className="flex flex-col md:flex-row items-center gap-6 bg-brand-50 p-6 rounded-xl border border-brand-100 mb-6">
-              <div className="flex-1">
-                {formData.whatsapp_config?.phone_number_id ? (
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-slate-800">WhatsApp Conectado</h3>
-                      <p className="text-sm text-slate-500">ID: {formData.whatsapp_config.phone_number_id}</p>
-                    </div>
-                  </div>
-                ) : (
-                  <div>
-                    <h3 className="font-semibold text-slate-800 mb-1">Sin conexión activa</h3>
-                    <p className="text-sm text-slate-600">Presiona el botón para iniciar el proceso de Meta. El sistema configurará tus credenciales y el Webhook automáticamente.</p>
-                  </div>
-                )}
-              </div>
-
-              <button
-                type="button"
-                onClick={launchWhatsAppSignup}
-                disabled={facebookLoading || loading}
-                className="px-6 py-3 bg-[#1877F2] text-white font-semibold rounded-lg hover:bg-[#166FE5] transition-colors flex items-center gap-3 shadow-md shadow-blue-500/20 whitespace-nowrap disabled:opacity-50"
-              >
-                {facebookLoading ? (
-                  <span>Conectando...</span>
-                ) : (
-                  <>
-                    <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.469h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.469h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                    </svg>
-                    Conectar con Meta
-                  </>
-                )}
-              </button>
+          {/* Meta Integrations Banner */}
+          <section className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100 flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900 mb-1">🔗 Conectar con WhatsApp e Instagram</h2>
+              <p className="text-slate-600 text-sm">Gestiona tus cuentas de Meta en el nuevo Centro de Integraciones.</p>
             </div>
-
-            <div className="border-t border-slate-200 my-6"></div>
-
-            <p className="text-slate-700 font-semibold mb-2">Opción 2: Conexión Manual (Desarrollo / Sin verificar)</p>
-            <p className="text-slate-600 text-sm mb-4">
-              Si aún no tienes tu negocio verificado, ingresa directamente las credenciales generadas en el panel de Meta for Developers.
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-slate-600 text-sm font-medium mb-2">Número de Teléfono (Tal como sale en Meta)</label>
-                <input
-                  type="text"
-                  value={formData.whatsapp_config?.phone || ''}
-                  onChange={(e) => handleChange('whatsapp_config', 'phone', e.target.value)}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-brand-500"
-                  placeholder="Ej: 15556433397"
-                />
-              </div>
-              <div>
-                <label className="block text-slate-600 text-sm font-medium mb-2">Phone Number ID</label>
-                <input
-                  type="text"
-                  value={formData.whatsapp_config?.phone_number_id || ''}
-                  onChange={(e) => handleChange('whatsapp_config', 'phone_number_id', e.target.value)}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-brand-500"
-                  placeholder="Ej: 1045231415252..."
-                />
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-slate-600 text-sm font-medium mb-2">Access Token Permanente</label>
-                <input
-                  type="password"
-                  value={formData.whatsapp_config?.access_token || ''}
-                  onChange={(e) => handleChange('whatsapp_config', 'access_token', e.target.value)}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-brand-500"
-                  placeholder="EAXXXX..."
-                />
-              </div>
-            </div>
-            
-            <p className="text-slate-500 text-xs mt-4">
-              🔒 Estas credenciales se almacenan de forma segura y solo son usadas para conectar la IA a tu WhatsApp.
-            </p>
+            <button
+              type="button"
+              onClick={() => navigate('/integrations')}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700"
+            >
+              Ir a Integraciones →
+            </button>
           </section>
 
           {/* Google Sheets */}

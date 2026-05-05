@@ -183,6 +183,7 @@ async function start() {
     try { await client.query('ALTER TABLE leads ADD COLUMN is_ai_active BOOLEAN DEFAULT true'); } catch (e) {}
     try { await client.query('ALTER TABLE leads ADD COLUMN last_client_message_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP'); } catch (e) {}
     try { await client.query('ALTER TABLE leads ADD COLUMN stage_id INTEGER REFERENCES stages(id)'); } catch (e) {}
+    try { await client.query('ALTER TABLE agents ADD COLUMN instagram_config JSONB'); } catch (e) {}
     
     const plans = await client.query('SELECT COUNT(*) FROM plans');
     if (parseInt(plans.rows[0].count) === 0) {

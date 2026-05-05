@@ -97,7 +97,7 @@ export default function Integrations() {
           feature: 'whatsapp_embedded_signup',
           version: 2
         },
-        scope: 'whatsapp_business_management, whatsapp_business_messaging, instagram_manage_messages, pages_manage_metadata, pages_read_engagement, pages_show_list'
+        scope: 'whatsapp_business_management, whatsapp_business_messaging'
       });
     } catch (err) {
       setFacebookLoading(false)

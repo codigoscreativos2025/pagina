@@ -58,6 +58,44 @@ router.get('/stats', auth, async (req, res) => {
   }
 });
 
+// Get Google OAuth token for Picker API (MUST be before /:id)
+router.get('/google-picker-token', auth, async (req, res) => {
+  try {
+    const result = await req.pool.query(
+      'SELECT google_config FROM user_integrations WHERE user_id = $1',
+      [req.user.id]
+    );
+    if (result.rows.length === 0 || !result.rows[0].google_config) {
+      return res.status(400).json({ error: 'Google no conectado' });
+    }
+    const config = typeof result.rows[0].google_config === 'string'
+      ? JSON.parse(result.rows[0].google_config)
+      : result.rows[0].google_config;
+
+    const { google } = require('googleapis');
+    const oauth2Client = new google.auth.OAuth2(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      process.env.GOOGLE_REDIRECT_URI
+    );
+    oauth2Client.setCredentials({
+      access_token: config.access_token,
+      refresh_token: config.refresh_token,
+      expiry_date: config.expiry_date
+    });
+
+    const { credentials } = await oauth2Client.getAccessToken();
+    res.json({
+      success: true,
+      access_token: credentials.access_token || config.access_token,
+      client_id: process.env.GOOGLE_CLIENT_ID
+    });
+  } catch (error) {
+    console.error('Google picker token error:', error);
+    res.status(500).json({ error: 'Failed to get Google token' });
+  }
+});
+
 router.get('/:id', auth, async (req, res) => {
   try {
     const result = await req.pool.query(
@@ -157,45 +195,6 @@ router.delete('/:id', auth, async (req, res) => {
   } catch (error) {
     console.error('Delete agent error:', error);
     res.status(500).json({ error: 'Failed to delete agent' });
-  }
-});
-
-// Get Google OAuth token for Picker API
-router.get('/google-picker-token', auth, async (req, res) => {
-  try {
-    const result = await req.pool.query(
-      'SELECT google_config FROM user_integrations WHERE user_id = $1',
-      [req.user.id]
-    );
-    if (result.rows.length === 0 || !result.rows[0].google_config) {
-      return res.status(400).json({ error: 'Google no conectado' });
-    }
-    const config = typeof result.rows[0].google_config === 'string'
-      ? JSON.parse(result.rows[0].google_config)
-      : result.rows[0].google_config;
-
-    // Try to refresh token if expired
-    const { google } = require('googleapis');
-    const oauth2Client = new google.auth.OAuth2(
-      process.env.GOOGLE_CLIENT_ID,
-      process.env.GOOGLE_CLIENT_SECRET,
-      process.env.GOOGLE_REDIRECT_URI
-    );
-    oauth2Client.setCredentials({
-      access_token: config.access_token,
-      refresh_token: config.refresh_token,
-      expiry_date: config.expiry_date
-    });
-
-    const { credentials } = await oauth2Client.getAccessToken();
-    res.json({
-      success: true,
-      access_token: credentials.access_token || config.access_token,
-      client_id: process.env.GOOGLE_CLIENT_ID
-    });
-  } catch (error) {
-    console.error('Google picker token error:', error);
-    res.status(500).json({ error: 'Failed to get Google token' });
   }
 });
 

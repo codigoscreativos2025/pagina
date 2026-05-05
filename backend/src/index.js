@@ -11,6 +11,7 @@ const agentRoutes = require('./routes/agents');
 const planRoutes = require('./routes/plans');
 const webhookRoutes = require('./routes/webhooks');
 const adminRoutes = require('./routes/admin');
+const crmRoutes = require('./routes/crm');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -60,6 +61,7 @@ app.use('/api/agents', agentRoutes);
 app.use('/api/plans', planRoutes);
 app.use('/api/webhooks', webhookRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/crm', crmRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
@@ -109,6 +111,28 @@ async function start() {
         price DECIMAL(10,2) NOT NULL,
         messages_limit INTEGER DEFAULT 100,
         features JSONB,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS leads (
+        id SERIAL PRIMARY KEY,
+        agent_id INTEGER REFERENCES agents(id),
+        client_phone VARCHAR(50) NOT NULL,
+        name VARCHAR(255),
+        status VARCHAR(50) DEFAULT 'nuevo',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS messages (
+        id SERIAL PRIMARY KEY,
+        lead_id INTEGER REFERENCES leads(id),
+        sender_type VARCHAR(50) NOT NULL,
+        content TEXT NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);

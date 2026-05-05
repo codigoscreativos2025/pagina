@@ -116,10 +116,11 @@ router.post('/', async (req, res) => {
     const text = message.text?.body
     const type = message.type
     const agentPhone = value?.metadata?.display_phone_number
+    const clientName = value?.contacts?.[0]?.profile?.name || from
     
     console.log('[WhatsApp] Received message:', { from, agentPhone, text, type })
     
-    await handleIncomingMessage(req, from, text, agentPhone)
+    await handleIncomingMessage(req, from, text, agentPhone, clientName)
     
     res.sendStatus(200)
   } catch (error) {
@@ -128,7 +129,7 @@ router.post('/', async (req, res) => {
   }
 })
 
-async function handleIncomingMessage(req, clientPhone, messageText, agentPhone) {
+async function handleIncomingMessage(req, clientPhone, messageText, agentPhone, clientName) {
   const pool = req.pool
   const redis = req.redis
 
@@ -145,6 +146,21 @@ async function handleIncomingMessage(req, clientPhone, messageText, agentPhone) 
   if (!agentExists) {
     console.log(`[WhatsApp] No agent found for business phone: ${agentPhone}`)
     return
+  }
+
+  // Guardar lead y mensaje en la BD para el CRM
+  try {
+    const agentIdResult = await pool.query(
+      `SELECT id FROM agents WHERE REGEXP_REPLACE(whatsapp_config->>'phone', '\\D', '', 'g') = $1 AND is_active = true LIMIT 1`, 
+      [agentPhone]
+    );
+    if (agentIdResult.rows.length > 0) {
+      const agentId = agentIdResult.rows[0].id;
+      const leadId = await getOrCreateLead(pool, agentId, clientPhone, clientName);
+      await saveMessage(pool, leadId, 'client', messageText);
+    }
+  } catch (e) {
+    console.error('[CRM] Error saving incoming message:', e);
   }
 
   const queueKey = `${agentPhone}:${clientPhone}`
@@ -184,6 +200,16 @@ async function processWithAgent(clientPhone, agentPhone, messageText) {
     console.log(`[Queue] Respuesta de OpenClaw recibida:`, result.success);
 
     if (result.success && result.response) {
+      // Guardar la respuesta de la IA en la BD para el CRM
+      try {
+        const leadResult = await pool.query('SELECT id FROM leads WHERE agent_id = $1 AND client_phone = $2 LIMIT 1', [agent.id, clientPhone]);
+        if (leadResult.rows.length > 0) {
+          await saveMessage(pool, leadResult.rows[0].id, 'agent', result.response);
+        }
+      } catch (e) {
+        console.error('[CRM] Error saving outgoing message:', e);
+      }
+
       await sendWhatsAppMessage(clientPhone, agentPhone, result.response)
     } else {
       console.error(`[Queue] Fallo en OpenClaw:`, result.error || result.response);
@@ -208,6 +234,31 @@ async function checkAgentExists(pool, agentPhone) {
   )
 
   return result.rows.length > 0;
+}
+
+async function getOrCreateLead(pool, agentId, clientPhone, clientName) {
+  const result = await pool.query(
+    'SELECT id FROM leads WHERE agent_id = $1 AND client_phone = $2',
+    [agentId, clientPhone]
+  );
+  
+  if (result.rows.length > 0) {
+    return result.rows[0].id;
+  }
+  
+  const insert = await pool.query(
+    'INSERT INTO leads (agent_id, client_phone, name) VALUES ($1, $2, $3) RETURNING id',
+    [agentId, clientPhone, clientName]
+  );
+  return insert.rows[0].id;
+}
+
+async function saveMessage(pool, leadId, senderType, content) {
+  if (!content) return;
+  await pool.query(
+    'INSERT INTO messages (lead_id, sender_type, content) VALUES ($1, $2, $3)',
+    [leadId, senderType, content]
+  );
 }
 
 async function sendWhatsAppMessage(to, agentPhone, message) {

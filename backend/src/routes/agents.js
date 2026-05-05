@@ -72,22 +72,34 @@ router.get('/google-picker-token', auth, async (req, res) => {
       ? JSON.parse(result.rows[0].google_config)
       : result.rows[0].google_config;
 
-    const { google } = require('googleapis');
-    const oauth2Client = new google.auth.OAuth2(
-      process.env.GOOGLE_CLIENT_ID,
-      process.env.GOOGLE_CLIENT_SECRET,
-      process.env.GOOGLE_REDIRECT_URI
-    );
-    oauth2Client.setCredentials({
-      access_token: config.access_token,
-      refresh_token: config.refresh_token,
-      expiry_date: config.expiry_date
-    });
+    // Try to refresh, fallback to stored token
+    let accessToken = config.access_token;
+    try {
+      const { google } = require('googleapis');
+      const oauth2Client = new google.auth.OAuth2(
+        process.env.GOOGLE_CLIENT_ID,
+        process.env.GOOGLE_CLIENT_SECRET,
+        process.env.GOOGLE_REDIRECT_URI
+      );
+      oauth2Client.setCredentials({
+        access_token: config.access_token,
+        refresh_token: config.refresh_token,
+        expiry_date: config.expiry_date
+      });
+      const tokenRes = await oauth2Client.getAccessToken();
+      if (tokenRes?.token) accessToken = tokenRes.token;
+      else if (tokenRes?.credentials?.access_token) accessToken = tokenRes.credentials.access_token;
+    } catch (refreshErr) {
+      console.log('Token refresh failed, using stored token');
+    }
 
-    const { credentials } = await oauth2Client.getAccessToken();
+    if (!accessToken) {
+      return res.status(400).json({ error: 'No se pudo obtener token de Google' });
+    }
+
     res.json({
       success: true,
-      access_token: credentials.access_token || config.access_token,
+      access_token: accessToken,
       client_id: process.env.GOOGLE_CLIENT_ID
     });
   } catch (error) {

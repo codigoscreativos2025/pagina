@@ -6,7 +6,7 @@ import './index.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <GoogleOAuthProvider clientId="405064438947-vo1ccbpp1uckdi8jg6r1ugpb5kflr1ep.apps.googleusercontent.com">
+    <GoogleOAuthProvider clientId="405064438947-u7hq2f88inje5e3795k29v5h2s251gud.apps.googleusercontent.com">
       <App />
     </GoogleOAuthProvider>
   </React.StrictMode>

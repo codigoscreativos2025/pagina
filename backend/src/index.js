@@ -334,6 +334,23 @@ async function start() {
         ('Business', 99.99, 10000, '{"api_access": true, "wa_templates_enabled": true, "ai_audio_transcription": true, "media_retention_days": 60, "max_storage_mb": 10000}'),
         ('Enterprise', 299.99, 999999, '{"priority": true, "support": true, "wa_templates_enabled": true, "ai_audio_transcription": true, "media_retention_days": 180, "max_storage_mb": 50000}')
       `);
+    } else {
+      // Backfill features for existing plans that have missing keys
+      const defaultFeatures = {
+        'Gratis': { basic: true, wa_templates_enabled: false, ai_audio_transcription: false, media_retention_days: 7, max_storage_mb: 50 },
+        'Starter': { google_sheets: true, wa_templates_enabled: true, ai_audio_transcription: false, media_retention_days: 30, max_storage_mb: 500 },
+        'Pro': { google_sheets: true, multiple_channels: true, wa_templates_enabled: true, ai_audio_transcription: true, media_retention_days: 30, max_storage_mb: 2000 },
+        'Business': { api_access: true, wa_templates_enabled: true, ai_audio_transcription: true, media_retention_days: 60, max_storage_mb: 10000 },
+        'Enterprise': { priority: true, support: true, wa_templates_enabled: true, ai_audio_transcription: true, media_retention_days: 180, max_storage_mb: 50000 }
+      };
+      const existingPlans = await client.query('SELECT id, name, features FROM plans');
+      for (const plan of existingPlans.rows) {
+        const defaults = defaultFeatures[plan.name];
+        if (!defaults) continue;
+        const current = typeof plan.features === 'string' ? JSON.parse(plan.features || '{}') : (plan.features || {});
+        const merged = { ...defaults, ...current };
+        await client.query('UPDATE plans SET features = $1 WHERE id = $2', [JSON.stringify(merged), plan.id]);
+      }
     }
 
     // Seed ai_models

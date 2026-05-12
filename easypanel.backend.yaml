@@ -14,3 +14,23 @@ port: 3001
 # Solo proxy, sin SSL externo (interno)
 features:
   - proxy
+
+# Volumen persistente para archivos multimedia
+volumes:
+  - from: /data
+    to: /data/uploads
+
+# Variables de entorno
+env:
+  - key: MEDIA_STORAGE_PATH
+    value: /data/uploads
+  - key: MEDIA_URL_SECRET
+    value: change-this-to-a-secure-random-string-in-production
+  - key: MEDIA_MAX_SIZE_MB
+    value: "100"
+  - key: WHISPER_MODEL
+    value: whisper-1
+  - key: WHISPER_LANGUAGE
+    value: es
+  - key: WA_TEMPLATE_SYNC_INTERVAL_MIN
+    value: "60"

@@ -112,4 +112,35 @@ router.delete('/models/:id', auth, async (req, res) => {
   }
 });
 
+// ============ PLAN FEATURES ============
+router.get('/plans', auth, async (req, res) => {
+  try {
+    const result = await req.pool.query('SELECT * FROM plans ORDER BY price ASC');
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Admin get plans error:', error);
+    res.status(500).json({ error: 'Failed to get plans' });
+  }
+});
+
+router.put('/plans/:id/features', auth, async (req, res) => {
+  try {
+    const { features } = req.body;
+    if (!features || typeof features !== 'object') {
+      return res.status(400).json({ error: 'features must be an object' });
+    }
+
+    const result = await req.pool.query(
+      'UPDATE plans SET features = $1 WHERE id = $2 RETURNING *',
+      [JSON.stringify(features), req.params.id]
+    );
+
+    if (!result.rows.length) return res.status(404).json({ error: 'Plan not found' });
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Admin update plan features error:', error);
+    res.status(500).json({ error: 'Failed to update plan features' });
+  }
+});
+
 module.exports = router;

@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const path = require('path');
 const { Pool } = require('pg');
 const redis = require('redis');
 const authRoutes = require('./routes/auth');
@@ -17,6 +18,8 @@ const integrationRoutes = require('./routes/integrations');
 const automationRoutes = require('./routes/automations');
 const analyticsRoutes = require('./routes/analytics');
 const cronEngine = require('./services/cronEngine');
+const templateRoutes = require('./routes/templates');
+const mediaRoutes = require('./routes/media');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -71,6 +74,8 @@ app.use('/api/funnels', funnelRoutes);
 app.use('/api/integrations', integrationRoutes);
 app.use('/api/automations', automationRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/templates', templateRoutes);
+app.use('/api/media', mediaRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
@@ -226,7 +231,70 @@ async function start() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    
+
+    // ============================================
+    // WhatsApp Templates (Utility / Marketing / Authentication)
+    // ============================================
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS wa_templates (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        agent_id INTEGER REFERENCES agents(id) ON DELETE SET NULL,
+        name VARCHAR(512) NOT NULL,
+        display_name VARCHAR(255),
+        language VARCHAR(20) DEFAULT 'es',
+        category VARCHAR(30) NOT NULL,
+        components JSONB NOT NULL,
+        body_text TEXT,
+        variables_count INTEGER DEFAULT 0,
+        status VARCHAR(30) DEFAULT 'DRAFT',
+        meta_template_id VARCHAR(255),
+        rejection_reason TEXT,
+        last_sync_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS agent_templates (
+        agent_id INTEGER REFERENCES agents(id) ON DELETE CASCADE,
+        template_id INTEGER REFERENCES wa_templates(id) ON DELETE CASCADE,
+        usage_context TEXT,
+        enabled BOOLEAN DEFAULT true,
+        PRIMARY KEY (agent_id, template_id)
+      )
+    `);
+
+    // ============================================
+    // Media Files
+    // ============================================
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS media_files (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        lead_id INTEGER REFERENCES leads(id) ON DELETE SET NULL,
+        message_id INTEGER,
+        direction VARCHAR(20),
+        type VARCHAR(30),
+        mime_type VARCHAR(100),
+        filename VARCHAR(255),
+        size_bytes BIGINT,
+        storage_path TEXT,
+        duration_seconds INTEGER,
+        meta_media_id VARCHAR(255),
+        transcription TEXT,
+        expires_at TIMESTAMP,
+        deleted_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    try { await client.query('CREATE INDEX IF NOT EXISTS idx_media_expires ON media_files(expires_at) WHERE deleted_at IS NULL'); } catch (e) {}
+    try { await client.query('CREATE INDEX IF NOT EXISTS idx_media_lead ON media_files(lead_id)'); } catch (e) {}
+    try { await client.query('CREATE INDEX IF NOT EXISTS idx_wa_templates_user ON wa_templates(user_id)'); } catch (e) {}
+    try { await client.query('CREATE INDEX IF NOT EXISTS idx_wa_templates_status ON wa_templates(status)'); } catch (e) {}
+
     // Migrations seguras
     try { await client.query('ALTER TABLE leads ADD COLUMN is_ai_active BOOLEAN DEFAULT true'); } catch (e) {}
     try { await client.query('ALTER TABLE leads ADD COLUMN last_client_message_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP'); } catch (e) {}
@@ -236,6 +304,14 @@ async function start() {
     try { await client.query("ALTER TABLE leads ADD COLUMN custom_fields JSONB DEFAULT '{}'::jsonb"); } catch (e) {}
     try { await client.query('ALTER TABLE user_integrations ADD COLUMN meta_ads_config JSONB'); } catch (e) {}
     try { await client.query('ALTER TABLE agents ADD COLUMN model_id INTEGER'); } catch (e) {}
+    try { await client.query("ALTER TABLE messages ADD COLUMN message_type VARCHAR(30) DEFAULT 'text'"); } catch (e) {}
+    try { await client.query('ALTER TABLE messages ADD COLUMN media_id INTEGER'); } catch (e) {}
+    try { await client.query('ALTER TABLE messages ADD COLUMN template_id INTEGER'); } catch (e) {}
+    try { await client.query('ALTER TABLE messages ADD COLUMN wa_message_id VARCHAR(255)'); } catch (e) {}
+    try { await client.query("ALTER TABLE messages ADD COLUMN status VARCHAR(30) DEFAULT 'sent'"); } catch (e) {}
+    try { await client.query('ALTER TABLE media_files ADD COLUMN IF NOT EXISTS message_id_fk INTEGER REFERENCES messages(id)'); } catch (e) {}
+    try { await client.query('ALTER TABLE plans ADD COLUMN IF NOT EXISTS features JSONB'); } catch (e) {}
+    try { await client.query("UPDATE plans SET features = '{}'::jsonb WHERE features IS NULL"); } catch (e) {}
 
     await client.query(`
       CREATE TABLE IF NOT EXISTS ai_models (
@@ -252,11 +328,11 @@ async function start() {
     if (parseInt(plans.rows[0].count) === 0) {
       await client.query(`
         INSERT INTO plans (name, price, messages_limit, features) VALUES
-        ('Gratis', 0, 50, '{"basic": true}'),
-        ('Starter', 19.99, 500, '{"google_sheets": true}'),
-        ('Pro', 49.99, 2000, '{"google_sheets": true, "multiple_channels": true}'),
-        ('Business', 99.99, 10000, '{"api_access": true}'),
-        ('Enterprise', 299.99, 999999, '{"priority": true, "support": true}')
+        ('Gratis', 0, 50, '{"basic": true, "wa_templates_enabled": false, "ai_audio_transcription": false, "media_retention_days": 7, "max_storage_mb": 50}'),
+        ('Starter', 19.99, 500, '{"google_sheets": true, "wa_templates_enabled": true, "ai_audio_transcription": false, "media_retention_days": 30, "max_storage_mb": 500}'),
+        ('Pro', 49.99, 2000, '{"google_sheets": true, "multiple_channels": true, "wa_templates_enabled": true, "ai_audio_transcription": true, "media_retention_days": 30, "max_storage_mb": 2000}'),
+        ('Business', 99.99, 10000, '{"api_access": true, "wa_templates_enabled": true, "ai_audio_transcription": true, "media_retention_days": 60, "max_storage_mb": 10000}'),
+        ('Enterprise', 299.99, 999999, '{"priority": true, "support": true, "wa_templates_enabled": true, "ai_audio_transcription": true, "media_retention_days": 180, "max_storage_mb": 50000}')
       `);
     }
 

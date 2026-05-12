@@ -3,6 +3,9 @@ const router = express.Router()
 const auth = require('../middleware/auth')
 const MessageQueue = require('../services/messageQueue')
 const OpenClawService = require('../services/openclawService')
+const mediaService = require('../services/mediaService')
+const transcriptionService = require('../services/transcriptionService')
+const { getPlanFeatures } = require('../middleware/planFeatures')
 
 let messageQueue = null
 let openclawService = null
@@ -113,14 +116,18 @@ router.post('/', async (req, res) => {
     }
 
     const from = message.from
-    const text = message.text?.body
     const type = message.type
     const agentPhone = value?.metadata?.display_phone_number
     const clientName = value?.contacts?.[0]?.profile?.name || from
     
-    console.log('[WhatsApp] Received message:', { from, agentPhone, text, type })
-    
-    await handleIncomingMessage(req, from, text, agentPhone, clientName)
+    console.log('[WhatsApp] Received message:', { from, agentPhone, type })
+
+    if (type === 'text') {
+      const text = message.text?.body
+      await handleIncomingMessage(req, from, text, agentPhone, clientName)
+    } else if (['audio', 'image', 'document', 'video', 'sticker'].includes(type)) {
+      await handleIncomingMedia(req, from, message, type, agentPhone, clientName)
+    }
     
     res.sendStatus(200)
   } catch (error) {
@@ -128,6 +135,106 @@ router.post('/', async (req, res) => {
     res.sendStatus(200)
   }
 })
+
+async function handleIncomingMedia(req, clientPhone, message, mediaType, agentPhone, clientName) {
+  const pool = req.pool || global.pool
+
+  try {
+    const agentIdResult = await pool.query(
+      `SELECT id, user_id, whatsapp_config FROM agents WHERE REGEXP_REPLACE(whatsapp_config->>'phone', '\\D', '', 'g') = $1 AND is_active = true LIMIT 1`,
+      [agentPhone]
+    )
+    if (!agentIdResult.rows.length) {
+      console.log(`[WhatsApp Media] No agent found for business phone: ${agentPhone}`)
+      return
+    }
+
+    const agent = agentIdResult.rows[0]
+    const agentId = agent.id
+    const userId = agent.user_id
+    const whatsappConfig = typeof agent.whatsapp_config === 'string' ? JSON.parse(agent.whatsapp_config) : agent.whatsapp_config
+    const accessToken = whatsappConfig?.access_token
+
+    if (!accessToken) {
+      console.error('[WhatsApp Media] No access token for agent:', agentId)
+      return
+    }
+
+    const mediaObj = message[mediaType]
+    const metaMediaId = mediaObj?.id
+    const mimeType = mediaObj?.mime_type || mediaObj?.mimetype || ''
+    const filename = mediaObj?.filename || mediaObj?.caption || `${mediaType}_${metaMediaId}`
+    const caption = mediaObj?.caption || ''
+    const duration = mediaObj?.duration_seconds || null
+
+    if (!metaMediaId) {
+      console.error('[WhatsApp Media] No media ID in message')
+      return
+    }
+
+    const leadId = await getOrCreateLeadAndUpdateTimestamp(pool, agentId, clientPhone, clientName)
+
+    const downloadResult = await mediaService.downloadFromMeta(metaMediaId, accessToken)
+    if (!downloadResult.success) {
+      console.error('[WhatsApp Media] Download failed:', downloadResult.error)
+      await saveMessage(pool, leadId, 'client', caption || `[${mediaType.toUpperCase()}] ${filename}`)
+      return
+    }
+
+    const classifiedType = mediaService.classifyMedia(mediaType, downloadResult.mime_type || mimeType)
+    const saved = await mediaService.saveBuffer(userId, downloadResult.buffer, downloadResult.filename, downloadResult.mime_type || mimeType)
+    const expiresAt = await mediaService.calculateExpiration(userId, pool)
+
+    const mediaResult = await pool.query(
+      `INSERT INTO media_files (user_id, lead_id, direction, type, mime_type, filename, size_bytes, storage_path, duration_seconds, meta_media_id, transcription, expires_at)
+       VALUES ($1, $2, 'inbound', $3, $4, $5, $6, $7, $8, $9, NULL, $10) RETURNING *`,
+      [userId, leadId, classifiedType, downloadResult.mime_type || mimeType, saved.filename,
+       saved.size_bytes, saved.storage_path, duration, metaMediaId, expiresAt]
+    )
+
+    const mediaRow = mediaResult.rows[0]
+
+    let transcription = null
+    let textForAI = caption || ''
+
+    if (classifiedType === 'audio') {
+      const features = await getPlanFeatures(pool, userId)
+      if (features.ai_audio_transcription) {
+        transcription = await transcriptionService.transcribe(saved.storage_path)
+        if (transcription) {
+          await pool.query('UPDATE media_files SET transcription = $1 WHERE id = $2', [transcription, mediaRow.id])
+          textForAI = transcription
+        } else {
+          textForAI = `[AUDIO] ${caption || 'Mensaje de voz'} (transcripcion no disponible)`
+        }
+      } else {
+        textForAI = `[AUDIO] ${caption || 'Mensaje de voz'} (transcripcion no incluida en tu plan)`
+      }
+    } else if (['document', 'image', 'video'].includes(classifiedType)) {
+      textForAI = `[${classifiedType.toUpperCase()}] ${saved.filename}${caption ? ` - ${caption}` : ''}`
+
+      if (classifiedType === 'document') {
+        const ext = require('path').extname(saved.filename).toLowerCase()
+        const unreadable = ['.pdf', '.xlsx', '.xls', '.doc', '.docx', '.ppt', '.pptx', '.zip', '.rar']
+        if (unreadable.includes(ext)) {
+          textForAI = `[DOCUMENTO: ${saved.filename}] He recibido tu archivo "${saved.filename}" pero no puedo leer su contenido. ${caption ? `Nota: ${caption}` : 'Por favor, podrías decirme qué información contiene?'}`
+        }
+      }
+    }
+
+    await pool.query(
+      `INSERT INTO messages (lead_id, sender_type, content, message_type, media_id)
+       VALUES ($1, 'client', $2, $3, $4)`,
+      [leadId, textForAI || `[${classifiedType.toUpperCase()}] ${saved.filename}`, classifiedType, mediaRow.id]
+    )
+
+    if (textForAI) {
+      await handleIncomingMessage(req, clientPhone, textForAI, agentPhone, clientName)
+    }
+  } catch (error) {
+    console.error('[WhatsApp Media] Error handling media:', error)
+  }
+}
 
 async function handleIncomingMessage(req, clientPhone, messageText, agentPhone, clientName) {
   const pool = req.pool
@@ -173,7 +280,7 @@ async function processWithAgent(clientPhone, agentPhone, messageText) {
     const pool = global.pool
 
     const agentResult = await pool.query(
-      `SELECT a.*, u.id as user_id 
+      `SELECT a.*, u.id as user_id, u.plan_id
        FROM agents a 
        JOIN users u ON a.user_id = u.id 
        WHERE REGEXP_REPLACE(a.whatsapp_config->>'phone', '\\D', '', 'g') = $1 
@@ -206,21 +313,45 @@ async function processWithAgent(clientPhone, agentPhone, messageText) {
       openclawService = new OpenClawService(process.env.OPENCLAW_URL)
     }
 
-    const result = await openclawService.sendMessage(userId, messageText, agent)
+    // Build context extras: templates + media
+    const contextExtras = {};
+
+    try {
+      const templates = await pool.query(
+        `SELECT t.name, t.display_name, t.category, t.body_text, t.language, at.usage_context
+         FROM wa_templates t
+         JOIN agent_templates at ON at.template_id = t.id
+         WHERE at.agent_id = $1 AND at.enabled = true AND t.status = 'APPROVED'`,
+        [agent.id]
+      );
+      contextExtras.templateContext = templates.rows;
+    } catch (e) {
+      console.error('[Queue] Error fetching template context:', e);
+    }
+
+    const result = await openclawService.sendMessage(userId, messageText, agent, contextExtras)
     console.log(`[Queue] Respuesta de OpenClaw recibida:`, result.success);
 
     if (result.success && result.response) {
-      // Guardar la respuesta de la IA en la BD para el CRM
+      // Check if the AI wants to send a template
+      const templateMatch = result.response.match(/SEND_TEMPLATE:(\w+)/);
+      let finalResponse = result.response;
+
+      if (templateMatch) {
+        finalResponse = result.response.replace(/SEND_TEMPLATE:\w+[\s]*/g, '').trim();
+      }
+
+      // Save the AI response to DB
       try {
         const leadResult = await pool.query('SELECT id FROM leads WHERE agent_id = $1 AND client_phone = $2 LIMIT 1', [agent.id, clientPhone]);
         if (leadResult.rows.length > 0) {
-          await saveMessage(pool, leadResult.rows[0].id, 'agent', result.response);
+          await saveMessage(pool, leadResult.rows[0].id, 'agent', finalResponse);
         }
       } catch (e) {
         console.error('[CRM] Error saving outgoing message:', e);
       }
 
-      await sendWhatsAppMessage(clientPhone, agentPhone, result.response)
+      await sendWhatsAppMessage(clientPhone, agentPhone, finalResponse)
     } else {
       console.error(`[Queue] Fallo en OpenClaw:`, result.error || result.response);
       await sendWhatsAppMessage(clientPhone, agentPhone, 'Lo siento, estoy teniendo problemas técnicos. Por favor intenta más tarde.')
@@ -264,11 +395,11 @@ async function getOrCreateLeadAndUpdateTimestamp(pool, agentId, clientPhone, cli
   return insert.rows[0].id;
 }
 
-async function saveMessage(pool, leadId, senderType, content) {
-  if (!content) return;
+async function saveMessage(pool, leadId, senderType, content, messageType = 'text', mediaId = null, templateId = null) {
+  if (!content && !mediaId) return;
   await pool.query(
-    'INSERT INTO messages (lead_id, sender_type, content) VALUES ($1, $2, $3)',
-    [leadId, senderType, content]
+    'INSERT INTO messages (lead_id, sender_type, content, message_type, media_id, template_id) VALUES ($1, $2, $3, $4, $5, $6)',
+    [leadId, senderType, content || '', messageType, mediaId, templateId]
   );
 }
 

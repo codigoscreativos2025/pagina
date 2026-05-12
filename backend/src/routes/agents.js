@@ -213,3 +213,76 @@ router.delete('/:id', auth, async (req, res) => {
 });
 
 module.exports = router;
+
+// Template assignment endpoints for agents
+router.get('/:id/templates', auth, async (req, res) => {
+  try {
+    const agentId = req.params.id;
+    const userId = req.user.id;
+
+    const agentCheck = await req.pool.query('SELECT id FROM agents WHERE id = $1 AND user_id = $2', [agentId, userId]);
+    if (agentCheck.rows.length === 0) return res.status(404).json({ error: 'Agent not found' });
+
+    const result = await req.pool.query(
+      `SELECT at.*, t.name as template_name, t.display_name, t.language, t.category, t.status as template_status, t.body_text, t.components
+       FROM agent_templates at
+       JOIN wa_templates t ON at.template_id = t.id
+       WHERE at.agent_id = $1 AND at.enabled = true`,
+      [agentId]
+    );
+
+    res.json({ success: true, assignments: result.rows });
+  } catch (error) {
+    console.error('Get agent templates error:', error);
+    res.status(500).json({ error: 'Failed to get agent templates' });
+  }
+});
+
+router.post('/:id/templates', auth, async (req, res) => {
+  try {
+    const agentId = req.params.id;
+    const userId = req.user.id;
+    const { template_id, usage_context, enabled } = req.body;
+
+    if (!template_id) return res.status(400).json({ error: 'template_id is required' });
+
+    const agentCheck = await req.pool.query('SELECT id FROM agents WHERE id = $1 AND user_id = $2', [agentId, userId]);
+    if (agentCheck.rows.length === 0) return res.status(404).json({ error: 'Agent not found' });
+
+    const templateCheck = await req.pool.query('SELECT id FROM wa_templates WHERE id = $1 AND user_id = $2', [template_id, userId]);
+    if (templateCheck.rows.length === 0) return res.status(404).json({ error: 'Template not found' });
+
+    await req.pool.query(
+      `INSERT INTO agent_templates (agent_id, template_id, usage_context, enabled)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (agent_id, template_id) DO UPDATE SET usage_context = $3, enabled = $4`,
+      [agentId, template_id, usage_context || null, enabled !== false]
+    );
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Assign template error:', error);
+    res.status(500).json({ error: 'Failed to assign template' });
+  }
+});
+
+router.delete('/:id/templates/:templateId', auth, async (req, res) => {
+  try {
+    const agentId = req.params.id;
+    const templateId = req.params.templateId;
+    const userId = req.user.id;
+
+    const agentCheck = await req.pool.query('SELECT id FROM agents WHERE id = $1 AND user_id = $2', [agentId, userId]);
+    if (agentCheck.rows.length === 0) return res.status(404).json({ error: 'Agent not found' });
+
+    await req.pool.query(
+      'DELETE FROM agent_templates WHERE agent_id = $1 AND template_id = $2',
+      [agentId, templateId]
+    );
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Remove template error:', error);
+    res.status(500).json({ error: 'Failed to remove template' });
+  }
+});

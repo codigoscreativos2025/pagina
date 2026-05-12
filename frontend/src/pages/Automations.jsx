@@ -12,6 +12,7 @@ const NODE_TYPES_CATALOG = [
   { type: 'condition_field', icon: '🔀', label: 'Si campo = valor', color: '#06b6d4', category: 'Condiciones' },
   { type: 'condition_tag', icon: '🏷️', label: 'Si tiene etiqueta', color: '#14b8a6', category: 'Condiciones' },
   { type: 'action_message', icon: '📩', label: 'Enviar mensaje', color: '#10b981', category: 'Acciones' },
+  { type: 'action_send_template', icon: '📋', label: 'Enviar plantilla WhatsApp', color: '#25d366', category: 'Acciones' },
   { type: 'action_move', icon: '➡️', label: 'Mover a etapa', color: '#6366f1', category: 'Acciones' },
   { type: 'action_tag', icon: '🏷️', label: 'Asignar etiqueta', color: '#ec4899', category: 'Acciones' },
   { type: 'action_notify', icon: '🔔', label: 'Notificar equipo', color: '#f97316', category: 'Acciones' },
@@ -216,6 +217,14 @@ export default function Automations() {
                         className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm" placeholder="Escribe el mensaje..." />
                     </div>
                   )}
+                  {nodeConfig.nodeType === 'action_send_template' && (
+                    <div>
+                      <label className="block text-xs text-slate-400 mb-1">ID de Plantilla</label>
+                      <input value={nodeConfig.template_id || ''} onChange={e => setNodeConfig(p => ({ ...p, template_id: e.target.value }))}
+                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm" placeholder="ID de la plantilla aprobada" />
+                      <p className="text-[10px] text-slate-500 mt-1">Crea plantillas en la sección Plantillas y usa su ID aquí</p>
+                    </div>
+                  )}
                   {nodeConfig.nodeType === 'action_move' && (
                     <div>
                       <label className="block text-xs text-slate-400 mb-1">Mover a etapa</label>
@@ -287,6 +296,12 @@ export default function Automations() {
     { value: 'stage_change', label: '📊 Cambio de etapa', desc: 'Cuando un lead cambia de etapa en el embudo' },
     { value: 'new_lead', label: '🆕 Nuevo lead', desc: 'Cuando entra un nuevo lead al CRM' },
     { value: 'custom_field', label: '📝 Campo personalizado', desc: 'Cuando un campo del lead cambia de valor' },
+  ]
+
+  const ACTION_TYPES = [
+    { value: 'send_message', label: '📩 Enviar mensaje', desc: 'Envía un mensaje de texto' },
+    { value: 'send_template', label: '📋 Enviar plantilla', desc: 'Envía una plantilla de WhatsApp aprobada' },
+    { value: 'move_stage', label: '➡️ Mover a etapa', desc: 'Mueve el lead a otra etapa del embudo' },
   ]
 
   return (
@@ -418,6 +433,33 @@ export default function Automations() {
                             </button>
                           ))}
                         </div>
+                      </div>
+                    )}
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">Acción del bot</label>
+                      <div className="grid grid-cols-1 gap-2">
+                        {ACTION_TYPES.map(a => (
+                          <button key={a.value} onClick={() => setBotForm(p => ({ ...p, actions: [{ type: a.value, ...(p.actions?.[0] || {}) }] }))}
+                            className={`p-3 rounded-xl border-2 text-left transition-all ${botForm.actions?.[0]?.type === a.value ? 'border-brand-500 bg-brand-50' : 'border-slate-200 hover:border-slate-300'}`}>
+                            <div className="text-sm font-bold">{a.label}</div>
+                            <div className="text-xs text-slate-400 mt-0.5">{a.desc}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    {botForm.actions?.[0]?.type === 'send_message' && (
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Mensaje</label>
+                        <textarea rows="3" value={botForm.actions?.[0]?.message || ''} onChange={e => setBotForm(p => ({ ...p, actions: [{ ...p.actions[0], message: e.target.value }] }))}
+                          className="w-full px-4 py-2 border border-slate-300 rounded-lg text-sm" placeholder="Escribe el mensaje que enviará el bot..." />
+                      </div>
+                    )}
+                    {botForm.actions?.[0]?.type === 'send_template' && (
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">ID de Plantilla</label>
+                        <input value={botForm.actions?.[0]?.template_id || ''} onChange={e => setBotForm(p => ({ ...p, actions: [{ ...p.actions[0], template_id: e.target.value }] }))}
+                          className="w-full px-4 py-2 border border-slate-300 rounded-lg text-sm" placeholder="ID de la plantilla aprobada" />
+                        <p className="text-xs text-slate-400 mt-1">Crea y aprueba plantillas en la sección Plantillas</p>
                       </div>
                     )}
                   </div>

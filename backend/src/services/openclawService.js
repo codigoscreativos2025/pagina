@@ -4,7 +4,7 @@ class OpenClawService {
     this.token = process.env.OPENCLAW_GATEWAY_TOKEN
   }
 
-  async sendMessage(userId, message, agentConfig) {
+  async sendMessage(userId, message, agentConfig, contextExtras = {}) {
     const sessionId = `user_${userId}_session`
 
     const parseJSON = (data) => {
@@ -13,10 +13,30 @@ class OpenClawService {
       try { return JSON.parse(data); } catch (e) { return {}; }
     }
 
-    const context = {
-      systemPrompt: agentConfig.system_prompt,
-      businessInfo: parseJSON(agentConfig.business_info),
-      googleSheets: parseJSON(agentConfig.google_sheets_config)
+    let systemContent = '';
+    if (agentConfig.system_prompt) {
+      systemContent = agentConfig.system_prompt;
+    }
+
+    const businessInfo = parseJSON(agentConfig.business_info);
+    const googleSheets = parseJSON(agentConfig.google_sheets_config);
+
+    if (Object.keys(businessInfo).length > 0) {
+      systemContent += `\n\n[Business Info]\n${JSON.stringify(businessInfo)}`;
+    }
+    if (Object.keys(googleSheets).length > 0) {
+      systemContent += `\n\n[Sheets Info]\n${JSON.stringify(googleSheets)}`;
+    }
+
+    if (contextExtras.mediaContext) {
+      systemContent += `\n\n[Media Context]\n${contextExtras.mediaContext}`;
+    }
+
+    if (contextExtras.templateContext && contextExtras.templateContext.length > 0) {
+      const templatesDesc = contextExtras.templateContext.map(t =>
+        `- "${t.name}" (${t.category}): ${t.body_text}${t.usage_context ? ` | Uso: ${t.usage_context}` : ''}`
+      ).join('\n');
+      systemContent += `\n\n[Available WhatsApp Templates]\nYou can proactively send these templates when appropriate:\n${templatesDesc}\nTo send a template, respond with: SEND_TEMPLATE:template_name`;
     }
 
     try {
@@ -34,10 +54,7 @@ class OpenClawService {
           model: 'main',
           user: sessionId,
           messages: [
-            { 
-              role: 'system', 
-              content: `${context.systemPrompt || ''}\n\n[Business Info]\n${JSON.stringify(context.businessInfo || {})}\n\n[Sheets Info]\n${JSON.stringify(context.googleSheets || {})}` 
-            },
+            { role: 'system', content: systemContent },
             { role: 'user', content: message }
           ]
         })
@@ -67,6 +84,24 @@ class OpenClawService {
   async sendMessageWithContext(userId, message, context) {
     const sessionId = `user_${userId}_session`
 
+    let systemContent = context.systemPrompt || '';
+
+    if (context.businessInfo && Object.keys(context.businessInfo).length > 0) {
+      systemContent += `\n\n[Business Info]\n${JSON.stringify(context.businessInfo)}`;
+    }
+    if (context.googleSheets && Object.keys(context.googleSheets).length > 0) {
+      systemContent += `\n\n[Sheets Info]\n${JSON.stringify(context.googleSheets)}`;
+    }
+    if (context.mediaContext) {
+      systemContent += `\n\n[Media Context]\n${context.mediaContext}`;
+    }
+    if (context.templateContext && context.templateContext.length > 0) {
+      const templatesDesc = context.templateContext.map(t =>
+        `- "${t.name}" (${t.category}): ${t.body_text}${t.usage_context ? ` | Uso: ${t.usage_context}` : ''}`
+      ).join('\n');
+      systemContent += `\n\n[Available WhatsApp Templates]\nYou can proactively send these templates when appropriate:\n${templatesDesc}\nTo send a template, respond with: SEND_TEMPLATE:template_name`;
+    }
+
     try {
       const headers = {
         'Content-Type': 'application/json'
@@ -84,7 +119,7 @@ class OpenClawService {
           messages: [
             { 
               role: 'system', 
-              content: `${context.systemPrompt || ''}\n\n[Business Info]\n${JSON.stringify(context.businessInfo || {})}\n\n[Sheets Info]\n${JSON.stringify(context.googleSheets || {})}` 
+              content: systemContent
             },
             { role: 'user', content: message }
           ]

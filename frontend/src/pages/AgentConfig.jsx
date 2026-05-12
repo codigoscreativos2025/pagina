@@ -57,13 +57,61 @@ export default function AgentConfig() {
     name: '', business_info: [],
     system_prompt: '', permissions: [], tools: [], is_active: true, model_id: ''
   })
+  const [templates, setTemplates] = useState([])
+  const [agentTemplates, setAgentTemplates] = useState([])
 
   useEffect(() => { loadAgent() }, [])
+
+  const loadTemplates = async () => {
+    try {
+      const res = await api.get('/templates')
+      setTemplates((res.data.templates || []).filter(t => t.status === 'APPROVED'))
+    } catch (err) { console.error('Error loading templates:', err) }
+  }
+
+  const loadAgentTemplates = async () => {
+    try {
+      const res = await api.get(`/agents/${id}/templates`)
+      if (res.data.success) setAgentTemplates(res.data.assignments || [])
+    } catch (err) { console.error('Error loading agent templates:', err) }
+  }
+
+  useEffect(() => { loadTemplates(); loadAgentTemplates() }, [id])
 
   const parseJSON = (data, def) => {
     if (!data) return def
     if (typeof data === 'object') return data
     try { return JSON.parse(data) } catch { return def }
+  }
+
+  const toggleTemplateAssignment = async (templateId) => {
+    const existing = agentTemplates.find(at => at.template_id === templateId)
+    if (existing) {
+      try {
+        await api.delete(`/agents/${id}/templates/${templateId}`)
+        setAgentTemplates(prev => prev.filter(at => at.template_id !== templateId))
+      } catch (err) { console.error('Error removing template:', err) }
+    } else {
+      try {
+        await api.post(`/agents/${id}/templates`, {
+          template_id: templateId,
+          usage_context: '',
+          enabled: true
+        })
+        setAgentTemplates(prev => [...prev, { template_id: templateId, usage_context: '', enabled: true, agent_id: parseInt(id) }])
+      } catch (err) { console.error('Error assigning template:', err) }
+    }
+  }
+
+  const updateTemplateUsageContext = async (templateId, usageContext) => {
+    try {
+      await api.post(`/agents/${id}/templates`, {
+        template_id: templateId,
+        usage_context: usageContext,
+        enabled: true
+      })
+      setAgentTemplates(prev => prev.map(at => at.template_id === templateId ? { ...at, usage_context: usageContext } : at))
+    } catch (err) { console.error('Error updating usage context:', err) }
   }
 
   const loadAgent = async () => {
@@ -349,6 +397,56 @@ export default function AgentConfig() {
                 )
               })}
             </div>
+          </section>
+
+          {/* Plantillas WhatsApp */}
+          <section className="bg-white rounded-xl p-6 border border-slate-200">
+            <h2 className="text-lg font-bold text-slate-900 mb-1">📋 Plantillas WhatsApp</h2>
+            <p className="text-slate-500 text-sm mb-4">Asigna plantillas aprobadas a este agente. Solo las plantillas asignadas estarán disponibles para envíos proactivos.</p>
+            {templates.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-slate-400 text-sm mb-2">No hay plantillas aprobadas</p>
+                <a href="/templates" className="text-brand-600 text-sm font-medium hover:text-brand-700">Crear plantilla →</a>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {templates.map(t => {
+                  const assigned = agentTemplates.find(at => at.template_id === t.id)
+                  return (
+                    <div key={t.id} className={`rounded-lg border-2 p-4 transition-all ${assigned ? 'border-brand-300 bg-brand-50/30' : 'border-slate-200 bg-white'}`}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <input
+                              type="checkbox"
+                              checked={!!assigned}
+                              onChange={() => toggleTemplateAssignment(t.id)}
+                              className="w-4 h-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                            />
+                            <span className="font-semibold text-slate-800 text-sm">{t.display_name || t.name}</span>
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 font-medium">{t.category}</span>
+                            <span className="text-[10px] text-slate-400">{t.language}</span>
+                          </div>
+                          <p className="text-xs text-slate-500 truncate ml-7">{t.body_text}</p>
+                        </div>
+                      </div>
+                      {assigned && (
+                        <div className="mt-3 ml-7">
+                          <label className="block text-xs font-medium text-slate-600 mb-1">Contexto de uso (describe al agente cuándo usar esta plantilla)</label>
+                          <textarea
+                            rows="2"
+                            value={assigned.usage_context || ''}
+                            onChange={e => updateTemplateUsageContext(t.id, e.target.value)}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500"
+                            placeholder="Ej: Usar cuando un cliente pide reprogramar su cita..."
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </section>
 
           {/* Modelo IA */}

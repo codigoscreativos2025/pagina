@@ -3,12 +3,14 @@ import { Link } from 'react-router-dom'
 import api from '../services/api'
 
 export default function Admin() {
-  const [tab, setTab] = useState('users') // users | models
+  const [tab, setTab] = useState('users') // users | models | plans
   const [users, setUsers] = useState([])
   const [models, setModels] = useState([])
+  const [plans, setPlans] = useState([])
   const [stats, setStats] = useState({})
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [editingPlan, setEditingPlan] = useState(null)
 
   // Models form
   const [editingModel, setEditingModel] = useState(null)
@@ -26,6 +28,10 @@ export default function Admin() {
       setUsers(usersRes.data)
       setStats(statsRes.data)
       setModels(modelsRes.data)
+      try {
+        const plansRes = await api.get('/admin/plans')
+        setPlans(plansRes.data)
+      } catch (e) { console.error('Error loading plans:', e) }
     } catch (err) { console.error(err) }
     finally { setLoading(false) }
   }
@@ -74,6 +80,7 @@ export default function Admin() {
             <div className="flex gap-2">
               <button onClick={() => setTab('users')} className={`px-4 py-2 rounded-lg text-sm font-bold ${tab === 'users' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white'}`}>Usuarios & SaaS</button>
               <button onClick={() => setTab('models')} className={`px-4 py-2 rounded-lg text-sm font-bold ${tab === 'models' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white'}`}>Modelos IA</button>
+              <button onClick={() => setTab('plans')} className={`px-4 py-2 rounded-lg text-sm font-bold ${tab === 'plans' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white'}`}>Planes & Features</button>
             </div>
           </div>
           <Link to="/dashboard" className="text-slate-400 hover:text-white text-sm font-medium">
@@ -100,7 +107,7 @@ export default function Admin() {
           ))}
         </div>
 
-        {tab === 'users' ? (
+        {tab === 'users' && (
           <div>
             {/* Buscador */}
             <div className="bg-white rounded-xl p-4 border border-slate-200 mb-6 flex justify-between items-center gap-4 shadow-sm">
@@ -163,7 +170,8 @@ export default function Admin() {
               </table>
             </div>
           </div>
-        ) : (
+        )}
+          {tab === 'models' && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="md:col-span-2 space-y-4">
               <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
@@ -230,6 +238,99 @@ export default function Admin() {
             </div>
           </div>
         )}
+        {tab === 'plans' && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+              <div className="p-4 border-b border-slate-100 bg-slate-50">
+                <h2 className="font-bold text-slate-800">Planes & Features</h2>
+                <p className="text-xs text-slate-500 mt-1">Configura las features disponibles por plan. Los cambios se reflejan inmediatamente.</p>
+              </div>
+              <div className="divide-y divide-slate-100">
+                {plans.map(plan => {
+                  const features = typeof plan.features === 'string' ? JSON.parse(plan.features || '{}') : (plan.features || {})
+                  return (
+                    <PlanFeatureEditor key={plan.id} plan={plan} features={features} onRefresh={loadData} />
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function PlanFeatureEditor({ plan, features, onRefresh }) {
+  const [saving, setSaving] = useState(false)
+  const [localFeatures, setLocalFeatures] = useState({})
+
+  useEffect(() => {
+    setLocalFeatures(features)
+  }, [features])
+
+  const featureLabels = {
+    basic: { label: 'Básico', type: 'boolean' },
+    google_sheets: { label: 'Google Sheets', type: 'boolean' },
+    multiple_channels: { label: 'Múltiples Canales', type: 'boolean' },
+    api_access: { label: 'API Access', type: 'boolean' },
+    priority: { label: 'Soporte Prioritario', type: 'boolean' },
+    support: { label: 'Soporte Dedicado', type: 'boolean' },
+    wa_templates_enabled: { label: 'Plantillas WhatsApp', type: 'boolean' },
+    ai_audio_transcription: { label: 'Transcripción de Audio (IA)', type: 'boolean' },
+    media_retention_days: { label: 'Retención de Archivos (días)', type: 'number' },
+    max_storage_mb: { label: 'Almacenamiento Máximo (MB)', type: 'number' }
+  }
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      await api.put(`/admin/plans/${plan.id}/features`, { features: localFeatures })
+      onRefresh()
+    } catch (err) {
+      alert('Error guardando features: ' + (err.response?.data?.error || err.message))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="p-5">
+      <div className="flex justify-between items-center mb-4">
+        <div>
+          <h3 className="font-bold text-slate-900 text-lg">{plan.name}</h3>
+          <p className="text-xs text-slate-500">${plan.price}/mo · {plan.messages_limit?.toLocaleString()} mensajes</p>
+        </div>
+        <button onClick={handleSave} disabled={saving} className="px-4 py-2 bg-brand-600 text-white rounded-lg text-xs font-bold hover:bg-brand-700 disabled:opacity-50">
+          {saving ? 'Guardando...' : 'Guardar Features'}
+        </button>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+        {Object.entries(featureLabels).map(([key, config]) => (
+          <div key={key} className="bg-slate-50 rounded-lg p-3 border border-slate-200">
+            {config.type === 'boolean' ? (
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={!!localFeatures[key]}
+                  onChange={e => setLocalFeatures(prev => ({ ...prev, [key]: e.target.checked }))}
+                  className="rounded text-brand-600 w-4 h-4"
+                />
+                <span className="text-xs font-medium text-slate-700">{config.label}</span>
+              </label>
+            ) : (
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">{config.label}</label>
+                <input
+                  type="number"
+                  value={localFeatures[key] ?? ''}
+                  onChange={e => setLocalFeatures(prev => ({ ...prev, [key]: parseInt(e.target.value) || 0 }))}
+                  className="w-full border border-slate-300 rounded px-2 py-1 text-xs"
+                />
+              </div>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   )

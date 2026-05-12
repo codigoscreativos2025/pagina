@@ -14,15 +14,23 @@ export default function CRM() {
   const [selectedStage, setSelectedStage] = useState('all')
   const [messageInput, setMessageInput] = useState('')
   const [sending, setSending] = useState(false)
-  const [viewMode, setViewMode] = useState('chat') // 'chat' or 'kanban'
+  const [viewMode, setViewMode] = useState('chat')
   const [showCustomFields, setShowCustomFields] = useState(false)
   const [customFieldInput, setCustomFieldInput] = useState({ name: '', type: 'text', value: '' })
   const [dragOverStage, setDragOverStage] = useState(null)
+  const [showTemplatePicker, setShowTemplatePicker] = useState(false)
+  const [templates, setTemplates] = useState([])
+  const [selectedTemplate, setSelectedTemplate] = useState(null)
+  const [templateVars, setTemplateVars] = useState({})
+  const [showFileUpload, setShowFileUpload] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const messagesEndRef = useRef(null)
+  const fileInputRef = useRef(null)
 
   useEffect(() => {
     loadInitialData()
-    const interval = setInterval(loadLeads, 10000) // Poll every 10s
+    loadTemplates()
+    const interval = setInterval(loadLeads, 10000)
     return () => clearInterval(interval)
   }, [])
 
@@ -63,6 +71,75 @@ export default function CRM() {
       setLoading(false)
     } catch (err) {
       console.error(err)
+    }
+  }
+
+  const loadTemplates = async () => {
+    try {
+      const res = await api.get('/templates')
+      setTemplates((res.data.templates || []).filter(t => t.status === 'APPROVED'))
+    } catch (err) {
+      console.error('Error loading templates:', err)
+    }
+  }
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file || !activeLead) return
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('direction', 'outbound')
+      formData.append('lead_id', activeLead.id)
+      const res = await api.post(`/crm/leads/${activeLead.id}/media`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+      await api.post(`/crm/leads/${activeLead.id}/messages`, {
+        content: `[${res.data.media.type.toUpperCase()}] ${res.data.media.filename}`,
+        message_type: res.data.media.type,
+        media_id: res.data.media.id
+      })
+      loadMessages(activeLead.id)
+    } catch (err) {
+      console.error('Upload error:', err)
+      alert('Error subiendo archivo: ' + (err.response?.data?.error || err.message))
+    } finally {
+      setUploading(false)
+      setShowFileUpload(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
+  const sendTemplateMessage = async () => {
+    if (!selectedTemplate || !activeLead) return
+    setSending(true)
+    try {
+      const components = []
+      if (selectedTemplate.variables_count > 0) {
+        const bodyVars = Object.entries(templateVars).map(([k, v], i) => ({
+          type: 'text',
+          text: v,
+          parameter_name: k,
+          index: i
+        }))
+        components.push({ type: 'body', parameters: bodyVars })
+      }
+      const res = await api.post(`/crm/leads/${activeLead.id}/messages`, {
+        template_id: selectedTemplate.id,
+        template_components: components
+      })
+      setMessages(prev => [...prev, res.data.message])
+      setShowTemplatePicker(false)
+      setSelectedTemplate(null)
+      setTemplateVars({})
+      setLeads(leads.map(l => l.id === activeLead.id ? { ...l, is_ai_active: false } : l))
+      setActiveLead({ ...activeLead, is_ai_active: false })
+    } catch (err) {
+      console.error(err)
+      alert('Error enviando plantilla: ' + (err.response?.data?.error || err.message))
+    } finally {
+      setSending(false)
     }
   }
 
@@ -201,6 +278,58 @@ export default function CRM() {
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
     return `${hours}h ${minutes}m`;
+  }
+
+  const renderMessageContent = (msg) => {
+    const msgType = msg.message_type || 'text'
+    if (msgType === 'audio' || msg.media_type === 'audio') {
+      return (
+        <div>
+          {msg.media_transcription && (
+            <div className="mb-1 text-xs text-gray-500 italic">🎤 {msg.media_transcription}</div>
+          )}
+          <div className="flex items-center gap-2 text-xs text-gray-400">
+            <span>🎧 Audio</span>
+            {msg.media_filename && <span className="truncate max-w-[150px]">{msg.media_filename}</span>}
+          </div>
+        </div>
+      )
+    }
+    if (msgType === 'image' || msg.media_type === 'image') {
+      return (
+        <div>
+          {msg.media_filename && (
+            <div className="flex items-center gap-2 mb-1">
+              <span>🖼️</span>
+              <span className="text-xs truncate max-w-[200px]">{msg.media_filename}</span>
+            </div>
+          )}
+          <div className="whitespace-pre-wrap leading-relaxed">{msg.content}</div>
+        </div>
+      )
+    }
+    if (msgType === 'document' || msg.media_type === 'document') {
+      return (
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <span>📎</span>
+            <span className="text-xs font-medium">{msg.media_filename || 'Documento'}</span>
+          </div>
+          <div className="whitespace-pre-wrap leading-relaxed text-sm">{msg.content}</div>
+        </div>
+      )
+    }
+    if (msgType === 'template') {
+      return (
+        <div>
+          <div className="text-[10px] font-semibold text-blue-600 mb-1 flex items-center gap-1">
+            📋 Plantilla{msg.template_display_name ? `: ${msg.template_display_name}` : ''}
+          </div>
+          <div className="whitespace-pre-wrap leading-relaxed">{msg.content}</div>
+        </div>
+      )
+    }
+    return <div className="whitespace-pre-wrap leading-relaxed">{msg.content}</div>
   }
 
   const filteredLeads = selectedStage === 'all' 
@@ -394,7 +523,7 @@ export default function CRM() {
                 messages.map(msg => (
                   <div key={msg.id} className={`flex ${msg.sender_type === 'client' ? 'justify-start' : 'justify-end'}`}>
                     <div className={`max-w-[70%] md:max-w-[60%] rounded-lg px-3 py-2 shadow-sm relative text-sm ${msg.sender_type === 'client' ? 'bg-white text-gray-800 rounded-tl-none' : 'bg-[#d9fdd3] text-gray-800 rounded-tr-none'}`}>
-                      <div className="whitespace-pre-wrap leading-relaxed">{msg.content}</div>
+                      {renderMessageContent(msg)}
                       <div className="text-[10px] text-gray-500 text-right mt-1 opacity-80">
                         {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </div>
@@ -406,23 +535,64 @@ export default function CRM() {
             </div>
             
             {/* Chat Input */}
-            <form onSubmit={sendManualMessage} className="bg-[#f0f2f5] px-4 py-3 flex items-center gap-3 z-10">
-              <input 
-                type="text" 
-                value={messageInput}
-                onChange={e => setMessageInput(e.target.value)}
-                placeholder="Escribe un mensaje..." 
-                className="flex-1 rounded-lg border-none px-4 py-2.5 focus:ring-0 text-sm outline-none bg-white"
-                disabled={sending || calculateTimeLeft(activeLead.last_client_message_at) === 'Expirado'}
-              />
-              <button 
-                type="submit" 
-                disabled={!messageInput.trim() || sending || calculateTimeLeft(activeLead.last_client_message_at) === 'Expirado'}
-                className="bg-brand-600 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
+            <form onSubmit={sendManualMessage} className="bg-[#f0f2f5] px-4 py-3 flex flex-col gap-2 z-10">
+              {/* Template Picker */}
+              {showTemplatePicker && (
+                <div className="bg-white rounded-lg border border-gray-200 shadow-lg p-3 max-h-60 overflow-y-auto">
+                  <div className="flex justify-between items-center mb-2">
+                    <h4 className="text-sm font-bold text-gray-700">Enviar Plantilla</h4>
+                    <button type="button" onClick={() => { setShowTemplatePicker(false); setSelectedTemplate(null); setTemplateVars({}); }} className="text-gray-400 hover:text-gray-600">✖</button>
+                  </div>
+                  {!selectedTemplate ? (
+                    <div className="space-y-1">
+                      {templates.length === 0 && <p className="text-xs text-gray-500">No hay plantillas aprobadas.</p>}
+                      {templates.map(t => (
+                        <button key={t.id} type="button" onClick={() => { setSelectedTemplate(t); if (t.body_text) { const vars = [...t.body_text.matchAll(/\{\{(\d+)\}\}/g)].map(m => m[1]); const vObj = {}; vars.forEach(v => vObj[v] = ''); setTemplateVars(vObj); } }} className="w-full text-left px-3 py-2 rounded hover:bg-brand-50 border border-gray-100">
+                          <div className="text-xs font-semibold text-gray-800">{t.display_name || t.name}</div>
+                          <div className="text-[10px] text-gray-500">{t.category} · {t.language}</div>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="text-xs font-semibold text-gray-700">{selectedTemplate.display_name || selectedTemplate.name}</div>
+                      <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">{selectedTemplate.body_text}</div>
+                      {Object.keys(templateVars).length > 0 && (
+                        <div className="space-y-1">
+                          {Object.keys(templateVars).map(k => (
+                            <input key={k} type="text" placeholder={`Variable {{${k}}}`} value={templateVars[k]} onChange={e => setTemplateVars(prev => ({ ...prev, [k]: e.target.value }))} className="w-full text-xs border border-gray-200 rounded px-2 py-1.5" />
+                          ))}
+                        </div>
+                      )}
+                      <button type="button" onClick={sendTemplateMessage} disabled={sending} className="w-full bg-brand-600 text-white text-sm font-bold py-2 rounded-md hover:bg-brand-700 disabled:opacity-50">
+                        {sending ? 'Enviando...' : 'Enviar Plantilla'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+              {/* File Upload Input (hidden) */}
+              <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv" />
+              <div className="flex items-center gap-3">
+                <button type="button" onClick={() => setShowTemplatePicker(!showTemplatePicker)} className="text-gray-500 hover:text-brand-600 text-lg" title="Plantillas">📋</button>
+                <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading} className="text-gray-500 hover:text-brand-600 text-lg" title="Adjuntar archivo">{uploading ? '⏳' : '📎'}</button>
+                <input 
+                  type="text" 
+                  value={messageInput}
+                  onChange={e => setMessageInput(e.target.value)}
+                  placeholder="Escribe un mensaje..." 
+                  className="flex-1 rounded-lg border-none px-4 py-2.5 focus:ring-0 text-sm outline-none bg-white"
+                  disabled={sending || calculateTimeLeft(activeLead.last_client_message_at) === 'Expirado'}
+                />
+                <button 
+                  type="submit" 
+                  disabled={!messageInput.trim() || sending || calculateTimeLeft(activeLead.last_client_message_at) === 'Expirado'}
+                  className="bg-brand-600 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
                   {sending ? '...' : '➤'}
                 </button>
-              </form>
+              </div>
+            </form>
             </div>
             
             {/* Custom Fields Sidebar */}

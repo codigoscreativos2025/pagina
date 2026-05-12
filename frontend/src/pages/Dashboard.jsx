@@ -70,6 +70,9 @@ export default function Dashboard() {
             <Link to="/crm" className="text-slate-600 hover:text-brand-600 font-medium transition-colors text-sm flex items-center gap-2">
               <span>📊</span> CRM / Chats
             </Link>
+            <Link to="/templates" className="text-slate-600 hover:text-brand-600 font-medium transition-colors text-sm flex items-center gap-2">
+              <span>📋</span> Plantillas
+            </Link>
             <Link to="/integrations" className="text-slate-600 hover:text-brand-600 font-medium transition-colors text-sm flex items-center gap-2">
               <span>🔌</span> Integraciones
             </Link>

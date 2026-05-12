@@ -53,6 +53,17 @@ router.put('/:type', auth, async (req, res) => {
       )
     }
 
+    // CRITICAL: For WhatsApp, also sync to agents table so webhooks/CRM/templates work
+    if (type === 'whatsapp') {
+      const agentExist = await pool.query('SELECT id, whatsapp_config FROM agents WHERE user_id = $1', [userId])
+      const mergedConfig = { ...(agentExist.rows[0]?.whatsapp_config || {}), ...config }
+      if (agentExist.rows.length > 0) {
+        await pool.query('UPDATE agents SET whatsapp_config = $1, is_active = true WHERE user_id = $2', [JSON.stringify(mergedConfig), userId])
+      } else {
+        await pool.query(`INSERT INTO agents (user_id, name, whatsapp_config) VALUES ($1, 'Nuevo Agente', $2)`, [userId, JSON.stringify(mergedConfig)])
+      }
+    }
+
     res.json({ success: true })
   } catch (error) {
     console.error('Error updating integration:', error)
@@ -352,3 +363,54 @@ router.get('/meta-ads/campaigns', auth, async (req, res) => {
 })
 
 module.exports = router
+
+// ============================================
+// DELETE: Disconnect an integration
+// ============================================
+router.delete('/:type', auth, async (req, res) => {
+  try {
+    const pool = req.pool
+    const userId = req.user.id
+    const type = req.params.type
+    
+    const allowedTypes = ['whatsapp', 'google', 'instagram', 'telegram', 'meta_ads']
+    if (!allowedTypes.includes(type)) {
+      return res.status(400).json({ error: 'Invalid integration type' })
+    }
+
+    const column = `${type}_config`
+
+    // Clear from user_integrations
+    await pool.query(
+      `UPDATE user_integrations SET ${column} = NULL, updated_at = CURRENT_TIMESTAMP WHERE user_id = $1`,
+      [userId]
+    )
+
+    // For WhatsApp, also deactivate agents
+    if (type === 'whatsapp') {
+      await pool.query('UPDATE agents SET whatsapp_config = NULL, is_active = false WHERE user_id = $1', [userId])
+    }
+
+    // For Google, revoke tokens if possible
+    if (type === 'google') {
+      try {
+        const { google } = require('googleapis')
+        const oauth2Client = new google.auth.OAuth2(
+          process.env.GOOGLE_CLIENT_ID,
+          process.env.GOOGLE_CLIENT_SECRET,
+          process.env.GOOGLE_REDIRECT_URI
+        )
+        const integrations = await pool.query('SELECT google_config FROM user_integrations WHERE user_id = $1', [userId])
+        if (integrations.rows[0]?.google_config?.access_token) {
+          oauth2Client.setCredentials({ access_token: integrations.rows[0].google_config.access_token })
+          await oauth2Client.revokeToken(integrations.rows[0].google_config.access_token).catch(() => {})
+        }
+      } catch (e) { console.error('Error revoking Google token:', e) }
+    }
+
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Error disconnecting integration:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})

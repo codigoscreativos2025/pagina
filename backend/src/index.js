@@ -312,6 +312,7 @@ async function start() {
     try { await client.query('ALTER TABLE media_files ADD COLUMN IF NOT EXISTS message_id_fk INTEGER REFERENCES messages(id)'); } catch (e) {}
     try { await client.query('ALTER TABLE plans ADD COLUMN IF NOT EXISTS features JSONB'); } catch (e) {}
     try { await client.query("UPDATE plans SET features = '{}'::jsonb WHERE features IS NULL"); } catch (e) {}
+    try { await client.query('ALTER TABLE agents ADD COLUMN IF NOT EXISTS active_funnels JSONB'); } catch (e) {}
 
     await client.query(`
       CREATE TABLE IF NOT EXISTS ai_models (

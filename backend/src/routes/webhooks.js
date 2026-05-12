@@ -65,13 +65,14 @@ router.post('/onboarding', auth, async (req, res) => {
       return res.status(400).json({ error: 'No se encontraron Cuentas de WhatsApp Business compartidas.' });
     }
 
-    // 2. Extraer Phone Number ID
+    // 2. Extraer Phone Number ID y display phone number
     const phoneRes = await fetch(`https://graph.facebook.com/v18.0/${wabaId}/phone_numbers?access_token=${access_token}`);
     const phoneData = await phoneRes.json();
     if (!phoneData.data || phoneData.data.length === 0) {
       return res.status(400).json({ error: 'No se encontró un número de teléfono en la cuenta WABA.' });
     }
     const phoneNumberId = phoneData.data[0].id;
+    const displayPhone = phoneData.data[0].display_phone_number || phoneData.data[0].verified_name || '';
 
     // 3. Suscribir el Webhook a esta App y a este WABA
     await fetch(`https://graph.facebook.com/v18.0/${wabaId}/subscribed_apps`, {
@@ -85,7 +86,13 @@ router.post('/onboarding', auth, async (req, res) => {
     const pool = req.pool;
     const agentExist = await pool.query('SELECT id, whatsapp_config FROM agents WHERE user_id = $1', [req.user.id]);
     
-    let wtsConfig = { phone_number_id: phoneNumberId, access_token: access_token };
+    // CRITICAL: Save ALL keys needed by the rest of the system
+    let wtsConfig = {
+      phone_number_id: phoneNumberId,
+      access_token: access_token,
+      waba_id: wabaId,
+      phone: displayPhone
+    };
     
     if (agentExist.rows.length > 0) {
       const oldConfig = agentExist.rows[0].whatsapp_config || {};
@@ -305,6 +312,17 @@ async function processWithAgent(clientPhone, agentPhone, messageText) {
     if (!isAiActive) {
       console.log(`[Queue] IA desactivada para el lead ${clientPhone}. Ignorando generacion de IA.`);
       return;
+    }
+
+    // Check if the lead's stage is in the agent's active stages
+    const leadStageCheck = await pool.query('SELECT stage_id FROM leads WHERE agent_id = $1 AND client_phone = $2 LIMIT 1', [agent.id, clientPhone]);
+    const leadStageId = leadStageCheck.rows.length > 0 ? leadStageCheck.rows[0].stage_id : null;
+    if (agent.active_funnels) {
+      const activeStages = typeof agent.active_funnels === 'string' ? JSON.parse(agent.active_funnels) : agent.active_funnels;
+      if (Array.isArray(activeStages) && activeStages.length > 0 && leadStageId && !activeStages.includes(leadStageId)) {
+        console.log(`[Queue] Lead stage ${leadStageId} not in agent's active stages. Ignoring.`);
+        return;
+      }
     }
 
     console.log(`[Queue] Agente encontrado (ID: ${agent.id}, User: ${userId}). Enviando a OpenClaw...`);

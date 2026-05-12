@@ -154,12 +154,23 @@ export default function Integrations() {
     } catch (err) { alert('Error guardando la integración') }
   }
 
+  const disconnectIntegration = async (key) => {
+    const names = { whatsapp: 'WhatsApp', google: 'Google', instagram: 'Instagram', telegram: 'Telegram', meta_ads: 'Meta Ads' }
+    if (!confirm(`¿Desconectar ${names[key] || key}? Esto eliminará la configuración guardada.`)) return
+    try {
+      await api.delete(`/integrations/${key}`)
+      loadData()
+    } catch (err) { alert('Error desconectando: ' + (err.response?.data?.error || err.message)) }
+  }
+
   const cards = [
     {
       key: 'whatsapp', icon: '📱', iconBg: 'bg-green-100 text-green-600',
       title: 'WhatsApp Business', desc: 'Conecta tu API de WhatsApp Cloud',
       connected: integrations.whatsapp_config?.access_token,
+      connectedLabel: integrations.whatsapp_config?.phone || integrations.whatsapp_config?.phone_number_id,
       onConnect: connectWhatsApp, connectLabel: 'Conectar con Meta',
+      onDisconnect: () => disconnectIntegration('whatsapp'),
       onManual: () => openModal('whatsapp'), manualLabel: 'Manual'
     },
     {
@@ -168,13 +179,16 @@ export default function Integrations() {
       connected: integrations.instagram_config?.access_token,
       connectedLabel: integrations.instagram_config?.page_name,
       onConnect: connectInstagram, connectLabel: 'Conectar con Facebook',
+      onDisconnect: () => disconnectIntegration('instagram'),
       onManual: () => openModal('instagram'), manualLabel: 'Manual'
     },
     {
       key: 'telegram', icon: '✈️', iconBg: 'bg-blue-100 text-blue-600',
       title: 'Telegram', desc: 'Conecta un Bot de Telegram',
       connected: integrations.telegram_config?.bot_token,
-      onConnect: null, onManual: () => openModal('telegram'), manualLabel: 'Configurar Token'
+      connectedLabel: null,
+      onConnect: null, onDisconnect: () => disconnectIntegration('telegram'),
+      onManual: () => openModal('telegram'), manualLabel: 'Configurar Token'
     },
     {
       key: 'google', icon: '📊', iconBg: 'bg-red-100 text-red-600',
@@ -182,6 +196,7 @@ export default function Integrations() {
       connected: integrations.google_config?.refresh_token || integrations.google_config?.access_token,
       connectedLabel: integrations.google_config?.email,
       onConnect: connectGoogle, connectLabel: 'Conectar con Google',
+      onDisconnect: () => disconnectIntegration('google'),
       onManual: () => openModal('google'), manualLabel: 'Manual'
     },
     {
@@ -190,6 +205,7 @@ export default function Integrations() {
       connected: integrations.meta_ads_config?.ad_account_id,
       connectedLabel: integrations.meta_ads_config?.ad_account_name,
       onConnect: connectMetaAds, connectLabel: 'Conectar con Facebook',
+      onDisconnect: () => disconnectIntegration('meta_ads'),
       onManual: () => openModal('meta_ads'), manualLabel: 'Manual'
     }
   ]
@@ -227,16 +243,31 @@ export default function Integrations() {
                 </div>
               </div>
               <div className="p-4 bg-slate-50 flex gap-3">
-                {card.onConnect && (
-                  <button onClick={card.onConnect} disabled={connecting === card.key}
-                    className="flex-1 px-4 py-2.5 bg-slate-800 text-white rounded-lg font-medium hover:bg-slate-900 disabled:opacity-60 transition-colors text-sm">
-                    {connecting === card.key ? '⏳ Conectando...' : card.connectLabel}
-                  </button>
+                {card.connected ? (
+                  <>
+                    <button onClick={card.onDisconnect}
+                      className="flex-shrink-0 px-4 py-2.5 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors text-sm">
+                      Desconectar
+                    </button>
+                    <button onClick={card.onManual}
+                      className="flex-1 px-4 py-2.5 bg-white border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50 text-sm">
+                      Editar
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {card.onConnect && (
+                      <button onClick={card.onConnect} disabled={connecting === card.key}
+                        className="flex-1 px-4 py-2.5 bg-slate-800 text-white rounded-lg font-medium hover:bg-slate-900 disabled:opacity-60 transition-colors text-sm">
+                        {connecting === card.key ? '⏳ Conectando...' : card.connectLabel}
+                      </button>
+                    )}
+                    <button onClick={card.onManual}
+                      className={`${card.onConnect ? 'flex-shrink-0' : 'flex-1'} px-4 py-2.5 bg-white border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50 text-sm`}>
+                      {card.manualLabel}
+                    </button>
+                  </>
                 )}
-                <button onClick={card.onManual}
-                  className={`${card.onConnect ? 'flex-shrink-0' : 'flex-1'} px-4 py-2.5 bg-white border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50 text-sm`}>
-                  {card.manualLabel}
-                </button>
               </div>
             </div>
           ))}

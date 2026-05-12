@@ -286,3 +286,41 @@ router.delete('/:id/templates/:templateId', auth, async (req, res) => {
     res.status(500).json({ error: 'Failed to remove template' });
   }
 });
+
+// Active funnels/stages endpoints
+router.put('/:id/active-funnels', auth, async (req, res) => {
+  try {
+    const agentId = req.params.id;
+    const userId = req.user.id;
+    const { active_funnels } = req.body;
+
+    const agentCheck = await req.pool.query('SELECT id FROM agents WHERE id = $1 AND user_id = $2', [agentId, userId]);
+    if (agentCheck.rows.length === 0) return res.status(404).json({ error: 'Agent not found' });
+
+    await req.pool.query(
+      'UPDATE agents SET active_funnels = $1 WHERE id = $2',
+      [JSON.stringify(active_funnels || []), agentId]
+    );
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Update active funnels error:', error);
+    res.status(500).json({ error: 'Failed to update active funnels' });
+  }
+});
+
+router.get('/:id/active-funnels', auth, async (req, res) => {
+  try {
+    const agentId = req.params.id;
+    const userId = req.user.id;
+
+    const agentCheck = await req.pool.query('SELECT id, active_funnels FROM agents WHERE id = $1 AND user_id = $2', [agentId, userId]);
+    if (agentCheck.rows.length === 0) return res.status(404).json({ error: 'Agent not found' });
+
+    const activeFunnels = agentCheck.rows[0].active_funnels || [];
+    res.json({ success: true, active_funnels: typeof activeFunnels === 'string' ? JSON.parse(activeFunnels) : activeFunnels });
+  } catch (error) {
+    console.error('Get active funnels error:', error);
+    res.status(500).json({ error: 'Failed to get active funnels' });
+  }
+});

@@ -52,6 +52,8 @@ export default function AgentConfig() {
   const [pickerToken, setPickerToken] = useState(null)
   const [pickerClientId, setPickerClientId] = useState(null)
   const [aiModels, setAiModels] = useState([])
+  const [funnels, setFunnels] = useState([])
+  const [activeFunnels, setActiveFunnels] = useState([])
 
   const [formData, setFormData] = useState({
     name: '', business_info: [],
@@ -61,6 +63,22 @@ export default function AgentConfig() {
   const [agentTemplates, setAgentTemplates] = useState([])
 
   useEffect(() => { loadAgent() }, [])
+
+  const loadFunnels = async () => {
+    try {
+      const res = await api.get('/funnels')
+      if (res.data.success) setFunnels([{ id: res.data.funnel.id, name: res.data.funnel.name, stages: res.data.stages }])
+    } catch (err) { console.error('Error loading funnels:', err) }
+  }
+
+  const loadActiveFunnels = async () => {
+    try {
+      const res = await api.get(`/agents/${id}/active-funnels`)
+      if (res.data.success) setActiveFunnels(res.data.active_funnels || [])
+    } catch (err) { console.error('Error loading active funnels:', err) }
+  }
+
+  useEffect(() => { loadFunnels(); loadActiveFunnels() }, [id])
 
   const loadTemplates = async () => {
     try {
@@ -101,6 +119,15 @@ export default function AgentConfig() {
         setAgentTemplates(prev => [...prev, { template_id: templateId, usage_context: '', enabled: true, agent_id: parseInt(id) }])
       } catch (err) { console.error('Error assigning template:', err) }
     }
+  }
+
+  const toggleActiveStage = async (stageId) => {
+    const isActive = activeFunnels.includes(stageId)
+    const updated = isActive ? activeFunnels.filter(s => s !== stageId) : [...activeFunnels, stageId]
+    setActiveFunnels(updated)
+    try {
+      await api.put(`/agents/${id}/active-funnels`, { active_funnels: updated })
+    } catch (err) { console.error('Error updating active stages:', err) }
   }
 
   const updateTemplateUsageContext = async (templateId, usageContext) => {
@@ -397,6 +424,45 @@ export default function AgentConfig() {
                 )
               })}
             </div>
+          </section>
+
+          {/* Embudos y Etapas Activas */}
+          <section className="bg-white rounded-xl p-6 border border-slate-200">
+            <h2 className="text-lg font-bold text-slate-900 mb-1">🔀 Embudos y Etapas Activas</h2>
+            <p className="text-slate-500 text-sm mb-4">Selecciona en qué etapas del embudo este agente responderá automáticamente. Si una etapa no está seleccionada, el agente no procesará mensajes de leads en esa etapa.</p>
+            {funnels.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-slate-400 text-sm mb-2">No hay embudos configurados</p>
+                <a href="/funnels" className="text-brand-600 text-sm font-medium hover:text-brand-700">Crear embudo →</a>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {funnels.map(funnel => (
+                  <div key={funnel.id} className="border border-slate-200 rounded-lg overflow-hidden">
+                    <div className="bg-slate-50 px-4 py-2 border-b border-slate-200">
+                      <h3 className="font-semibold text-slate-800 text-sm">{funnel.name}</h3>
+                    </div>
+                    <div className="p-3 grid grid-cols-2 md:grid-cols-3 gap-2">
+                      {funnel.stages.map(stage => {
+                        const isActive = activeFunnels.includes(stage.id)
+                        return (
+                          <label key={stage.id} className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-all border ${isActive ? 'border-brand-300 bg-brand-50' : 'border-slate-200 bg-white hover:bg-slate-50'}`}>
+                            <input
+                              type="checkbox"
+                              checked={isActive}
+                              onChange={() => toggleActiveStage(stage.id)}
+                              className="w-4 h-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                            />
+                            <span className="text-sm text-slate-700">{stage.name}</span>
+                            {stage.ai_enabled && <span className="text-[10px] text-green-600 ml-auto">IA</span>}
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
 
           {/* Plantillas WhatsApp */}

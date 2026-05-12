@@ -73,6 +73,9 @@ export default function Dashboard() {
             <Link to="/templates" className="text-slate-600 hover:text-brand-600 font-medium transition-colors text-sm flex items-center gap-2">
               <span>📋</span> Plantillas
             </Link>
+            <Link to="/funnels" className="text-slate-600 hover:text-brand-600 font-medium transition-colors text-sm flex items-center gap-2">
+              <span>🔀</span> Embudos
+            </Link>
             <Link to="/integrations" className="text-slate-600 hover:text-brand-600 font-medium transition-colors text-sm flex items-center gap-2">
               <span>🔌</span> Integraciones
             </Link>

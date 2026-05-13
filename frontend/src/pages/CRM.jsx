@@ -24,6 +24,11 @@ export default function CRM() {
   const [templateVars, setTemplateVars] = useState({})
   const [showFileUpload, setShowFileUpload] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [simpleMode, setSimpleMode] = useState(() => {
+    const saved = localStorage.getItem('pivot_crm_simple_mode')
+    return saved !== null ? saved === 'true' : true
+  })
+  const [aiSuggestion, setAiSuggestion] = useState(null)
   const messagesEndRef = useRef(null)
   const fileInputRef = useRef(null)
 
@@ -37,6 +42,7 @@ export default function CRM() {
   useEffect(() => {
     if (activeLead) {
       loadMessages(activeLead.id)
+      loadAiSuggestion(activeLead.id)
       const interval = setInterval(() => loadMessages(activeLead.id), 5000)
       return () => clearInterval(interval)
     }
@@ -150,6 +156,25 @@ export default function CRM() {
     } catch (err) {
       console.error(err)
     }
+  }
+
+  const loadAiSuggestion = async (leadId) => {
+    try {
+      const res = await api.get(`/crm/leads/${leadId}/suggestion`)
+      if (res.data.success && res.data.suggestion) {
+        setAiSuggestion(res.data.suggestion)
+      } else {
+        setAiSuggestion(null)
+      }
+    } catch (err) {
+      setAiSuggestion(null)
+    }
+  }
+
+  const toggleSimpleMode = () => {
+    const newVal = !simpleMode
+    setSimpleMode(newVal)
+    localStorage.setItem('pivot_crm_simple_mode', String(newVal))
   }
 
   const updateLeadStatus = async (leadId, stage_id) => {
@@ -346,23 +371,39 @@ export default function CRM() {
           <Link to="/dashboard" className="text-brand-600 font-semibold hover:text-brand-700">
             ← Volver
           </Link>
-          <div className="flex bg-gray-200 p-1 rounded-lg">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={toggleSimpleMode}
+              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors ${
+                simpleMode
+                  ? 'bg-brand-100 text-brand-700 border border-brand-200'
+                  : 'bg-gray-200 text-gray-500 hover:text-gray-700'
+              }`}
+              title={simpleMode ? 'Modo simple activo' : 'Activar modo simple'}
+            >
+              {simpleMode ? '✨ Simple' : '🔧 Avanzado'}
+            </button>
+            <div className="flex bg-gray-200 p-1 rounded-lg">
             <button 
               onClick={() => setViewMode('chat')}
               className={`px-3 py-1 text-xs font-bold rounded-md transition-colors ${viewMode === 'chat' ? 'bg-white shadow-sm text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}
             >
               Chat
             </button>
+            {!simpleMode && (
             <button 
               onClick={() => setViewMode('kanban')}
               className={`px-3 py-1 text-xs font-bold rounded-md transition-colors ${viewMode === 'kanban' ? 'bg-white shadow-sm text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}
             >
               Kanban
             </button>
+            )}
           </div>
         </div>
+        </div>
 
-        {/* CRM Stage Filters */}
+        {/* CRM Stage Filters - hidden in simple mode */}
+        {!simpleMode && (
         <div className="bg-white p-2 border-b border-gray-200">
           <select 
             className="w-full bg-gray-100 rounded-lg p-2 text-sm border-none focus:ring-0 text-gray-700 outline-none"
@@ -375,6 +416,7 @@ export default function CRM() {
             ))}
           </select>
         </div>
+        )}
 
         {/* Search */}
         <div className="bg-white p-2 border-b border-gray-200">
@@ -456,8 +498,9 @@ export default function CRM() {
                 </div>
               </div>
               
-              <div className="flex items-center gap-4">
-                {/* AI Toggle Switch */}
+              <div className="flex items-center gap-3">
+                {/* AI Toggle - hidden in simple mode */}
+                {!simpleMode && (
                 <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-gray-200">
                   <span className="text-xs font-semibold text-gray-600">IA:</span>
                   <button 
@@ -470,28 +513,31 @@ export default function CRM() {
                     {activeLead.is_ai_active ? 'ON' : 'OFF'}
                   </span>
                 </div>
-              <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-gray-200 cursor-pointer hover:border-brand-300" onClick={() => setShowCustomFields(!showCustomFields)}>
-                <span className="text-xs font-semibold text-gray-600">Variables</span>
-                <span className={`text-xs font-bold ${showCustomFields ? 'text-brand-600' : 'text-gray-400'}`}>{showCustomFields ? 'ON' : 'OFF'}</span>
-              </div>
-
-            <div className="flex flex-col items-end gap-2">
-                {/* CRM Status Dropdown */}
+                )}
+                {/* Variables toggle - hidden in simple mode */}
+                {!simpleMode && (
+                <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-gray-200 cursor-pointer hover:border-brand-300" onClick={() => setShowCustomFields(!showCustomFields)}>
+                  <span className="text-xs font-semibold text-gray-600">Variables</span>
+                  <span className={`text-xs font-bold ${showCustomFields ? 'text-brand-600' : 'text-gray-400'}`}>{showCustomFields ? 'ON' : 'OFF'}</span>
+                </div>
+                )}
+                {/* CRM Status Dropdown - hidden in simple mode */}
+                {!simpleMode && (
                 <div className="flex items-center gap-2">
                   <select 
                     className={`text-sm rounded-full px-3 py-1 font-semibold outline-none border-none cursor-pointer ${stages.find(s => s.id === activeLead.stage_id)?.color || 'bg-gray-100 text-gray-800'}`}
                     value={activeLead.stage_id || ''}
                     onChange={(e) => updateLeadStatus(activeLead.id, e.target.value)}
                   >
-                    <option value="" disabled>Seleccionar etapa</option>
+                    <option value="" disabled>Etapa</option>
                     {stages.map(s => (
                       <option key={s.id} value={s.id} className="bg-white text-gray-900">{s.name}</option>
                     ))}
                   </select>
                 </div>
-                
-                {/* Tags Dropdown/List */}
-                {tags.length > 0 && (
+                )}
+                {/* Tags - hidden in simple mode */}
+                {!simpleMode && tags.length > 0 && (
                   <div className="flex gap-1 relative group items-center">
                     {activeLead.tags?.map(t => (
                       <span key={t.id} className={`text-[10px] px-2 py-0.5 rounded-full ${t.color}`}>{t.name}</span>
@@ -515,11 +561,36 @@ export default function CRM() {
                   </div>
                 )}
               </div>
-              </div>
             </div>
 
             <div className="flex-1 flex overflow-hidden">
-              <div className={`flex flex-col h-full ${showCustomFields ? 'w-2/3' : 'w-full'}`}>
+              <div className={`flex flex-col h-full ${showCustomFields && !simpleMode ? 'w-2/3' : 'w-full'}`}>
+                {/* AI Suggestion Banner */}
+                {!simpleMode && aiSuggestion && (
+                  <div className="bg-yellow-50 border-b border-yellow-200 px-4 py-2 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">💡</span>
+                      <span className="text-sm text-yellow-800">{aiSuggestion.message}</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          updateLeadStatus(activeLead.id, aiSuggestion.suggested_stage_id)
+                          setAiSuggestion(null)
+                        }}
+                        className="px-3 py-1 bg-yellow-600 text-white text-xs font-bold rounded hover:bg-yellow-700"
+                      >
+                        Mover a "{aiSuggestion.suggested_stage_name}"
+                      </button>
+                      <button
+                        onClick={() => setAiSuggestion(null)}
+                        className="px-2 py-1 text-yellow-600 text-xs hover:text-yellow-800"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                )}
                 {/* Chat Messages */}
                 <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-4">
               {messages.length === 0 ? (
@@ -583,8 +654,12 @@ export default function CRM() {
               {/* File Upload Input (hidden) */}
               <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv" />
               <div className="flex items-center gap-3">
+                {!simpleMode && (
                 <button type="button" onClick={() => setShowTemplatePicker(!showTemplatePicker)} className="text-gray-500 hover:text-brand-600 text-lg" title="Plantillas">📋</button>
+                )}
+                {!simpleMode && (
                 <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading} className="text-gray-500 hover:text-brand-600 text-lg" title="Adjuntar archivo">{uploading ? '⏳' : '📎'}</button>
+                )}
                 <input 
                   type="text" 
                   value={messageInput}
@@ -604,8 +679,8 @@ export default function CRM() {
             </form>
             </div>
             
-            {/* Custom Fields Sidebar */}
-            {showCustomFields && (
+            {/* Custom Fields Sidebar - hidden in simple mode */}
+            {showCustomFields && !simpleMode && (
               <div className="w-1/3 bg-white border-l border-gray-200 flex flex-col shrink-0">
                 <div className="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
                   <div>
@@ -689,8 +764,8 @@ export default function CRM() {
         )}
       </div>
 
-      {/* Full Screen Kanban Overlay */}
-      {viewMode === 'kanban' && (
+      {/* Full Screen Kanban Overlay - hidden in simple mode */}
+      {viewMode === 'kanban' && !simpleMode && (
         <div className="absolute inset-0 bg-[#f0f2f5] z-50 flex flex-col h-screen">
           <div className="bg-white h-16 flex items-center justify-between px-6 border-b border-gray-200 shrink-0 shadow-sm">
             <div className="flex items-center gap-4">

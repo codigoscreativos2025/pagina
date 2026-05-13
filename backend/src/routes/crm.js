@@ -302,3 +302,79 @@ router.delete('/leads/:id/tags/:tagId', auth, async (req, res) => {
 })
 
 module.exports = router
+
+// ============================================
+// AI SUGGESTION: Suggest stage change for lead
+// ============================================
+router.get('/leads/:id/suggestion', auth, async (req, res) => {
+  try {
+    const pool = req.pool
+    const leadId = req.params.id
+
+    // Get lead and recent messages
+    const leadRes = await pool.query(
+      `SELECT l.*, a.user_id FROM leads l
+       JOIN agents a ON l.agent_id = a.id
+       WHERE l.id = $1`,
+      [leadId]
+    )
+    if (leadRes.rows.length === 0) return res.json({ success: false })
+
+    const lead = leadRes.rows[0]
+    const messagesRes = await pool.query(
+      'SELECT content, sender_type FROM messages WHERE lead_id = $1 ORDER BY created_at DESC LIMIT 10',
+      [leadId]
+    )
+    const messages = messagesRes.rows
+
+    // Simple keyword-based suggestion logic
+    const allText = messages.map(m => m.content).join(' ').toLowerCase()
+    const buyKeywords = ['compro', 'comprar', 'me interesa', 'quiero', 'precio', 'costo', 'contratar', 'reservar', 'agendar', 'cita']
+    const hasBuyIntent = buyKeywords.some(kw => allText.includes(kw))
+
+    // Get stages for this user
+    const stagesRes = await pool.query(
+      `SELECT s.* FROM stages s
+       JOIN funnels f ON s.funnel_id = f.id
+       WHERE f.user_id = $1
+       ORDER BY s.order_index`,
+      [lead.user_id]
+    )
+    const stages = stagesRes.rows
+
+    // Find appropriate stage
+    let suggestedStageId = null
+    let suggestedStageName = ''
+    let suggestionMessage = ''
+
+    if (hasBuyIntent && lead.stage_id) {
+      // Suggest moving to "Propuesta" or equivalent
+      const proposalStage = stages.find(s =>
+        s.name.toLowerCase().includes('propuesta') ||
+        s.name.toLowerCase().includes('conversación') ||
+        s.name.toLowerCase().includes('contactado')
+      )
+      if (proposalStage && proposalStage.id !== lead.stage_id) {
+        suggestedStageId = proposalStage.id
+        suggestedStageName = proposalStage.name
+        suggestionMessage = 'Este lead muestra interés de compra. ¿Mover a esta etapa?'
+      }
+    }
+
+    if (!suggestedStageId) {
+      return res.json({ success: false })
+    }
+
+    res.json({
+      success: true,
+      suggestion: {
+        message: suggestionMessage,
+        suggested_stage_id: suggestedStageId,
+        suggested_stage_name: suggestedStageName
+      }
+    })
+  } catch (error) {
+    console.error('AI suggestion error:', error)
+    res.json({ success: false })
+  }
+})

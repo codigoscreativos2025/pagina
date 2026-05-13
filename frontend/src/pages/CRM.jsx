@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import api from '../services/api'
+import InteractiveTour from '../components/InteractiveTour'
+import ContextualHelp from '../components/ContextualHelp'
 
 export default function CRM() {
   const { user } = useAuth()
@@ -853,6 +855,12 @@ export default function CRM() {
           </div>
         </div>
       )}
+      
+      {/* Interactive Tour */}
+      <InteractiveTour page="crm" />
+      
+      {/* Contextual Help */}
+      <ContextualHelp page="crm" />
     </div>
   )
 }

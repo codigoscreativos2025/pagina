@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import api from '../services/api'
+import InteractiveTour from '../components/InteractiveTour'
+import ContextualHelp from '../components/ContextualHelp'
 
 export default function Dashboard() {
   const { user, logout } = useAuth()
@@ -319,6 +321,12 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+      
+      {/* Interactive Tour */}
+      <InteractiveTour page="dashboard" />
+      
+      {/* Contextual Help */}
+      <ContextualHelp page="dashboard" />
     </div>
   )
 }

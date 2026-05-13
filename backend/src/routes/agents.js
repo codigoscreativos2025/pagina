@@ -14,7 +14,28 @@ router.post('/', auth, async (req, res) => {
        JSON.stringify(ai_config || {}), JSON.stringify(permissions || [])]
     );
     
-    res.json(result.rows[0]);
+    const agent = result.rows[0];
+
+    // Auto-create default funnel with stages for this user
+    const existingFunnel = await req.pool.query('SELECT id FROM funnels WHERE user_id = $1 LIMIT 1', [req.user.id]);
+    if (existingFunnel.rows.length === 0) {
+      const funnelResult = await req.pool.query(
+        'INSERT INTO funnels (user_id, name) VALUES ($1, $2) RETURNING *',
+        [req.user.id, 'Embudo de Ventas']
+      );
+      const funnelId = funnelResult.rows[0].id;
+      
+      await req.pool.query(`
+        INSERT INTO stages (funnel_id, name, color, ai_enabled, order_index) VALUES 
+        ($1, 'Nuevo', 'bg-blue-100 text-blue-800', true, 0),
+        ($1, 'En conversación', 'bg-yellow-100 text-yellow-800', true, 1),
+        ($1, 'Propuesta', 'bg-purple-100 text-purple-800', true, 2),
+        ($1, 'Convertido', 'bg-green-100 text-green-800', false, 3),
+        ($1, 'Perdido', 'bg-red-100 text-red-800', false, 4)
+      `, [funnelId]);
+    }
+    
+    res.json(agent);
   } catch (error) {
     console.error('Create agent error:', error);
     res.status(500).json({ error: 'Failed to create agent' });

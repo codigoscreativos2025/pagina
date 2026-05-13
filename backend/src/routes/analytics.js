@@ -86,6 +86,106 @@ router.get('/overview', auth, async (req, res) => {
   }
 })
 
+router.get('/results', auth, async (req, res) => {
+  try {
+    const pool = req.pool
+    const userId = req.user.id
+
+    // Conversations this week
+    const convRes = await pool.query(
+      `SELECT COUNT(DISTINCT l.id) as total FROM leads l
+       JOIN agents a ON l.agent_id = a.id
+       WHERE a.user_id = $1 AND l.created_at > NOW() - INTERVAL '7 days'`,
+      [userId]
+    )
+    const conversationsThisWeek = parseInt(convRes.rows[0].total) || 0
+
+    // Leads this week
+    const leadsThisWeekRes = await pool.query(
+      `SELECT COUNT(*) as total FROM leads l
+       JOIN agents a ON l.agent_id = a.id
+       WHERE a.user_id = $1 AND l.created_at > NOW() - INTERVAL '7 days'`,
+      [userId]
+    )
+    const leadsThisWeek = parseInt(leadsThisWeekRes.rows[0].total) || 0
+
+    // Leads last week (for comparison)
+    const leadsLastWeekRes = await pool.query(
+      `SELECT COUNT(*) as total FROM leads l
+       JOIN agents a ON l.agent_id = a.id
+       WHERE a.user_id = $1 AND l.created_at > NOW() - INTERVAL '14 days' AND l.created_at <= NOW() - INTERVAL '7 days'`,
+      [userId]
+    )
+    const leadsLastWeek = parseInt(leadsLastWeekRes.rows[0].total) || 0
+
+    // Total messages
+    const msgRes = await pool.query(
+      `SELECT COUNT(*) as total FROM messages m
+       JOIN leads l ON m.lead_id = l.id
+       JOIN agents a ON l.agent_id = a.id
+       WHERE a.user_id = $1`,
+      [userId]
+    )
+    const messagesTotal = parseInt(msgRes.rows[0].total) || 0
+
+    // Time saved: messages from agent * 2 minutes / 60
+    const agentMsgRes = await pool.query(
+      `SELECT COUNT(*) as total FROM messages m
+       JOIN leads l ON m.lead_id = l.id
+       JOIN agents a ON l.agent_id = a.id
+       WHERE a.user_id = $1 AND m.sender_type = 'agent'`,
+      [userId]
+    )
+    const agentMessages = parseInt(agentMsgRes.rows[0].total) || 0
+    const timeSavedHours = Math.round((agentMessages * 2) / 60)
+
+    // Conversion rate
+    const convRateRes = await pool.query(
+      `SELECT 
+        COUNT(*) FILTER (WHERE status != 'nuevo') as converted,
+        COUNT(*) as total
+       FROM leads l
+       JOIN agents a ON l.agent_id = a.id
+       WHERE a.user_id = $1`,
+      [userId]
+    )
+    const convRow = convRateRes.rows[0]
+    const conversionRate = convRow.total > 0
+      ? ((parseInt(convRow.converted) / parseInt(convRow.total)) * 100).toFixed(1) + '%'
+      : '0%'
+
+    // Active channels
+    const intRes = await pool.query(
+      'SELECT whatsapp_config, instagram_config, facebook_config, tiktok_config FROM user_integrations WHERE user_id = $1',
+      [userId]
+    )
+    const ints = intRes.rows[0] || {}
+    let channelsActive = 0
+    if (ints.whatsapp_config) channelsActive++
+    if (ints.instagram_config) channelsActive++
+    if (ints.facebook_config) channelsActive++
+    if (ints.tiktok_config) channelsActive++
+
+    // Average response time (mock for now)
+    const responseTimeAvg = agentMessages > 0 ? '< 1 min' : '—'
+
+    res.json({
+      success: true,
+      conversations_this_week: conversationsThisWeek,
+      leads_this_week: leadsThisWeek,
+      leads_last_week: leadsLastWeek,
+      messages_total: messagesTotal,
+      time_saved_hours: timeSavedHours,
+      conversion_rate: conversionRate,
+      channels_active: channelsActive,
+      response_time_avg: responseTimeAvg
+    })
+  } catch (error) {
+    console.error('Error fetching results:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
 router.get('/meta-ads', auth, async (req, res) => {
   try {
     const pool = req.pool

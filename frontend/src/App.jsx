@@ -15,6 +15,9 @@ import Account from './pages/Account'
 import Templates from './pages/Templates'
 import Funnels from './pages/Funnels'
 import TikTokAds from './pages/TikTokAds'
+import OnboardingWizard from './pages/OnboardingWizard'
+import Results from './pages/Results'
+import Recipes from './pages/Recipes'
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth()
@@ -36,6 +39,7 @@ function AppRoutes() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/onboarding" element={<PrivateRoute><OnboardingWizard /></PrivateRoute>} />
           <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
           <Route path="/config/:id" element={<PrivateRoute><AgentConfig /></PrivateRoute>} />
           <Route path="/config" element={<Navigate to="/dashboard" />} />
@@ -46,6 +50,8 @@ function AppRoutes() {
           <Route path="/integrations" element={<PrivateRoute><Integrations /></PrivateRoute>} />
           <Route path="/meta-ads" element={<PrivateRoute><MetaAds /></PrivateRoute>} />
           <Route path="/tiktok-ads" element={<PrivateRoute><TikTokAds /></PrivateRoute>} />
+          <Route path="/results" element={<PrivateRoute><Results /></PrivateRoute>} />
+          <Route path="/recipes" element={<PrivateRoute><Recipes /></PrivateRoute>} />
           <Route path="/plans" element={<PrivateRoute><Plans /></PrivateRoute>} />
           <Route path="/account" element={<PrivateRoute><Account /></PrivateRoute>} />
           <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />

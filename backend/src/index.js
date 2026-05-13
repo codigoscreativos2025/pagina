@@ -22,6 +22,7 @@ const templateRoutes = require('./routes/templates');
 const mediaRoutes = require('./routes/media');
 const tiktokRoutes = require('./routes/tiktok');
 const facebookRoutes = require('./routes/facebook');
+const onboardingRoutes = require('./routes/onboarding');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -80,6 +81,7 @@ app.use('/api/templates', templateRoutes);
 app.use('/api/media', mediaRoutes);
 app.use('/api/integrations/tiktok', tiktokRoutes);
 app.use('/api/integrations/facebook', facebookRoutes);
+app.use('/api/onboarding', onboardingRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
@@ -320,6 +322,7 @@ async function start() {
     try { await client.query('ALTER TABLE plans ADD COLUMN IF NOT EXISTS features JSONB'); } catch (e) {}
     try { await client.query("UPDATE plans SET features = '{}'::jsonb WHERE features IS NULL"); } catch (e) {}
     try { await client.query('ALTER TABLE agents ADD COLUMN IF NOT EXISTS active_funnels JSONB'); } catch (e) {}
+    try { await client.query("ALTER TABLE users ADD COLUMN active_recipes JSONB DEFAULT '[]'::jsonb"); } catch (e) {}
 
     await client.query(`
       CREATE TABLE IF NOT EXISTS ai_models (

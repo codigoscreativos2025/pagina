@@ -20,6 +20,16 @@ export default function Dashboard() {
     loadData()
   }, [])
 
+  // Redirect to onboarding if no agents
+  useEffect(() => {
+    if (!loading && agents.length === 0) {
+      const hasSeenOnboarding = localStorage.getItem('pivot_onboarding_done')
+      if (!hasSeenOnboarding) {
+        navigate('/onboarding')
+      }
+    }
+  }, [loading, agents])
+
   const loadData = async () => {
     try {
       const [agentRes, statsRes, analyticsRes, intRes] = await Promise.all([
@@ -73,6 +83,12 @@ export default function Dashboard() {
           <div className="flex items-center gap-6">
             <Link to="/automations" className="text-slate-600 hover:text-brand-600 font-medium transition-colors text-sm flex items-center gap-2">
               <span>⚡</span> Automatizaciones
+            </Link>
+            <Link to="/results" className="text-slate-600 hover:text-brand-600 font-medium transition-colors text-sm flex items-center gap-2">
+              <span>📊</span> Resultados
+            </Link>
+            <Link to="/recipes" className="text-slate-600 hover:text-brand-600 font-medium transition-colors text-sm flex items-center gap-2">
+              <span>🍳</span> Recetas
             </Link>
             <Link to="/crm" className="text-slate-600 hover:text-brand-600 font-medium transition-colors text-sm flex items-center gap-2">
               <span>📊</span> CRM / Chats
@@ -194,12 +210,20 @@ export default function Dashboard() {
             <div className="text-4xl mb-4">🤖</div>
             <h2 className="text-xl font-bold text-slate-900 mb-2">No tienes agentes todavía</h2>
             <p className="text-slate-600 mb-6 max-w-md mx-auto text-sm">Crea tu primer asistente de IA personalizado para comenzar a atender clientes automáticamente.</p>
-            <button
-              onClick={() => { setNewAgentName(''); setShowCreateModal(true) }}
-              className="px-6 py-3 bg-brand-600 text-white rounded-lg font-semibold hover:bg-brand-700"
-            >
-              Crear mi primer Agente
-            </button>
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={() => navigate('/onboarding')}
+                className="px-6 py-3 bg-brand-600 text-white rounded-lg font-semibold hover:bg-brand-700"
+              >
+                🚀 Asistente guiado (5 min)
+              </button>
+              <button
+                onClick={() => { setNewAgentName(''); setShowCreateModal(true) }}
+                className="px-6 py-3 bg-white border border-slate-300 text-slate-700 rounded-lg font-semibold hover:bg-slate-50"
+              >
+                Crear desde cero
+              </button>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">

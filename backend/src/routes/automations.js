@@ -110,3 +110,76 @@ router.delete('/pibots/:id', auth, async (req, res) => {
 })
 
 module.exports = router
+
+// ============================================
+// RECETAS DE AUTOMATIZACIÓN
+// ============================================
+const { getAllRecipes, getRecipeById } = require('../data/automationRecipes')
+
+// GET: Get all available recipes
+router.get('/recipes', auth, (req, res) => {
+  res.json({ success: true, recipes: getAllRecipes() })
+})
+
+// GET: Get active recipes for user
+router.get('/active', auth, async (req, res) => {
+  try {
+    const pool = req.pool
+    const result = await pool.query(
+      'SELECT active_recipes FROM users WHERE id = $1',
+      [req.user.id]
+    )
+    const activeRecipes = result.rows[0]?.active_recipes || []
+    res.json({ success: true, active: typeof activeRecipes === 'string' ? JSON.parse(activeRecipes) : activeRecipes })
+  } catch (error) {
+    res.json({ success: true, active: [] })
+  }
+})
+
+// POST: Activate a recipe
+router.post('/recipes/:id/activate', auth, async (req, res) => {
+  try {
+    const pool = req.pool
+    const recipeId = req.params.id
+    const recipe = getRecipeById(recipeId)
+    if (!recipe) return res.status(404).json({ error: 'Recipe not found' })
+
+    const result = await pool.query('SELECT active_recipes FROM users WHERE id = $1', [req.user.id])
+    let activeRecipes = result.rows[0]?.active_recipes || []
+    if (typeof activeRecipes === 'string') activeRecipes = JSON.parse(activeRecipes)
+    if (!Array.isArray(activeRecipes)) activeRecipes = []
+
+    if (!activeRecipes.includes(recipeId)) {
+      activeRecipes.push(recipeId)
+      await pool.query('UPDATE users SET active_recipes = $1 WHERE id = $2', [JSON.stringify(activeRecipes), req.user.id])
+    }
+
+    console.log(`[Recipes] User ${req.user.id} activated recipe: ${recipeId}`)
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Activate recipe error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// POST: Deactivate a recipe
+router.post('/recipes/:id/deactivate', auth, async (req, res) => {
+  try {
+    const pool = req.pool
+    const recipeId = req.params.id
+
+    const result = await pool.query('SELECT active_recipes FROM users WHERE id = $1', [req.user.id])
+    let activeRecipes = result.rows[0]?.active_recipes || []
+    if (typeof activeRecipes === 'string') activeRecipes = JSON.parse(activeRecipes)
+    if (!Array.isArray(activeRecipes)) activeRecipes = []
+
+    activeRecipes = activeRecipes.filter(r => r !== recipeId)
+    await pool.query('UPDATE users SET active_recipes = $1 WHERE id = $2', [JSON.stringify(activeRecipes), req.user.id])
+
+    console.log(`[Recipes] User ${req.user.id} deactivated recipe: ${recipeId}`)
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Deactivate recipe error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})

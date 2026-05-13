@@ -14,6 +14,7 @@ import PrivacyPolicy from './pages/PrivacyPolicy'
 import Account from './pages/Account'
 import Templates from './pages/Templates'
 import Funnels from './pages/Funnels'
+import TikTokAds from './pages/TikTokAds'
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth()
@@ -44,6 +45,7 @@ function AppRoutes() {
           <Route path="/funnels" element={<PrivateRoute><Funnels /></PrivateRoute>} />
           <Route path="/integrations" element={<PrivateRoute><Integrations /></PrivateRoute>} />
           <Route path="/meta-ads" element={<PrivateRoute><MetaAds /></PrivateRoute>} />
+          <Route path="/tiktok-ads" element={<PrivateRoute><TikTokAds /></PrivateRoute>} />
           <Route path="/plans" element={<PrivateRoute><Plans /></PrivateRoute>} />
           <Route path="/account" element={<PrivateRoute><Account /></PrivateRoute>} />
           <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />

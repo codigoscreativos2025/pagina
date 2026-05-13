@@ -1,0 +1,264 @@
+<template id="beat-1-login-template">
+  <div data-composition-id="beat-1-login" data-width="1920" data-height="1080">
+    <style>
+      [data-composition-id="beat-1-login"] {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: 'Inter', sans-serif;
+      }
+      .login-card {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 24px;
+        padding: 48px;
+        width: 440px;
+        text-align: center;
+      }
+      .logo {
+        font-size: 42px;
+        font-weight: 700;
+        margin-bottom: 32px;
+      }
+      .logo-pivot {
+        color: #60a5fa;
+      }
+      .logo-ai {
+        color: #06b6d4;
+      }
+      .title {
+        color: #f8fafc;
+        font-size: 24px;
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+      .subtitle {
+        color: #94a3b8;
+        font-size: 14px;
+        margin-bottom: 32px;
+      }
+      .input-group {
+        margin-bottom: 16px;
+        text-align: left;
+      }
+      .input-label {
+        color: #94a3b8;
+        font-size: 12px;
+        font-weight: 500;
+        margin-bottom: 6px;
+        display: block;
+      }
+      .input-field {
+        width: 100%;
+        padding: 14px 16px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid #475569;
+        border-radius: 8px;
+        color: #f8fafc;
+        font-size: 14px;
+        outline: none;
+        transition: border-color 0.2s;
+      }
+      .input-field:focus {
+        border-color: #3b82f6;
+      }
+      .btn-facebook {
+        width: 100%;
+        padding: 14px;
+        background: #1877f2;
+        border: none;
+        border-radius: 8px;
+        color: #fff;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        margin-top: 8px;
+        transition: background 0.2s;
+      }
+      .btn-facebook:hover {
+        background: #166fe5;
+      }
+      .btn-google {
+        width: 100%;
+        padding: 14px;
+        background: #fff;
+        border: none;
+        border-radius: 8px;
+        color: #1e293b;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        margin-top: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+      .cursor {
+        width: 24px;
+        height: 24px;
+        position: absolute;
+        z-index: 100;
+      }
+      .cursor svg {
+        width: 100%;
+        height: 100%;
+      }
+      @keyframes clickPulse {
+        0% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.2); opacity: 0.7; }
+        100% { transform: scale(1); opacity: 1; }
+      }
+      .clicking {
+        animation: clickPulse 0.3s ease;
+      }
+    </style>
+    
+    <div class="login-card" id="loginCard">
+      <div class="logo" id="logo">
+        <span class="logo-pivot">Pivot</span><span class="logo-ai">.AI</span>
+      </div>
+      <h1 class="title" id="title">Iniciar Sesión</h1>
+      <p class="subtitle" id="subtitle">Accede a tu cuenta de Pivot Agents</p>
+      
+      <div class="input-group">
+        <label class="input-label">Email</label>
+        <input type="email" class="input-field" id="emailInput" placeholder="tu@email.com" />
+      </div>
+      
+      <div class="input-group">
+        <label class="input-label">Contraseña</label>
+        <input type="password" class="input-field" id="passInput" placeholder="••••••••" />
+      </div>
+      
+      <button class="btn-facebook" id="fbBtn">
+        <svg style="display:inline;vertical-align:middle;width:20px;height:20px;margin-right:8px" viewBox="0 0 24 24" fill="#fff">
+          <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.955 10.125 11.854v-8.385H7.078v-3.47h3.047V9.413c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.003.099 2.003.099v2.202h-1.129c-1.106 0-1.461.697-1.461 1.413v2.334h3.168l-.498 3.47h-2.67v8.385c5.736-.899 10.125-5.864 10.125-11.854z"/>
+        </svg>
+        Continue with Facebook
+      </button>
+      
+      <button class="btn-google" id="googleBtn">
+        <svg style="width:20px;height:20px" viewBox="0 0 24 24">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.96 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.96 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+        </svg>
+        Continue with Google
+      </button>
+    </div>
+    
+    <div class="cursor" id="cursor">
+      <svg viewBox="0 0 24 24" fill="none">
+        <path d="M5.5 3.21V20.8c0 .45.54.67.85.35l4.86-4.86a.5.5 0 01.35-.15h6.87a.5.5 0 00.35-.85L6.35 2.86a.5.5 0 00-.85.35z" fill="#fff" stroke="#000" stroke-width="1"/>
+      </svg>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+      
+      // Card entrance - scale from 0.95
+      tl.from("#loginCard", { 
+        scale: 0.95, 
+        opacity: 0, 
+        duration: 0.4, 
+        ease: "power3.out" 
+      }, 0);
+      
+      // Logo stagger fade in
+      tl.from("#logo", { 
+        y: -20, 
+        opacity: 0, 
+        duration: 0.3, 
+        ease: "power2.out" 
+      }, 0.3);
+      
+      // Title and subtitle
+      tl.from("#title", { 
+        y: 20, 
+        opacity: 0, 
+        duration: 0.3, 
+        ease: "power2.out" 
+      }, 0.5);
+      tl.from("#subtitle", { 
+        opacity: 0, 
+        duration: 0.3 
+      }, 0.7);
+      
+      // Input fields stagger
+      tl.from("#emailInput", { 
+        x: -20, 
+        opacity: 0, 
+        duration: 0.3,
+        ease: "power2.out"
+      }, 1.0);
+      tl.from("#passInput", { 
+        x: -20, 
+        opacity: 0, 
+        duration: 0.3,
+        ease: "power2.out"
+      }, 1.15);
+      
+      // Buttons fade in
+      tl.from("#fbBtn", { 
+        y: 20, 
+        opacity: 0, 
+        duration: 0.3,
+        ease: "power2.out"
+      }, 1.5);
+      tl.from("#googleBtn", { 
+        y: 20, 
+        opacity: 0, 
+        duration: 0.3,
+        ease: "power2.out"
+      }, 1.65);
+      
+      // Cursor enters and moves
+      tl.from("#cursor", {
+        x: 200,
+        opacity: 0,
+        duration: 0.3
+      }, 2.5);
+      
+      // Cursor moves to Facebook button area
+      tl.to("#cursor", {
+        x: -120,
+        y: 80,
+        duration: 1.0,
+        ease: "power2.inOut"
+      }, 3.0);
+      
+      // Click animation on button
+      tl.add(() => {
+        document.getElementById('fbBtn').classList.add('clicking');
+      }, 4.2);
+      
+      // Flash/transition out
+      tl.to("#loginCard", {
+        opacity: 0,
+        scale: 1.05,
+        duration: 0.3,
+        ease: "power2.in"
+      }, 5.5);
+      
+      tl.fromTo("#cursor", {
+        opacity: 1
+      }, {
+        opacity: 0,
+        duration: 0.2
+      }, 5.5);
+      
+      window.__timelines["beat-1-login"] = tl;
+    </script>
+  </div>
+</template>

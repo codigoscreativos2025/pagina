@@ -1,0 +1,381 @@
+<template id="beat-5-messages-template">
+  <div data-composition-id="beat-5-messages" data-width="1920" data-height="1080">
+    <style>
+      [data-composition-id="beat-5-messages"] {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: #0f172a;
+        display: flex;
+        font-family: 'Inter', sans-serif;
+      }
+      .sidebar {
+        width: 300px;
+        height: 100%;
+        background: #1e293b;
+        border-right: 1px solid #334155;
+        padding: 24px 0;
+      }
+      .sidebar-logo {
+        padding: 0 24px 32px;
+        font-size: 28px;
+        font-weight: 700;
+      }
+      .logo-pivot { color: #60a5fa; }
+      .logo-ai { color: #06b6d4; }
+      .nav-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 24px;
+        color: #94a3b8;
+        font-size: 14px;
+        font-weight: 500;
+      }
+      .nav-item.active {
+        background: rgba(37, 99, 235, 0.1);
+        color: #60a5fa;
+        border-right: 3px solid #2563eb;
+      }
+      .conversation-list {
+        flex: 1;
+        border-right: 1px solid #334155;
+        overflow-y: auto;
+        padding: 16px 0;
+      }
+      .conversation-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      .conversation-item:hover { background: rgba(255,255,255,0.02); }
+      .conversation-item.active { background: rgba(37, 99, 235, 0.1); }
+      .conv-avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 14px;
+      }
+      .conv-avatar.insta {
+        background: linear-gradient(45deg, #f09433, #dc2743);
+        color: #fff;
+      }
+      .conv-avatar.whatsapp {
+        background: #25d366;
+        color: #fff;
+      }
+      .conv-info { flex: 1; }
+      .conv-name {
+        font-size: 14px;
+        font-weight: 600;
+        color: #f8fafc;
+        margin-bottom: 2px;
+      }
+      .conv-preview {
+        font-size: 12px;
+        color: #94a3b8;
+      }
+      .conv-time {
+        font-size: 11px;
+        color: #64748b;
+      }
+      .chat-panel {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+      .chat-header {
+        padding: 16px 24px;
+        border-bottom: 1px solid #334155;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .chat-header .conv-avatar {
+        width: 40px;
+        height: 40px;
+      }
+      .chat-name {
+        font-size: 16px;
+        font-weight: 600;
+        color: #f8fafc;
+      }
+      .chat-platform {
+        font-size: 12px;
+        color: #94a3b8;
+      }
+      .chat-status {
+        margin-left: auto;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 500;
+      }
+      .chat-status.active {
+        background: rgba(6, 182, 212, 0.2);
+        color: #06b6d4;
+      }
+      .chat-messages {
+        flex: 1;
+        padding: 24px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .message {
+        max-width: 60%;
+        padding: 12px 16px;
+        border-radius: 16px;
+        font-size: 14px;
+        line-height: 1.5;
+      }
+      .message.incoming {
+        background: #334155;
+        color: #f8fafc;
+        align-self: flex-start;
+        border-bottom-left-radius: 4px;
+      }
+      .message.outgoing {
+        background: #2563eb;
+        color: #fff;
+        align-self: flex-end;
+        border-bottom-right-radius: 4px;
+      }
+      .message.ai {
+        background: linear-gradient(135deg, #2563eb, #06b6d4);
+        color: #fff;
+        align-self: flex-end;
+        border-bottom-right-radius: 4px;
+      }
+      .message-time {
+        font-size: 11px;
+        color: #64748b;
+        margin-top: 4px;
+      }
+      .typing-indicator {
+        display: flex;
+        gap: 4px;
+        padding: 12px 16px;
+        background: #334155;
+        border-radius: 16px;
+        border-bottom-left-radius: 4px;
+        width: fit-content;
+        display: none;
+      }
+      .typing-indicator.show { display: flex; }
+      .typing-dot {
+        width: 8px;
+        height: 8px;
+        background: #64748b;
+        border-radius: 50%;
+        animation: typing 1.4s infinite;
+      }
+      .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+      .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+      @keyframes typing {
+        0%, 60%, 100% { transform: translateY(0); }
+        30% { transform: translateY(-4px); }
+      }
+      .quick-replies {
+        padding: 16px 24px;
+        border-top: 1px solid #334155;
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .quick-reply {
+        padding: 8px 16px;
+        background: rgba(37, 99, 235, 0.2);
+        border: 1px solid #2563eb;
+        border-radius: 20px;
+        color: #60a5fa;
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .quick-reply:hover {
+        background: rgba(37, 99, 235, 0.4);
+      }
+      .chat-input-area {
+        padding: 16px 24px;
+        border-top: 1px solid #334155;
+      }
+      .chat-input {
+        width: 100%;
+        padding: 12px 16px;
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 24px;
+        color: #f8fafc;
+        font-size: 14px;
+        outline: none;
+      }
+      .chat-input:focus { border-color: #2563eb; }
+    </style>
+    
+    <div class="sidebar">
+      <div class="sidebar-logo">
+        <span class="logo-pivot">Pivot</span><span class="logo-ai">.AI</span>
+      </div>
+      <nav>
+        <div class="nav-item">Dashboard</div>
+        <div class="nav-item">Agents</div>
+        <div class="nav-item">Integrations</div>
+        <div class="nav-item active">CRM</div>
+        <div class="nav-item">Settings</div>
+      </nav>
+    </div>
+    
+    <div class="conversation-list">
+      <div class="conversation-item active" id="conv1">
+        <div class="conv-avatar insta">MR</div>
+        <div class="conv-info">
+          <div class="conv-name">Maria Rodriguez</div>
+          <div class="conv-preview">Hola, tengo una pregunta...</div>
+        </div>
+        <div class="conv-time">2m</div>
+      </div>
+      <div class="conversation-item" id="conv2">
+        <div class="conv-avatar whatsapp">JL</div>
+        <div class="conv-info">
+          <div class="conv-name">Juan Lopez</div>
+          <div class="conv-preview">Gracias por la info</div>
+        </div>
+        <div class="conv-time">15m</div>
+      </div>
+      <div class="conversation-item" id="conv3">
+        <div class="conv-avatar insta">CP</div>
+        <div class="conv-info">
+          <div class="conv-name">Carlos Perez</div>
+          <div class="conv-preview">Me interesa el producto</div>
+        </div>
+        <div class="conv-time">1h</div>
+      </div>
+      <div class="conversation-item" id="conv4">
+        <div class="conv-avatar whatsapp">AG</div>
+        <div class="conv-info">
+          <div class="conv-name">Ana Garcia</div>
+          <div class="conv-preview">Cual es el precio?</div>
+        </div>
+        <div class="conv-time">2h</div>
+      </div>
+    </div>
+    
+    <div class="chat-panel">
+      <div class="chat-header">
+        <div class="conv-avatar insta">MR</div>
+        <div>
+          <div class="chat-name">Maria Rodriguez</div>
+          <div class="chat-platform">Via Instagram</div>
+        </div>
+        <div class="chat-status active">AI Active</div>
+      </div>
+      
+      <div class="chat-messages" id="messages">
+        <div class="message incoming" id="msg1">
+          Hola! Tengo una pregunta sobre tus servicios
+          <div class="message-time">10:32 AM</div>
+        </div>
+        <div class="message outgoing" id="msg2">
+          Hola Maria! Con gusto te ayudo. Cual es tu pregunta?
+          <div class="message-time">10:33 AM</div>
+        </div>
+        <div class="message incoming" id="msg3">
+          Me interesa saber mas sobre los planes de automation para WhatsApp Business
+          <div class="message-time">10:34 AM</div>
+        </div>
+        <div class="typing-indicator" id="typingIndicator">
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+        </div>
+      </div>
+      
+      <div class="quick-replies" id="quickReplies">
+        <button class="quick-reply">Ver planes</button>
+        <button class="quick-reply">Demo gratuita</button>
+        <button class="quick-reply">Contactar agente</button>
+      </div>
+      
+      <div class="chat-input-area">
+        <input type="text" class="chat-input" placeholder="Type a message..." />
+      </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+      
+      // Sidebar in
+      tl.from(".sidebar", { x: -300, duration: 0.3, ease: "power2.out" }, 0);
+      
+      // Conversation list
+      tl.from("#conv1", { x: -20, opacity: 0, duration: 0.3 }, 0.3);
+      tl.from("#conv2", { x: -20, opacity: 0, duration: 0.3 }, 0.4);
+      tl.from("#conv3", { x: -20, opacity: 0, duration: 0.3 }, 0.5);
+      tl.from("#conv4", { x: -20, opacity: 0, duration: 0.3 }, 0.6);
+      
+      // Chat panel
+      tl.from(".chat-header", { y: -20, opacity: 0, duration: 0.3 }, 0.8);
+      
+      // Messages appear
+      tl.from("#msg1", { y: 20, opacity: 0, duration: 0.3 }, 1.0);
+      tl.from("#msg2", { y: 20, opacity: 0, duration: 0.3 }, 1.3);
+      tl.from("#msg3", { y: 20, opacity: 0, duration: 0.3 }, 1.6);
+      
+      // Typing indicator appears
+      tl.add(() => {
+        document.getElementById('typingIndicator').classList.add('show');
+      }, 2.0);
+      
+      // AI response typing effect
+      const aiMsg = document.createElement('div');
+      aiMsg.className = 'message ai';
+      aiMsg.id = 'aiMsg';
+      document.getElementById('messages').appendChild(aiMsg);
+      
+      tl.add(() => {
+        const element = document.getElementById('aiMsg');
+        const text = "Claro! Tenemos planes desde $49/mes. Incluyen automatización de respuestas, integración con CRM, y más. Te envío información?";
+        let i = 0;
+        element.innerHTML = '<span class="text-content"></span><div class="message-time">10:35 AM</div>';
+        const textSpan = element.querySelector('.text-content');
+        const interval = setInterval(() => {
+          if (i < text.length) {
+            textSpan.textContent += text.charAt(i);
+            i++;
+          } else {
+            clearInterval(interval);
+          }
+        }, 30);
+      }, 3.0);
+      
+      // Hide typing, show AI message
+      tl.add(() => {
+        document.getElementById('typingIndicator').classList.remove('show');
+      }, 3.5);
+      
+      tl.from("#aiMsg", { y: 20, opacity: 0, duration: 0.3 }, 3.5);
+      
+      // Quick replies
+      tl.from(".quick-reply", { scale: 0.8, opacity: 0, duration: 0.3, stagger: 0.1 }, 4.5);
+      
+      // Input area
+      tl.from(".chat-input", { y: 20, opacity: 0, duration: 0.3 }, 5.0);
+      
+      window.__timelines["beat-5-messages"] = tl;
+    </script>
+  </div>
+</template>

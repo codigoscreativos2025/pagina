@@ -34,6 +34,8 @@ const TOOL_CATALOG = [
   },
   { id: 'whatsapp_reply', icon: '📱', label: 'Responder WhatsApp', desc: 'Enviar mensajes por WhatsApp', color: 'bg-emerald-50 border-emerald-200', simple: true },
   { id: 'instagram_reply', icon: '📸', label: 'Responder Instagram', desc: 'Enviar mensajes por Instagram DM', color: 'bg-pink-50 border-pink-200', simple: true },
+  { id: 'facebook_reply', icon: '💬', label: 'Responder Facebook', desc: 'Enviar mensajes por Facebook Messenger', color: 'bg-blue-50 border-blue-200', simple: true },
+  { id: 'tiktok_reply', icon: '🎵', label: 'Responder TikTok', desc: 'Enviar mensajes por TikTok DM', color: 'bg-gray-50 border-gray-200', simple: true },
   { id: 'telegram_notify', icon: '✈️', label: 'Notificar por Telegram', desc: 'Enviar alertas por Telegram', color: 'bg-sky-50 border-sky-200', simple: true },
   { id: 'send_email', icon: '📧', label: 'Enviar Emails', desc: 'Enviar correos electrónicos', color: 'bg-orange-50 border-orange-200', simple: true },
 ]

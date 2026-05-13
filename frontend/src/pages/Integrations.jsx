@@ -13,6 +13,9 @@ export default function Integrations() {
   const [formData, setFormData] = useState({})
   const [metaConfigs, setMetaConfigs] = useState({ app_id: '', configs: {} })
   const [connecting, setConnecting] = useState(null)
+  const [selectedPage, setSelectedPage] = useState(null)
+  const [facebookPages, setFacebookPages] = useState([])
+  const [showPageSelector, setShowPageSelector] = useState(false)
 
   useEffect(() => { loadData() }, [])
 
@@ -24,6 +27,22 @@ export default function Integrations() {
       loadData()
     } else if (googleResult === 'error') {
       alert('❌ Error conectando Google: ' + (searchParams.get('reason') || 'desconocido'))
+    }
+
+    const tiktokResult = searchParams.get('tiktok')
+    if (tiktokResult === 'success') {
+      alert('✅ TikTok conectado exitosamente!')
+      loadData()
+    } else if (tiktokResult === 'error') {
+      alert('❌ Error conectando TikTok: ' + (searchParams.get('reason') || 'desconocido'))
+    }
+
+    const tiktokAdsResult = searchParams.get('tiktok_ads')
+    if (tiktokAdsResult === 'success') {
+      alert('✅ TikTok Ads conectado exitosamente!')
+      loadData()
+    } else if (tiktokAdsResult === 'error') {
+      alert('❌ Error conectando TikTok Ads: ' + (searchParams.get('reason') || 'desconocido'))
     }
   }, [searchParams])
 
@@ -133,6 +152,74 @@ export default function Integrations() {
     } catch (err) { alert('Error: ' + err.message); setConnecting(null) }
   }
 
+  // TikTok OAuth (Messages)
+  const connectTikTok = async () => {
+    setConnecting('tiktok')
+    try {
+      const res = await api.get('/integrations/tiktok/auth-url')
+      if (res.data.url) {
+        window.location.href = res.data.url
+      } else { alert('Error generando URL de TikTok'); setConnecting(null) }
+    } catch (err) { alert('Error: ' + err.message); setConnecting(null) }
+  }
+
+  // TikTok Ads OAuth
+  const connectTikTokAds = async () => {
+    setConnecting('tiktok_ads')
+    try {
+      const res = await api.get('/integrations/tiktok/ads-auth-url')
+      if (res.data.url) {
+        window.location.href = res.data.url
+      } else { alert('Error generando URL de TikTok Ads'); setConnecting(null) }
+    } catch (err) { alert('Error: ' + err.message); setConnecting(null) }
+  }
+
+  // Facebook Page (Messenger)
+  const connectFacebook = async () => {
+    if (!metaConfigs.app_id) return alert('Falta configurar FACEBOOK_APP_ID en el servidor.')
+    setConnecting('facebook')
+    try {
+      const FB = await loadFBSDK()
+      FB.login(async (response) => {
+        if (response.authResponse) {
+          try {
+            // Get user pages
+            const pagesRes = await api.get(`/integrations/facebook/pages?access_token=${response.authResponse.accessToken}`)
+            if (pagesRes.data.success && pagesRes.data.pages.length > 0) {
+              setFacebookPages(pagesRes.data.pages)
+              setShowPageSelector(true)
+              setConnecting(null)
+            } else {
+              alert('No se encontraron Páginas de Facebook.')
+              setConnecting(null)
+            }
+          } catch (err) {
+            alert('Error: ' + (err.response?.data?.error || err.message))
+            setConnecting(null)
+          }
+        } else { alert('Conexión cancelada.'); setConnecting(null) }
+      }, { scope: 'pages_show_list,pages_manage_metadata,pages_messaging', response_type: 'token' })
+    } catch (err) { console.error(err); setConnecting(null) }
+  }
+
+  const selectFacebookPage = async (page) => {
+    try {
+      setConnecting('facebook')
+      const res = await api.post('/integrations/facebook/onboarding', {
+        access_token: page.access_token,
+        page_id: page.id
+      })
+      alert(`✅ Facebook Messenger conectado! Página: ${res.data.page_name}`)
+      loadData()
+      setShowPageSelector(false)
+      setSelectedPage(null)
+    } catch (err) {
+      alert('Error: ' + (err.response?.data?.error || err.message))
+    } finally {
+      setConnecting(null)
+    }
+  }
+
   const openModal = (type) => {
     const configData = integrations[`${type}_config`] || {}
     let initialData = {}
@@ -141,6 +228,9 @@ export default function Integrations() {
     else if (type === 'google') initialData = { sheet_id: configData.sheet_id || '', credentials_json: configData.credentials_json || '' }
     else if (type === 'telegram') initialData = { bot_token: configData.bot_token || '' }
     else if (type === 'meta_ads') initialData = { ad_account_id: configData.ad_account_id || '', access_token: configData.access_token || '' }
+    else if (type === 'tiktok') initialData = { open_id: configData.open_id || '', access_token: configData.access_token || '' }
+    else if (type === 'tiktok_ads') initialData = { advertiser_id: configData.advertiser_id || '', access_token: configData.access_token || '' }
+    else if (type === 'facebook') initialData = { page_id: configData.page_id || '', access_token: configData.access_token || '' }
     setFormData(initialData)
     setActiveModal(type)
   }
@@ -155,7 +245,7 @@ export default function Integrations() {
   }
 
   const disconnectIntegration = async (key) => {
-    const names = { whatsapp: 'WhatsApp', google: 'Google', instagram: 'Instagram', telegram: 'Telegram', meta_ads: 'Meta Ads' }
+    const names = { whatsapp: 'WhatsApp', google: 'Google', instagram: 'Instagram', telegram: 'Telegram', meta_ads: 'Meta Ads', tiktok: 'TikTok', tiktok_ads: 'TikTok Ads', facebook: 'Facebook' }
     if (!confirm(`¿Desconectar ${names[key] || key}? Esto eliminará la configuración guardada.`)) return
     try {
       await api.delete(`/integrations/${key}`)
@@ -183,6 +273,24 @@ export default function Integrations() {
       onManual: () => openModal('instagram'), manualLabel: 'Manual'
     },
     {
+      key: 'facebook', icon: '💬', iconBg: 'bg-blue-100 text-blue-600',
+      title: 'Facebook Messenger', desc: 'Conecta tu Página de Facebook para Messenger',
+      connected: integrations.facebook_config?.page_id,
+      connectedLabel: integrations.facebook_config?.page_name,
+      onConnect: connectFacebook, connectLabel: 'Conectar con Facebook',
+      onDisconnect: () => disconnectIntegration('facebook'),
+      onManual: () => openModal('facebook'), manualLabel: 'Manual'
+    },
+    {
+      key: 'tiktok', icon: '🎵', iconBg: 'bg-gray-100 text-gray-900',
+      title: 'TikTok Messages', desc: 'Conecta TikTok para recibir y enviar DMs',
+      connected: integrations.tiktok_config?.open_id,
+      connectedLabel: integrations.tiktok_config?.display_name,
+      onConnect: connectTikTok, connectLabel: 'Conectar con TikTok',
+      onDisconnect: () => disconnectIntegration('tiktok'),
+      onManual: () => openModal('tiktok'), manualLabel: 'Manual'
+    },
+    {
       key: 'telegram', icon: '✈️', iconBg: 'bg-blue-100 text-blue-600',
       title: 'Telegram', desc: 'Conecta un Bot de Telegram',
       connected: integrations.telegram_config?.bot_token,
@@ -207,6 +315,15 @@ export default function Integrations() {
       onConnect: connectMetaAds, connectLabel: 'Conectar con Facebook',
       onDisconnect: () => disconnectIntegration('meta_ads'),
       onManual: () => openModal('meta_ads'), manualLabel: 'Manual'
+    },
+    {
+      key: 'tiktok_ads', icon: '📈', iconBg: 'bg-gray-100 text-gray-900',
+      title: 'TikTok Ads', desc: 'Métricas de campañas publicitarias',
+      connected: integrations.tiktok_ads_config?.advertiser_id,
+      connectedLabel: integrations.tiktok_ads_config?.advertiser_name,
+      onConnect: connectTikTokAds, connectLabel: 'Conectar con TikTok Ads',
+      onDisconnect: () => disconnectIntegration('tiktok_ads'),
+      onManual: () => openModal('tiktok_ads'), manualLabel: 'Manual'
     }
   ]
 
@@ -313,11 +430,53 @@ export default function Integrations() {
                 <div><label className="block text-sm font-medium text-slate-700 mb-1">Access Token (ads_read)</label>
                 <input type="password" value={formData.access_token||''} onChange={e => setFormData({...formData, access_token: e.target.value})} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:border-brand-500 focus:outline-none" /></div>
               </>)}
+              {activeModal === 'tiktok' && (<>
+                <div><label className="block text-sm font-medium text-slate-700 mb-1">Open ID</label>
+                <input type="text" value={formData.open_id||''} onChange={e => setFormData({...formData, open_id: e.target.value})} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:border-brand-500 focus:outline-none" /></div>
+                <div><label className="block text-sm font-medium text-slate-700 mb-1">Access Token</label>
+                <input type="password" value={formData.access_token||''} onChange={e => setFormData({...formData, access_token: e.target.value})} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:border-brand-500 focus:outline-none" /></div>
+              </>)}
+              {activeModal === 'tiktok_ads' && (<>
+                <div><label className="block text-sm font-medium text-slate-700 mb-1">Advertiser ID</label>
+                <input type="text" value={formData.advertiser_id||''} onChange={e => setFormData({...formData, advertiser_id: e.target.value})} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:border-brand-500 focus:outline-none" /></div>
+                <div><label className="block text-sm font-medium text-slate-700 mb-1">Access Token</label>
+                <input type="password" value={formData.access_token||''} onChange={e => setFormData({...formData, access_token: e.target.value})} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:border-brand-500 focus:outline-none" /></div>
+              </>)}
+              {activeModal === 'facebook' && (<>
+                <div><label className="block text-sm font-medium text-slate-700 mb-1">Page ID</label>
+                <input type="text" value={formData.page_id||''} onChange={e => setFormData({...formData, page_id: e.target.value})} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:border-brand-500 focus:outline-none" /></div>
+                <div><label className="block text-sm font-medium text-slate-700 mb-1">Page Access Token</label>
+                <input type="password" value={formData.access_token||''} onChange={e => setFormData({...formData, access_token: e.target.value})} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:border-brand-500 focus:outline-none" /></div>
+              </>)}
               <div className="pt-4 border-t border-slate-100 flex justify-end gap-3">
                 <button type="button" onClick={() => setActiveModal(null)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">Cancelar</button>
                 <button type="submit" className="px-6 py-2 bg-brand-600 text-white rounded-lg font-medium hover:bg-brand-700">Guardar</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Facebook Page Selector Modal */}
+      {showPageSelector && (
+        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+              <h2 className="text-xl font-bold text-slate-900">Selecciona tu Página de Facebook</h2>
+              <button onClick={() => { setShowPageSelector(false); setConnecting(null) }} className="text-slate-400 hover:text-slate-600 text-xl">&times;</button>
+            </div>
+            <div className="p-6 space-y-3 max-h-96 overflow-y-auto">
+              {facebookPages.map(page => (
+                <button
+                  key={page.id}
+                  onClick={() => selectFacebookPage(page)}
+                  className="w-full p-4 border border-slate-200 rounded-xl hover:border-brand-300 hover:bg-brand-50 transition-all text-left"
+                >
+                  <div className="font-semibold text-slate-900">{page.name}</div>
+                  <div className="text-xs text-slate-500 mt-1">ID: {page.id}</div>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}

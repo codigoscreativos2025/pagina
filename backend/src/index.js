@@ -20,6 +20,8 @@ const analyticsRoutes = require('./routes/analytics');
 const cronEngine = require('./services/cronEngine');
 const templateRoutes = require('./routes/templates');
 const mediaRoutes = require('./routes/media');
+const tiktokRoutes = require('./routes/tiktok');
+const facebookRoutes = require('./routes/facebook');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -76,6 +78,8 @@ app.use('/api/automations', automationRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/templates', templateRoutes);
 app.use('/api/media', mediaRoutes);
+app.use('/api/integrations/tiktok', tiktokRoutes);
+app.use('/api/integrations/facebook', facebookRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
@@ -303,6 +307,9 @@ async function start() {
     try { await client.query("ALTER TABLE agents ADD COLUMN permissions JSONB DEFAULT '[]'::jsonb"); } catch (e) {}
     try { await client.query("ALTER TABLE leads ADD COLUMN custom_fields JSONB DEFAULT '{}'::jsonb"); } catch (e) {}
     try { await client.query('ALTER TABLE user_integrations ADD COLUMN meta_ads_config JSONB'); } catch (e) {}
+    try { await client.query('ALTER TABLE user_integrations ADD COLUMN tiktok_config JSONB'); } catch (e) {}
+    try { await client.query('ALTER TABLE user_integrations ADD COLUMN facebook_config JSONB'); } catch (e) {}
+    try { await client.query('ALTER TABLE user_integrations ADD COLUMN tiktok_ads_config JSONB'); } catch (e) {}
     try { await client.query('ALTER TABLE agents ADD COLUMN model_id INTEGER'); } catch (e) {}
     try { await client.query("ALTER TABLE messages ADD COLUMN message_type VARCHAR(30) DEFAULT 'text'"); } catch (e) {}
     try { await client.query('ALTER TABLE messages ADD COLUMN media_id INTEGER'); } catch (e) {}

@@ -176,7 +176,7 @@ C:\Users\Rcompany\Documents\Paginapivot\openclaw-main
 
 **Opción A: Usar Docker Hub (Recomendada)**
 ```bash
-docker pull openclaw/openclaw:latest
+docker pull    
 ```
 
 **Opción B: Usar tu repositorio local**

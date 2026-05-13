@@ -1,0 +1,24 @@
+  # EasyPanel Configuration - Agents App
+# Tipo: Node.js - Framework Vite
+# Puerto: 3000
+name: agents
+logo: ""
+
+# Build con Vite desde la carpeta app/
+build:
+  framework: vite
+  root: app
+  command: npm install && npm run build
+  output: dist
+
+# Puerto donde corre la app
+port: 3000
+
+features:
+  - proxy
+  - ssl
+
+# Variables de entorno
+env:
+  - key: VITE_API_URL
+    value: /api

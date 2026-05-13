@@ -413,9 +413,15 @@ export default function CRM() {
                   </div>
                   <div className="text-sm text-gray-500 truncate flex justify-between">
                     <span>{lead.client_phone}</span>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full ${stages.find(s => s.id === lead.stage_id)?.color || 'bg-gray-100 text-gray-800'}`}>
-                      {stages.find(s => s.id === lead.stage_id)?.name || lead.status || 'Nuevo'}
-                    </span>
+                    <div className="flex items-center gap-1">
+                      {lead.source === 'tiktok' && <span className="text-xs">🎵</span>}
+                      {lead.source === 'facebook' && <span className="text-xs">💬</span>}
+                      {lead.source === 'instagram' && <span className="text-xs">📸</span>}
+                      {(!lead.source || lead.source === 'whatsapp' || lead.source === 'web') && <span className="text-xs">📱</span>}
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full ${stages.find(s => s.id === lead.stage_id)?.color || 'bg-gray-100 text-gray-800'}`}>
+                        {stages.find(s => s.id === lead.stage_id)?.name || lead.status || 'Nuevo'}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -437,6 +443,9 @@ export default function CRM() {
                 <div>
                   <h2 className="text-base font-medium text-gray-900">{activeLead.name || activeLead.client_phone}</h2>
                   <div className="flex items-center gap-2">
+                    <span className="text-xs">
+                      {activeLead.source === 'tiktok' ? '🎵 TikTok' : activeLead.source === 'facebook' ? '💬 Facebook' : activeLead.source === 'instagram' ? '📸 Instagram' : '📱 WhatsApp'}
+                    </span>
                     <p className="text-xs text-gray-500">{activeLead.client_phone}</p>
                     {activeLead.last_client_message_at && (
                       <span className={`text-[10px] px-1.5 rounded ${calculateTimeLeft(activeLead.last_client_message_at) === 'Expirado' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'}`}>

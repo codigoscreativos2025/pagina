@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Pivot.AI - Meta App Review</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+      
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      
+      html, body {
+        margin: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: #000;
+        font-family: 'Inter', sans-serif;
+      }
+
+      .subtitle {
+        position: fixed;
+        bottom: 60px;
+        left: 0;
+        right: 0;
+        text-align: center;
+        font-size: 24px;
+        color: #f8fafc;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+        z-index: 100;
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .subtitle.visible {
+        animation: subtitleFade 4s ease-in-out forwards;
+      }
+
+      @keyframes subtitleFade {
+        0% { opacity: 0; }
+        15% { opacity: 1; }
+        70% { opacity: 1; }
+        100% { opacity: 0; }
+      }
+    </style>
+
+    <link rel="preload" href="compositions/beat-1-login.html" as="fetch" />
+    <link rel="preload" href="compositions/beat-2-dashboard.html" as="fetch" />
+    <link rel="preload" href="compositions/beat-3-integrations.html" as="fetch" />
+    <link rel="preload" href="compositions/beat-4-ads.html" as="fetch" />
+    <link rel="preload" href="compositions/beat-5-messages.html" as="fetch" />
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="50" data-width="1920" data-height="1080">
+      <div id="beat1" data-composition-id="beat-1-login" class="clip" data-composition-src="compositions/beat-1-login.html" data-start="0" data-duration="8" data-track-index="1"></div>
+      <div id="beat2" data-composition-id="beat-2-dashboard" class="clip" data-composition-src="compositions/beat-2-dashboard.html" data-start="8" data-duration="9" data-track-index="1"></div>
+      <div id="beat3" data-composition-id="beat-3-integrations" class="clip" data-composition-src="compositions/beat-3-integrations.html" data-start="17" data-duration="10" data-track-index="1"></div>
+      <div id="beat4" data-composition-id="beat-4-ads" class="clip" data-composition-src="compositions/beat-4-ads.html" data-start="27" data-duration="10" data-track-index="1"></div>
+      <div id="beat5" data-composition-id="beat-5-messages" class="clip" data-composition-src="compositions/beat-5-messages.html" data-start="37" data-duration="13" data-track-index="1"></div>
+
+      <div class="subtitle" id="subtitle"></div>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      
+      const subtitles = [
+        { time: 0, text: "Inicia sesión con Facebook" },
+        { time: 1.5, text: "Access your AI marketing platform" },
+        { time: 8, text: "Dashboard principal" },
+        { time: 9.5, text: "Monitorea tus métricas en tiempo real" },
+        { time: 17, text: "Conecta tus cuentas Meta" },
+        { time: 19, text: "Facebook, Instagram, WhatsApp" },
+        { time: 27, text: "Visualiza métricas de Ads" },
+        { time: 29, text: "Datos en tiempo real" },
+        { time: 37, text: "Gestiona mensajes automáticamente" },
+        { time: 39, text: "Instagram + WhatsApp" }
+      ];
+
+      function updateSubtitle() {
+        const video = document.querySelector('[data-composition-id="main"]');
+        if (!video || !video.__player__) return;
+        
+        const currentTime = video.__player__.currentTime();
+        const subtitleEl = document.getElementById('subtitle');
+        
+        for (let i = subtitles.length - 1; i >= 0; i--) {
+          const sub = subtitles[i];
+          if (currentTime >= sub.time && currentTime < sub.time + 4) {
+            if (subtitleEl.textContent !== sub.text) {
+              subtitleEl.classList.remove('visible');
+              void subtitleEl.offsetWidth;
+              subtitleEl.textContent = sub.text;
+              subtitleEl.classList.add('visible');
+            }
+            return;
+          }
+        }
+        subtitleEl.textContent = '';
+      }
+
+      const tl = gsap.timeline({ paused: true });
+      
+      tl.call(updateSubtitle, null, 0);
+      
+      window.__timelines["main"] = tl;
+    </script>
+
+    <script>
+      window.__hyperframes = window.__hyperframes || {};
+      window.__hyperframes.subtitleUpdater = function() {
+        updateSubtitle();
+      };
+    </script>
+  </body>
+</html>

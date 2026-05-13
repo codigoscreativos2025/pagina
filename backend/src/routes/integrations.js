@@ -32,7 +32,7 @@ router.put('/:type', auth, async (req, res) => {
     const type = req.params.type
     const config = req.body
     
-    const allowedTypes = ['whatsapp', 'instagram', 'google', 'telegram', 'meta_ads']
+    const allowedTypes = ['whatsapp', 'instagram', 'google', 'telegram', 'meta_ads', 'tiktok', 'facebook', 'tiktok_ads']
     if (!allowedTypes.includes(type)) {
       return res.status(400).json({ error: 'Invalid integration type' })
     }
@@ -373,7 +373,7 @@ router.delete('/:type', auth, async (req, res) => {
     const userId = req.user.id
     const type = req.params.type
     
-    const allowedTypes = ['whatsapp', 'google', 'instagram', 'telegram', 'meta_ads']
+    const allowedTypes = ['whatsapp', 'google', 'instagram', 'telegram', 'meta_ads', 'tiktok', 'facebook', 'tiktok_ads']
     if (!allowedTypes.includes(type)) {
       return res.status(400).json({ error: 'Invalid integration type' })
     }

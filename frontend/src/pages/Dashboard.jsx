@@ -9,6 +9,8 @@ export default function Dashboard() {
   const [agents, setAgents] = useState([])
   const [stats, setStats] = useState({ messages: 0, conversations: 0 })
   const [analytics, setAnalytics] = useState(null)
+  const [channels, setChannels] = useState({})
+  const [integrations, setIntegrations] = useState({})
   const [loading, setLoading] = useState(true)
   const [creatingAgent, setCreatingAgent] = useState(false)
   const [newAgentName, setNewAgentName] = useState('')
@@ -20,18 +22,20 @@ export default function Dashboard() {
 
   const loadData = async () => {
     try {
-      const [agentRes, statsRes] = await Promise.all([
+      const [agentRes, statsRes, analyticsRes, intRes] = await Promise.all([
         api.get('/agents'),
-        api.get('/agents/stats')
+        api.get('/agents/stats'),
+        api.get('/analytics/overview').catch(() => ({ data: { success: false } })),
+        api.get('/integrations').catch(() => ({ data: { integrations: {} } }))
       ])
       setAgents(agentRes.data)
       setStats(statsRes.data)
+      setIntegrations(intRes.data.integrations || {})
       
-      // Load analytics separately (may fail if not connected)
-      try {
-        const analyticsRes = await api.get('/analytics/meta-ads')
-        if (analyticsRes.data.success) setAnalytics(analyticsRes.data.metrics)
-      } catch (e) { /* Analytics optional */ }
+      if (analyticsRes.data.success) {
+        setAnalytics(analyticsRes.data.summary)
+        setChannels(analyticsRes.data.channels)
+      }
       
     } catch (err) {
       console.error(err)
@@ -53,8 +57,11 @@ export default function Dashboard() {
     }
   }
 
-  const conversionRate = analytics?.crm?.conversion_rate || '—'
-  const metaConnected = analytics?.meta?.connected
+  const conversionRate = analytics?.conversion_rate || '—'
+  const totalLeads = analytics?.total_leads || 0
+  const leads7d = analytics?.leads_7d || 0
+  const totalMessages = analytics?.total_messages || 0
+  const activeAgents = analytics?.active_agents || agents.length
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -79,7 +86,12 @@ export default function Dashboard() {
             <Link to="/integrations" className="text-slate-600 hover:text-brand-600 font-medium transition-colors text-sm flex items-center gap-2">
               <span>🔌</span> Integraciones
             </Link>
-            {metaConnected && (
+            {channels?.tiktok_ads?.connected && (
+              <Link to="/tiktok-ads" className="text-slate-600 hover:text-brand-600 font-medium transition-colors text-sm flex items-center gap-2">
+                <span>🎵</span> TikTok Ads
+              </Link>
+            )}
+            {channels?.meta_ads?.connected && (
               <Link to="/meta-ads" className="text-slate-600 hover:text-brand-600 font-medium transition-colors text-sm flex items-center gap-2">
                 <span>📣</span> Meta Ads
               </Link>
@@ -115,22 +127,22 @@ export default function Dashboard() {
           <div className="bg-white rounded-xl p-5 border border-slate-200 flex items-center gap-4">
             <div className="w-10 h-10 rounded-lg bg-brand-100 flex items-center justify-center text-xl">💬</div>
             <div>
-              <p className="text-slate-500 text-xs">Mensajes</p>
-              <p className="text-2xl font-bold text-slate-900">{stats.messages}</p>
+              <p className="text-slate-500 text-xs">Mensajes Totales</p>
+              <p className="text-2xl font-bold text-slate-900">{totalMessages || stats.messages}</p>
             </div>
           </div>
           <div className="bg-white rounded-xl p-5 border border-slate-200 flex items-center gap-4">
             <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center text-xl">👥</div>
             <div>
               <p className="text-slate-500 text-xs">Contactos</p>
-              <p className="text-2xl font-bold text-slate-900">{stats.conversations}</p>
+              <p className="text-2xl font-bold text-slate-900">{totalLeads || stats.conversations}</p>
             </div>
           </div>
           <div className="bg-white rounded-xl p-5 border border-slate-200 flex items-center gap-4">
             <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-xl">🤖</div>
             <div>
-              <p className="text-slate-500 text-xs">Agentes</p>
-              <p className="text-2xl font-bold text-slate-900">{agents.length}</p>
+              <p className="text-slate-500 text-xs">Agentes Activos</p>
+              <p className="text-2xl font-bold text-slate-900">{activeAgents}</p>
             </div>
           </div>
           <div className="bg-white rounded-xl p-5 border border-slate-200 flex items-center gap-4">
@@ -141,6 +153,33 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+
+        {/* Leads by Channel */}
+        {Object.keys(channels).length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-lg font-bold text-slate-900 mb-4">Leads por Canal</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {Object.entries(channels).map(([key, val]) => {
+                const icons = { whatsapp: '📱', instagram: '📸', facebook: '💬', tiktok: '🎵' }
+                const colors = {
+                  whatsapp: 'bg-green-50 text-green-700 border-green-200',
+                  instagram: 'bg-pink-50 text-pink-700 border-pink-200',
+                  facebook: 'bg-blue-50 text-blue-700 border-blue-200',
+                  tiktok: 'bg-gray-50 text-gray-900 border-gray-200'
+                }
+                const labels = { whatsapp: 'WhatsApp', instagram: 'Instagram', facebook: 'Facebook', tiktok: 'TikTok' }
+                return (
+                  <div key={key} className={`rounded-xl p-4 border ${colors[key] || 'bg-slate-50 text-slate-700 border-slate-200'}`}>
+                    <div className="text-2xl mb-1">{icons[key] || '📊'}</div>
+                    <div className="text-2xl font-bold">{val.leads}</div>
+                    <div className="text-xs font-medium opacity-70">{labels[key] || key}</div>
+                    {!val.connected && <div className="text-xs opacity-50 mt-1">No conectado</div>}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
 
 
 
@@ -186,6 +225,8 @@ export default function Dashboard() {
                     { label: 'WhatsApp', ok: agent.whatsapp_config?.phone },
                     { label: 'Google Sheets', ok: agent.google_sheets_config?.sheet_id },
                     { label: 'Instagram', ok: agent.instagram_config?.page_id },
+                    { label: 'Facebook', ok: integrations?.facebook_config?.page_id },
+                    { label: 'TikTok', ok: integrations?.tiktok_config?.open_id },
                   ].map(item => (
                     <div key={item.label} className="flex justify-between items-center text-xs">
                       <span className="text-slate-500">{item.label}</span>

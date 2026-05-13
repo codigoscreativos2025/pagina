@@ -1,7 +1,7 @@
 // Pre-built WhatsApp message templates by industry
 // These are ready-to-use templates that match Meta's WhatsApp Business API format
 
-export const industryMessageTemplates = {
+const industryMessageTemplates = {
   restaurant: [
     {
       id: 'rest_welcome',
@@ -335,15 +335,15 @@ export const industryMessageTemplates = {
 }
 
 // Helper functions
-export function getTemplatesByIndustry(industry) {
+function getTemplatesByIndustry(industry) {
   return industryMessageTemplates[industry] || []
 }
 
-export function getAllMessageTemplates() {
+function getAllMessageTemplates() {
   return Object.values(industryMessageTemplates).flat()
 }
 
-export function searchTemplates(query, industry = null) {
+function searchTemplates(query, industry = null) {
   const templates = industry 
     ? (industryMessageTemplates[industry] || [])
     : getAllMessageTemplates()
@@ -357,7 +357,7 @@ export function searchTemplates(query, industry = null) {
   )
 }
 
-export function convertToMetaFormat(template) {
+function convertToMetaFormat(template) {
   // Convert our simplified format to Meta WhatsApp API format
   const components = [
     {
@@ -394,4 +394,12 @@ export function convertToMetaFormat(template) {
     language: template.language,
     components
   }
+}
+
+module.exports = {
+  industryMessageTemplates,
+  getTemplatesByIndustry,
+  getAllMessageTemplates,
+  searchTemplates,
+  convertToMetaFormat
 }

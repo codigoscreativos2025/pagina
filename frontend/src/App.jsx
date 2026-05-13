@@ -13,6 +13,7 @@ import MetaAds from './pages/MetaAds'
 import PrivacyPolicy from './pages/PrivacyPolicy'
 import Account from './pages/Account'
 import Templates from './pages/Templates'
+import TemplateEditor from './pages/TemplateEditor'
 import Funnels from './pages/Funnels'
 import TikTokAds from './pages/TikTokAds'
 import OnboardingWizard from './pages/OnboardingWizard'
@@ -46,6 +47,7 @@ function AppRoutes() {
           <Route path="/crm" element={<PrivateRoute><CRM /></PrivateRoute>} />
           <Route path="/automations" element={<PrivateRoute><Automations /></PrivateRoute>} />
           <Route path="/templates" element={<PrivateRoute><Templates /></PrivateRoute>} />
+          <Route path="/template-editor" element={<PrivateRoute><TemplateEditor /></PrivateRoute>} />
           <Route path="/funnels" element={<PrivateRoute><Funnels /></PrivateRoute>} />
           <Route path="/integrations" element={<PrivateRoute><Integrations /></PrivateRoute>} />
           <Route path="/meta-ads" element={<PrivateRoute><MetaAds /></PrivateRoute>} />

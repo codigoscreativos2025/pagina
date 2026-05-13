@@ -94,7 +94,10 @@ export default function Dashboard() {
               <span>📊</span> CRM / Chats
             </Link>
             <Link to="/templates" className="text-slate-600 hover:text-brand-600 font-medium transition-colors text-sm flex items-center gap-2">
-              <span>📋</span> Plantillas
+              <span>📋</span> Plantillas Meta
+            </Link>
+            <Link to="/template-editor" className="text-slate-600 hover:text-brand-600 font-medium transition-colors text-sm flex items-center gap-2">
+              <span>✏️</span> Editor Plantillas
             </Link>
             <Link to="/funnels" className="text-slate-600 hover:text-brand-600 font-medium transition-colors text-sm flex items-center gap-2">
               <span>🔀</span> Embudos

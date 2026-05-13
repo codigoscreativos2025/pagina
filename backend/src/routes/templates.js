@@ -3,6 +3,42 @@ const router = express.Router();
 const auth = require('../middleware/auth');
 const planFeature = require('../middleware/planFeatures');
 const waTemplates = require('../services/whatsappTemplates');
+const { industryMessageTemplates, getTemplatesByIndustry } = require('../data/messageTemplates');
+
+// GET industry-specific pre-built templates
+router.get('/industry', auth, async (req, res) => {
+  try {
+    // Get user's agent industry
+    const agentResult = await req.pool.query(
+      'SELECT business_info FROM agents WHERE user_id = $1 LIMIT 1',
+      [req.user.id]
+    );
+    
+    const userIndustry = agentResult.rows[0]?.business_info?.industry || null;
+    
+    // Return templates for user's industry, or all if no industry set
+    const templates = userIndustry 
+      ? { [userIndustry]: getTemplatesByIndustry(userIndustry) }
+      : industryMessageTemplates;
+    
+    res.json({ success: true, templates, userIndustry });
+  } catch (error) {
+    console.error('[Templates] Industry list error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET all pre-built templates (no auth required for browsing)
+router.get('/industry/:industry', async (req, res) => {
+  const { industry } = req.params;
+  const templates = getTemplatesByIndustry(industry);
+  
+  if (templates.length === 0) {
+    return res.json({ success: true, templates: [], message: 'No templates for this industry' });
+  }
+  
+  res.json({ success: true, templates });
+});
 
 router.get('/', auth, async (req, res) => {
   try {

@@ -106,7 +106,7 @@ export default function Integrations() {
       const configId = metaConfigs.configs.instagram
       const loginOpts = configId
         ? { config_id: configId, response_type: 'token', override_default_response_type: true }
-        : { scope: 'instagram_basic,pages_show_list,pages_read_engagement', response_type: 'token' }
+        : { scope: 'instagram_basic,pages_show_list,pages_read_engagement,pages_messaging,instagram_manage_messages', response_type: 'token' }
       
       FB.login((response) => {
         if (response.authResponse) {

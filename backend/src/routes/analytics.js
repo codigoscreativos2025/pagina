@@ -14,20 +14,30 @@ router.get('/overview', auth, async (req, res) => {
     )
     const integrations = integrationsRes.rows[0] || {}
 
-    // Get total leads per channel
-    const leadsRes = await pool.query(
-      `SELECT 
-        COUNT(*) FILTER (WHERE source = 'whatsapp') as whatsapp_leads,
-        COUNT(*) FILTER (WHERE source = 'instagram') as instagram_leads,
-        COUNT(*) FILTER (WHERE source = 'facebook') as facebook_leads,
-        COUNT(*) FILTER (WHERE source = 'tiktok') as tiktok_leads,
-        COUNT(*) FILTER (WHERE source IS NULL OR source = 'web') as other_leads,
-        COUNT(*) as total_leads
-       FROM leads 
-       WHERE agent_id IN (SELECT id FROM agents WHERE user_id = $1)`,
-      [userId]
-    )
-    const leads = leadsRes.rows[0]
+    // Get total leads per channel (source column may not exist yet)
+    let leads = { whatsapp_leads: 0, instagram_leads: 0, facebook_leads: 0, tiktok_leads: 0, other_leads: 0, total_leads: 0 }
+    try {
+      const leadsRes = await pool.query(
+        `SELECT 
+          COUNT(*) FILTER (WHERE source = 'whatsapp') as whatsapp_leads,
+          COUNT(*) FILTER (WHERE source = 'instagram') as instagram_leads,
+          COUNT(*) FILTER (WHERE source = 'facebook') as facebook_leads,
+          COUNT(*) FILTER (WHERE source = 'tiktok') as tiktok_leads,
+          COUNT(*) FILTER (WHERE source IS NULL OR source = 'web') as other_leads,
+          COUNT(*) as total_leads
+         FROM leads 
+         WHERE agent_id IN (SELECT id FROM agents WHERE user_id = $1)`,
+        [userId]
+      )
+      leads = leadsRes.rows[0]
+    } catch (e) {
+      // Fallback if source column doesn't exist
+      const leadsRes = await pool.query(
+        `SELECT COUNT(*) as total_leads FROM leads WHERE agent_id IN (SELECT id FROM agents WHERE user_id = $1)`,
+        [userId]
+      )
+      leads.total_leads = leadsRes.rows[0].total_leads
+    }
 
     // Get recent leads (last 7 days)
     const recentLeadsRes = await pool.query(

@@ -323,6 +323,13 @@ async function start() {
     try { await client.query("UPDATE plans SET features = '{}'::jsonb WHERE features IS NULL"); } catch (e) {}
     try { await client.query('ALTER TABLE agents ADD COLUMN IF NOT EXISTS active_funnels JSONB'); } catch (e) {}
     try { await client.query("ALTER TABLE users ADD COLUMN active_recipes JSONB DEFAULT '[]'::jsonb"); } catch (e) {}
+    try { await client.query("ALTER TABLE leads ADD COLUMN IF NOT EXISTS source VARCHAR(30)"); } catch (e) {}
+    try { await client.query("ALTER TABLE leads ADD COLUMN IF NOT EXISTS instagram_psid VARCHAR(100)"); } catch (e) {}
+    try { await client.query("ALTER TABLE leads ADD COLUMN IF NOT EXISTS facebook_psid VARCHAR(100)"); } catch (e) {}
+    try { await client.query("ALTER TABLE leads ADD COLUMN IF NOT EXISTS tiktok_open_id VARCHAR(100)"); } catch (e) {}
+    try { await client.query("ALTER TABLE messages ADD COLUMN IF NOT EXISTS source VARCHAR(30)"); } catch (e) {}
+    try { await client.query("ALTER TABLE messages ADD COLUMN IF NOT EXISTS fb_message_id VARCHAR(255)"); } catch (e) {}
+    try { await client.query("ALTER TABLE messages ADD COLUMN IF NOT EXISTS template_display_name VARCHAR(255)"); } catch (e) {}
 
     await client.query(`
       CREATE TABLE IF NOT EXISTS ai_models (

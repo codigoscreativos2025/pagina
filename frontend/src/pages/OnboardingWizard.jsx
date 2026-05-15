@@ -192,7 +192,7 @@ export default function OnboardingWizard() {
         )}
 
         {/* Step 4: Customize */}
-        {step === 4 && selectedTemplate && (
+        {step === 4 && (
           <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200">
             <div className="text-center mb-6">
               <h1 className="text-2xl font-bold text-slate-900 mb-2">Personaliza tu agente</h1>
@@ -209,15 +209,7 @@ export default function OnboardingWizard() {
                   placeholder={`${formData.business_name} Asistente`}
                 />
               </div>
-              {selectedTemplate && selectedTemplate.id && (
-                <>
-                  {(() => {
-                    const template = require('../data/agentTemplates.js')
-                    // We can't require in frontend, so we use the API response
-                    return null
-                  })()}
-                  {/* Render fields based on industry */}
-                  {formData.industry === 'restaurant' && (<>
+              {formData.industry === 'restaurant' && (<>
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1">Dirección</label>
                       <input type="text" onChange={e => updateFormData({ business_info: { ...formData.business_info, address: e.target.value } })} className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:border-brand-500" placeholder="Ej: Av. Principal 123" />
@@ -271,8 +263,6 @@ export default function OnboardingWizard() {
                       <input type="text" onChange={e => updateFormData({ business_info: { ...formData.business_info, schedule: e.target.value } })} className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:border-brand-500" placeholder="Ej: Mañana 9-12, Tarde 2-5" />
                     </div>
                   </>)}
-                </>
-              )}
             </div>
           </div>
         )}

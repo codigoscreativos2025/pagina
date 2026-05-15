@@ -76,6 +76,40 @@ router.put('/leads/:id/stage', auth, async (req, res) => {
   }
 })
 
+// Delete lead and all associated messages/media
+router.delete('/leads/:id', auth, async (req, res) => {
+  try {
+    const pool = req.pool
+    const userId = req.user.id
+    const leadId = req.params.id
+
+    // Verify ownership
+    const check = await pool.query(`
+      SELECT l.id FROM leads l
+      JOIN agents a ON l.agent_id = a.id
+      WHERE l.id = $1 AND a.user_id = $2
+    `, [leadId, userId])
+
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Lead not found or unauthorized' })
+    }
+
+    // Delete associated media files first
+    await pool.query('DELETE FROM media_files WHERE lead_id = $1', [leadId])
+    // Delete messages
+    await pool.query('DELETE FROM messages WHERE lead_id = $1', [leadId])
+    // Delete lead tags
+    await pool.query('DELETE FROM lead_tags WHERE lead_id = $1', [leadId])
+    // Delete lead
+    await pool.query('DELETE FROM leads WHERE id = $1', [leadId])
+
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Error deleting lead:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
 // Get chat history for a lead
 router.get('/leads/:id/messages', auth, async (req, res) => {
   try {

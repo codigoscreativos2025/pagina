@@ -276,6 +276,21 @@ export default function CRM() {
     }
   }
 
+  const deleteLead = async (leadId) => {
+    if (!confirm('¿Eliminar este lead y todos sus mensajes?')) return
+    try {
+      await api.delete(`/crm/leads/${leadId}`)
+      setLeads(leads.filter(l => l.id !== leadId))
+      if (activeLead?.id === leadId) {
+        setActiveLead(null)
+        setMessages([])
+      }
+    } catch (err) {
+      console.error(err)
+      alert('Error eliminando lead')
+    }
+  }
+
   const sendManualMessage = async (e) => {
     e.preventDefault()
     if (!messageInput.trim() || sending) return
@@ -443,7 +458,7 @@ export default function CRM() {
               <div 
                 key={lead.id} 
                 onClick={() => setActiveLead(lead)}
-                className={`flex items-center px-3 py-3 border-b border-gray-100 cursor-pointer hover:bg-[#f5f6f6] transition-colors ${activeLead?.id === lead.id ? 'bg-[#ebebeb]' : ''}`}
+                className={`flex items-center px-3 py-3 border-b border-gray-100 cursor-pointer hover:bg-[#f5f6f6] transition-colors group ${activeLead?.id === lead.id ? 'bg-[#ebebeb]' : ''}`}
               >
                 {/* Avatar */}
                 <div className="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center text-xl text-white mr-3 flex-shrink-0">
@@ -452,11 +467,11 @@ export default function CRM() {
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-baseline mb-1">
-                    <h3 className="text-base text-gray-900 truncate">{lead.name || lead.client_phone}</h3>
+                    <h3 className="text-base text-gray-900 truncate">{lead.name || (lead.source === 'instagram' ? 'Instagram User' : lead.client_phone)}</h3>
                     {!lead.is_ai_active && <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded ml-2">IA ⏸️</span>}
                   </div>
                   <div className="text-sm text-gray-500 truncate flex justify-between">
-                    <span>{lead.client_phone}</span>
+                    <span>{lead.source === 'instagram' ? '@instagram' : (lead.client_phone || 'Sin teléfono')}</span>
                     <div className="flex items-center gap-1">
                       {lead.source === 'tiktok' && <span className="text-xs">🎵</span>}
                       {lead.source === 'facebook' && <span className="text-xs">💬</span>}
@@ -468,6 +483,14 @@ export default function CRM() {
                     </div>
                   </div>
                 </div>
+                {/* Delete button - visible on hover */}
+                <button
+                  onClick={(e) => { e.stopPropagation(); deleteLead(lead.id) }}
+                  className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500 transition-all"
+                  title="Eliminar lead"
+                >
+                  🗑️
+                </button>
               </div>
             ))
           )}
@@ -485,12 +508,12 @@ export default function CRM() {
                   {activeLead.name ? activeLead.name.charAt(0).toUpperCase() : '👤'}
                 </div>
                 <div>
-                  <h2 className="text-base font-medium text-gray-900">{activeLead.name || activeLead.client_phone}</h2>
+                  <h2 className="text-base font-medium text-gray-900">{activeLead.name || (activeLead.source === 'instagram' ? 'Instagram User' : activeLead.client_phone)}</h2>
                   <div className="flex items-center gap-2">
                     <span className="text-xs">
                       {activeLead.source === 'tiktok' ? '🎵 TikTok' : activeLead.source === 'facebook' ? '💬 Facebook' : activeLead.source === 'instagram' ? '📸 Instagram' : '📱 WhatsApp'}
                     </span>
-                    <p className="text-xs text-gray-500">{activeLead.client_phone}</p>
+                    <p className="text-xs text-gray-500">{activeLead.source === 'instagram' ? '@instagram' : (activeLead.client_phone || '')}</p>
                     {activeLead.last_client_message_at && (
                       <span className={`text-[10px] px-1.5 rounded ${calculateTimeLeft(activeLead.last_client_message_at) === 'Expirado' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'}`}>
                         ⏱️ {calculateTimeLeft(activeLead.last_client_message_at)}
@@ -498,6 +521,14 @@ export default function CRM() {
                     )}
                   </div>
                 </div>
+                {/* Delete lead button */}
+                <button
+                  onClick={() => deleteLead(activeLead.id)}
+                  className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                  title="Eliminar lead"
+                >
+                  🗑️
+                </button>
               </div>
               
               <div className="flex items-center gap-3">

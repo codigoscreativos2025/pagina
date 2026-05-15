@@ -46,25 +46,45 @@ export default function OnboardingWizard() {
       const res = await api.get('/integrations/meta/config-ids').catch(() => ({ data: { configs: {} } }))
       const appId = res.data.app_id
       if (!appId) {
-        alert('Falta configurar FACEBOOK_APP_ID. Usa configuración manual.')
+        alert('Falta configurar FACEBOOK_APP_ID. Usa "Conectar más tarde" y configúralo después.')
         setConnecting(null)
         return
       }
 
-      // Load FB SDK
-      await new Promise((resolve) => {
-        if (window.FB) return resolve()
-        window.fbAsyncInit = function () {
-          window.FB.init({ appId, cookie: true, xfbml: false, version: 'v18.0' })
-          resolve()
-        }
-        if (!document.getElementById('facebook-jssdk')) {
-          const js = document.createElement('script')
-          js.id = 'facebook-jssdk'
-          js.src = 'https://connect.facebook.net/en_US/sdk.js'
-          document.getElementsByTagName('head')[0].appendChild(js)
-        }
-      })
+      // Load FB SDK with timeout
+      let fbReady = false
+      if (window.FB) {
+        fbReady = true
+      } else {
+        await new Promise((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            reject(new Error('Facebook SDK timeout'))
+          }, 10000)
+          
+          window.fbAsyncInit = function () {
+            clearTimeout(timeout)
+            window.FB.init({ appId, cookie: true, xfbml: false, version: 'v18.0' })
+            fbReady = true
+            resolve()
+          }
+          if (!document.getElementById('facebook-jssdk')) {
+            const js = document.createElement('script')
+            js.id = 'facebook-jssdk'
+            js.src = 'https://connect.facebook.net/en_US/sdk.js'
+            js.onerror = () => {
+              clearTimeout(timeout)
+              reject(new Error('Failed to load Facebook SDK'))
+            }
+            document.getElementsByTagName('head')[0].appendChild(js)
+          }
+        })
+      }
+
+      if (!fbReady || !window.FB) {
+        alert('No se pudo cargar el SDK de Facebook. Intenta de nuevo o usa "Conectar más tarde".')
+        setConnecting(null)
+        return
+      }
 
       window.FB.login(async (response) => {
         if (response.authResponse) {
@@ -75,11 +95,15 @@ export default function OnboardingWizard() {
               channel_config: onboardingRes.data
             })
             alert('✅ WhatsApp conectado!')
+            setConnecting(null)
           } catch (err) {
             alert('Error: ' + (err.response?.data?.error || err.message))
+            setConnecting(null)
           }
+        } else {
+          alert('Conexión cancelada. Puedes conectar más tarde.')
+          setConnecting(null)
         }
-        setConnecting(null)
       }, {
         config_id: res.data.configs.whatsapp || undefined,
         response_type: 'code',
@@ -88,6 +112,7 @@ export default function OnboardingWizard() {
       })
     } catch (err) {
       console.error(err)
+      alert('Error conectando WhatsApp: ' + err.message)
       setConnecting(null)
     }
   }

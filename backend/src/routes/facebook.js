@@ -158,13 +158,22 @@ async function handleInstagramMessages(body, req) {
             [pageId]
           )
           if (configRes.rows[0]?.instagram_config?.access_token) {
+            const accessToken = configRes.rows[0].instagram_config.access_token
+            // Try to get username from Instagram profile
             const senderRes = await fetch(
-              `https://graph.facebook.com/v18.0/${senderId}?fields=username&access_token=${configRes.rows[0].instagram_config.access_token}`
+              `https://graph.facebook.com/v18.0/${senderId}?fields=username,name&access_token=${accessToken}`
             )
             const senderData = await senderRes.json()
-            senderName = senderData.username || senderName
+            if (senderData.username) {
+              senderName = senderData.username
+            } else if (senderData.name) {
+              senderName = senderData.name
+            }
+            console.log(`[Instagram Webhook] Sender ${senderId} name: ${senderName}`, senderData)
           }
-        } catch (e) {}
+        } catch (e) {
+          console.log(`[Instagram Webhook] Could not fetch sender name: ${e.message}`)
+        }
 
         const newLead = await pool.query(
           `INSERT INTO leads (agent_id, client_phone, name, instagram_psid, status, source)
@@ -172,6 +181,7 @@ async function handleInstagramMessages(body, req) {
           [agent_id, '', senderName, senderId]
         )
         leadId = newLead.rows[0].id
+        console.log(`[Instagram Webhook] Created new lead: ${leadId} (${senderName})`)
       } else {
         leadId = leadRes.rows[0].id
         await pool.query('UPDATE leads SET updated_at = CURRENT_TIMESTAMP, last_client_message_at = CURRENT_TIMESTAMP WHERE id = $1', [leadId])

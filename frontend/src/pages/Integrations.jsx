@@ -83,7 +83,7 @@ export default function Integrations() {
       const FB = await loadFBSDK()
       const configId = metaConfigs.configs.whatsapp;
       const loginOpts = {
-        response_type: 'code',
+        response_type: 'token',
         override_default_response_type: true,
         extras: { setup: { business: { name: 'Pivot AI' } }, featureType: '', sessionInfoVersion: '2' }
       };

@@ -124,19 +124,19 @@ async function handleInstagramMessages(body, req) {
 
       console.log(`[Instagram Webhook] Message from ${senderId}: ${messageText}`)
 
-      // Find user by Facebook page_id (this is what Instagram webhook sends)
+      // Meta sends the Instagram Business Account ID (starts with 17841...)
+      // We need to match against BOTH page_id and ig_account_id
       const userRes = await pool.query(
         `SELECT ui.user_id, ui.instagram_config, a.id as agent_id FROM user_integrations ui
          JOIN agents a ON a.user_id = ui.user_id
-         WHERE ui.instagram_config->>'page_id' = $1 AND a.is_active = true
+         WHERE (ui.instagram_config->>'page_id' = $1 OR ui.instagram_config->>'ig_account_id' = $1) AND a.is_active = true
          LIMIT 1`,
         [pageId]
       )
 
       if (userRes.rows.length === 0) {
         console.log(`[Instagram Webhook] No active agent found for page_id: ${pageId}`)
-        // Debug: show all instagram configs
-        const allConfigs = await pool.query("SELECT user_id, instagram_config->>'page_id' as stored_page_id FROM user_integrations WHERE instagram_config IS NOT NULL")
+        const allConfigs = await pool.query("SELECT user_id, instagram_config->>'page_id' as stored_page_id, instagram_config->>'ig_account_id' as stored_ig_id FROM user_integrations WHERE instagram_config IS NOT NULL")
         console.log('[Instagram Webhook] All stored IG configs:', JSON.stringify(allConfigs.rows))
         continue
       }
@@ -154,7 +154,7 @@ async function handleInstagramMessages(body, req) {
         let senderName = 'Instagram User'
         try {
           const configRes = await pool.query(
-            `SELECT instagram_config FROM user_integrations WHERE instagram_config->>'page_id' = $1`,
+            `SELECT instagram_config FROM user_integrations WHERE (instagram_config->>'page_id' = $1 OR instagram_config->>'ig_account_id' = $1)`,
             [pageId]
           )
           if (configRes.rows[0]?.instagram_config?.access_token) {
@@ -208,7 +208,7 @@ async function sendInstagramMessage(igUserId, text, pageId) {
   try {
     const pool = global.pool
     const configRes = await pool.query(
-      `SELECT instagram_config FROM user_integrations WHERE instagram_config->>'page_id' = $1`,
+      `SELECT instagram_config FROM user_integrations WHERE (instagram_config->>'page_id' = $1 OR instagram_config->>'ig_account_id' = $1)`,
       [pageId]
     )
 

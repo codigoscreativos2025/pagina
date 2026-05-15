@@ -6,7 +6,7 @@ import api from '../services/api'
 const STEPS = [
   { id: 1, label: 'Tu negocio' },
   { id: 2, label: 'Tipo de negocio' },
-  { id: 3, label: 'Conectar canal' },
+  { id: 3, label: 'Canal principal' },
   { id: 4, label: 'Personalizar' },
   { id: 5, label: '¡Listo!' }
 ]
@@ -25,7 +25,6 @@ export default function OnboardingWizard() {
     channel: '',
     channel_config: null
   })
-  const [connecting, setConnecting] = useState(null)
 
   useEffect(() => {
     api.get('/onboarding/templates')
@@ -39,73 +38,8 @@ export default function OnboardingWizard() {
     setFormData(prev => ({ ...prev, ...data }))
   }
 
-  const loadFBSDK = async (appId) => {
-    // If FB is already loaded and initialized, use it
-    if (window.FB && typeof window.FB.login === 'function') {
-      return window.FB
-    }
-
-    return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error('Tiempo de espera agotado. Intenta de nuevo.')), 15000)
-
-      window.fbAsyncInit = function () {
-        clearTimeout(timeout)
-        window.FB.init({ appId, cookie: true, xfbml: false, version: 'v18.0' })
-        resolve(window.FB)
-      }
-
-      // If script tag doesn't exist, create it
-      if (!document.getElementById('facebook-jssdk')) {
-        const js = document.createElement('script')
-        js.id = 'facebook-jssdk'
-        js.src = 'https://connect.facebook.net/en_US/sdk.js'
-        js.onerror = () => { clearTimeout(timeout); reject(new Error('No se pudo cargar el SDK de Facebook')) }
-        document.getElementsByTagName('head')[0].appendChild(js)
-      }
-    })
-  }
-
-  const handleConnectWhatsApp = async () => {
-    setConnecting('whatsapp')
-    try {
-      const res = await api.get('/integrations/meta/config-ids').catch(() => ({ data: { configs: {} } }))
-      const appId = res.data.app_id
-      if (!appId) {
-        alert('Falta configurar FACEBOOK_APP_ID en el servidor. Usa "Conectar más tarde".')
-        setConnecting(null)
-        return
-      }
-
-      const FB = await loadFBSDK(appId)
-
-      FB.login(async (response) => {
-        if (response.authResponse) {
-          try {
-            await api.post('/webhooks/onboarding', { access_token: response.authResponse.accessToken })
-            updateFormData({ channel: 'whatsapp', channel_config: { connected: true } })
-            alert('✅ WhatsApp conectado!')
-          } catch (err) {
-            alert('Error: ' + (err.response?.data?.error || err.message))
-          }
-        } else {
-          alert('Conexión cancelada. Puedes conectar más tarde.')
-        }
-        setConnecting(null)
-      }, {
-        config_id: res.data.configs.whatsapp || undefined,
-        response_type: 'code',
-        override_default_response_type: true,
-        extras: { setup: { business: { name: 'Pivot AI' } }, featureType: '', sessionInfoVersion: '2' }
-      })
-    } catch (err) {
-      console.error(err)
-      alert('Error conectando WhatsApp: ' + err.message)
-      setConnecting(null)
-    }
-  }
-
-  const handleSkipChannel = () => {
-    updateFormData({ channel: '', channel_config: null })
+  const handleSelectChannel = (channelId) => {
+    updateFormData({ channel: channelId, channel_config: {} })
     setStep(4)
   }
 
@@ -216,56 +150,42 @@ export default function OnboardingWizard() {
           </div>
         )}
 
-        {/* Step 3: Connect channel */}
+        {/* Step 3: Select channel */}
         {step === 3 && (
           <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200">
             <div className="text-center mb-6">
-              <h1 className="text-2xl font-bold text-slate-900 mb-2">Conecta tu canal principal</h1>
-              <p className="text-slate-500">¿Por dónde quieres que tu agente atienda a tus clientes?</p>
+              <div className="text-5xl mb-4">📱</div>
+              <h1 className="text-2xl font-bold text-slate-900 mb-2">¿Cuál es tu canal principal?</h1>
+              <p className="text-slate-500">Selecciona por dónde quieres que tu agente atienda a tus clientes. Podrás conectarlo después desde el panel de Integraciones.</p>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg mx-auto mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg mx-auto">
               {[
-                { id: 'whatsapp', icon: '📱', label: 'WhatsApp', desc: 'El más popular' },
-                { id: 'facebook', icon: '💬', label: 'Facebook', desc: 'Messenger' },
-                { id: 'instagram', icon: '📸', label: 'Instagram', desc: 'DMs' },
-                { id: 'tiktok', icon: '🎵', label: 'TikTok', desc: 'Mensajes directos' }
+                { id: 'whatsapp', icon: '📱', label: 'WhatsApp', desc: 'El más popular en Latinoamérica' },
+                { id: 'facebook', icon: '💬', label: 'Facebook Messenger', desc: 'Ideal para páginas de Facebook' },
+                { id: 'instagram', icon: '📸', label: 'Instagram DM', desc: 'Mensajes directos de Instagram' },
+                { id: 'tiktok', icon: '🎵', label: 'TikTok', desc: 'Mensajes directos de TikTok' }
               ].map(ch => (
                 <button
                   key={ch.id}
-                  onClick={() => {
-                    if (ch.id === 'whatsapp') {
-                      handleConnectWhatsApp()
-                    } else {
-                      // For other channels, skip and configure later
-                      updateFormData({ channel: ch.id, channel_config: {} })
-                      setStep(4)
-                    }
-                  }}
-                  disabled={connecting === 'whatsapp'}
-                  className={`p-5 rounded-xl border-2 text-left transition-all ${
+                  onClick={() => handleSelectChannel(ch.id)}
+                  className={`p-5 rounded-xl border-2 text-left transition-all hover:shadow-sm ${
                     formData.channel === ch.id
                       ? 'border-brand-500 bg-brand-50'
                       : 'border-slate-200 hover:border-slate-300'
-                  } disabled:opacity-50`}
+                  }`}
                 >
                   <div className="text-3xl mb-2">{ch.icon}</div>
                   <div className="font-bold text-slate-900">{ch.label}</div>
                   <div className="text-xs text-slate-500">{ch.desc}</div>
-                  {connecting === 'whatsapp' && ch.id === 'whatsapp' && (
-                    <div className="text-xs text-brand-600 mt-2">Conectando...</div>
-                  )}
-                  {formData.channel === ch.id && formData.channel_config && (
-                    <div className="text-xs text-green-600 mt-2">✅ Conectado</div>
-                  )}
                 </button>
               ))}
             </div>
-            <div className="text-center">
+            <div className="text-center mt-6">
               <button
-                onClick={handleSkipChannel}
+                onClick={() => handleSelectChannel('')}
                 className="text-sm text-slate-500 hover:text-slate-700 underline"
               >
-                Conectar más tarde
+                Decidir después →
               </button>
             </div>
           </div>
@@ -368,7 +288,7 @@ export default function OnboardingWizard() {
             <div className="bg-green-50 border border-green-200 rounded-xl p-4 max-w-md mx-auto mb-6">
               <div className="text-green-700 font-medium">✅ Agente creado</div>
               <div className="text-green-700 font-medium">✅ Embudo configurado</div>
-              {formData.channel && <div className="text-green-700 font-medium">✅ {formData.channel === 'whatsapp' ? 'WhatsApp' : formData.channel} conectado</div>}
+              {formData.channel && <div className="text-green-700 font-medium">✅ Canal seleccionado: {formData.channel === 'whatsapp' ? 'WhatsApp' : formData.channel === 'facebook' ? 'Facebook' : formData.channel === 'instagram' ? 'Instagram' : 'TikTok'}</div>}
               <div className="text-green-700 font-medium">✅ IA activada</div>
             </div>
             <p className="text-sm text-slate-400">Redirigiendo a la configuración...</p>

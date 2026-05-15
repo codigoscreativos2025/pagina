@@ -219,13 +219,13 @@ async function sendInstagramMessage(igUserId, text, pageId) {
 
     const config = configRes.rows[0].instagram_config
     const accessToken = config.access_token
-    // Instagram messaging uses the Facebook Page ID as the endpoint
-    const fbPageId = config.page_id
+    // Instagram messaging uses the Instagram Business Account ID as the endpoint
+    const igAccountId = config.ig_account_id || config.page_id
 
-    console.log(`[Instagram Send] Sending to ${igUserId} via page ${fbPageId}`)
+    console.log(`[Instagram Send] Sending to ${igUserId} via IG account ${igAccountId}`)
 
     const res = await fetch(
-      `https://graph.facebook.com/v18.0/${fbPageId}/messages?access_token=${accessToken}`,
+      `https://graph.facebook.com/v18.0/${igAccountId}/messages?access_token=${accessToken}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

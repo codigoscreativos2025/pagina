@@ -102,6 +102,17 @@ router.post('/onboarding', auth, async (req, res) => {
       await pool.query(`INSERT INTO agents (user_id, name, whatsapp_config) VALUES ($1, 'Nuevo Agente', $2)`, [req.user.id, JSON.stringify(wtsConfig)]);
     }
 
+    // CRITICAL: Also save to user_integrations so the frontend sees it as connected
+    const intCheck = await pool.query('SELECT user_id FROM user_integrations WHERE user_id = $1', [req.user.id]);
+    if (intCheck.rows.length === 0) {
+      await pool.query('INSERT INTO user_integrations (user_id, whatsapp_config) VALUES ($1, $2)', [req.user.id, JSON.stringify(wtsConfig)]);
+    } else {
+      // Merge with existing whatsapp_config in user_integrations
+      const oldIntConfig = intCheck.rows[0].whatsapp_config || {};
+      const mergedIntConfig = { ...oldIntConfig, ...wtsConfig };
+      await pool.query('UPDATE user_integrations SET whatsapp_config = $1, updated_at = CURRENT_TIMESTAMP WHERE user_id = $2', [JSON.stringify(mergedIntConfig), req.user.id]);
+    }
+
     console.log('[Meta Onboarding] Completado exitosamente para user:', req.user.id);
     res.json({ success: true, phone_number_id: phoneNumberId, waba_id: wabaId });
 

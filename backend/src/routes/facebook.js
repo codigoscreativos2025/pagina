@@ -225,7 +225,7 @@ async function sendInstagramMessage(igUserId, text, pageId) {
     console.log(`[Instagram Send] Sending to ${igUserId} via IG account ${igAccountId}`)
 
     const res = await fetch(
-      `https://graph.facebook.com/v18.0/${igAccountId}/messages?access_token=${accessToken}`,
+      `https://graph.facebook.com/v18.0/me/messages?access_token=${accessToken}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

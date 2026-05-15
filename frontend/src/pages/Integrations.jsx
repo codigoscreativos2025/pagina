@@ -81,6 +81,19 @@ export default function Integrations() {
     setConnecting('whatsapp')
     try {
       const FB = await loadFBSDK()
+      const configId = metaConfigs.configs.whatsapp;
+      const loginOpts = {
+        response_type: 'code',
+        override_default_response_type: true,
+        extras: { setup: { business: { name: 'Pivot AI' } }, featureType: '', sessionInfoVersion: '2' }
+      };
+
+      if (configId) {
+        loginOpts.config_id = configId;
+      } else {
+        loginOpts.scope = 'whatsapp_business_management,whatsapp_business_messaging,business_management';
+      }
+
       FB.login((response) => {
         if (response.authResponse) {
           api.post('/webhooks/onboarding', { access_token: response.authResponse.accessToken })
@@ -88,12 +101,7 @@ export default function Integrations() {
             .catch(err => alert('Error: ' + (err.response?.data?.error || err.message)))
         } else { alert('Conexión cancelada por el usuario.') }
         setConnecting(null)
-      }, {
-        config_id: metaConfigs.configs.whatsapp || undefined,
-        response_type: 'code',
-        override_default_response_type: true,
-        extras: { setup: { business: { name: 'Pivot AI' } }, featureType: '', sessionInfoVersion: '2' }
-      })
+      }, loginOpts)
     } catch (err) { console.error(err); setConnecting(null) }
   }
 

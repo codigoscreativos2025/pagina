@@ -119,6 +119,7 @@ router.post('/meta/onboarding', auth, async (req, res) => {
       let igAccountId = null
       let pageName = null
       let pageAccessToken = null
+      let facebookPageId = null
 
       for (const page of pagesData.data) {
         const igRes = await fetch(`https://graph.facebook.com/v18.0/${page.id}?fields=instagram_business_account,name&access_token=${page.access_token}`)
@@ -128,6 +129,7 @@ router.post('/meta/onboarding', auth, async (req, res) => {
           igAccountId = igData.instagram_business_account.id
           pageName = igData.name
           pageAccessToken = page.access_token
+          facebookPageId = page.id
           break
         }
       }
@@ -136,9 +138,10 @@ router.post('/meta/onboarding', auth, async (req, res) => {
         return res.status(400).json({ error: 'No se encontró una cuenta de Instagram Business vinculada a ninguna de tus Páginas de Facebook.' })
       }
 
-      // 3. Save to user_integrations
+      // 3. Save BOTH the Facebook page_id (for webhook matching) and ig_account_id
       const igConfig = {
-        page_id: igAccountId,
+        page_id: facebookPageId,
+        ig_account_id: igAccountId,
         page_name: pageName,
         access_token: pageAccessToken,
         connected_at: new Date().toISOString()
@@ -151,7 +154,7 @@ router.post('/meta/onboarding', auth, async (req, res) => {
         await pool.query('UPDATE user_integrations SET instagram_config = $1, updated_at = CURRENT_TIMESTAMP WHERE user_id = $2', [JSON.stringify(igConfig), userId])
       }
 
-      console.log(`[Instagram Onboarding] User ${userId} connected IG account ${igAccountId} (${pageName})`)
+      console.log(`[Instagram Onboarding] User ${userId} connected IG account ${igAccountId} via Page ${facebookPageId} (${pageName})`)
       return res.json({ success: true, ig_account_id: igAccountId, page_name: pageName })
 
     } else if (type === 'meta_ads') {

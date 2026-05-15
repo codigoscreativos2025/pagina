@@ -85,6 +85,7 @@ router.get('/webhook', (req, res) => {
 router.post('/webhook', async (req, res) => {
   try {
     const body = req.body
+    console.log('[Webhook] Received:', JSON.stringify({ object: body.object, entry_count: body.entry?.length }).substring(0, 200))
 
     if (body.object === 'page') {
       await handleFacebookMessages(body, req)
@@ -93,6 +94,7 @@ router.post('/webhook', async (req, res) => {
       await handleInstagramMessages(body, req)
       res.status(200).send('EVENT_RECEIVED')
     } else {
+      console.log('[Webhook] Unknown object type:', body.object)
       res.status(200).send('OK')
     }
   } catch (error) {
@@ -110,6 +112,8 @@ async function handleInstagramMessages(body, req) {
   for (const entry of body.entry) {
     const pageId = entry.id
     const messaging = entry.messaging || []
+    
+    console.log(`[Instagram Webhook] Entry page_id: ${pageId}, messaging events: ${messaging.length}`)
 
     for (const event of messaging) {
       if (!event.message || !event.sender || event.message.is_echo) continue
@@ -120,9 +124,9 @@ async function handleInstagramMessages(body, req) {
 
       console.log(`[Instagram Webhook] Message from ${senderId}: ${messageText}`)
 
-      // Find user by instagram page_id
+      // Find user by Facebook page_id (this is what Instagram webhook sends)
       const userRes = await pool.query(
-        `SELECT ui.user_id, a.id as agent_id FROM user_integrations ui
+        `SELECT ui.user_id, ui.instagram_config, a.id as agent_id FROM user_integrations ui
          JOIN agents a ON a.user_id = ui.user_id
          WHERE ui.instagram_config->>'page_id' = $1 AND a.is_active = true
          LIMIT 1`,
@@ -130,7 +134,10 @@ async function handleInstagramMessages(body, req) {
       )
 
       if (userRes.rows.length === 0) {
-        console.log('[Instagram Webhook] No active agent found for instagram page:', pageId)
+        console.log(`[Instagram Webhook] No active agent found for page_id: ${pageId}`)
+        // Debug: show all instagram configs
+        const allConfigs = await pool.query("SELECT user_id, instagram_config->>'page_id' as stored_page_id FROM user_integrations WHERE instagram_config IS NOT NULL")
+        console.log('[Instagram Webhook] All stored IG configs:', JSON.stringify(allConfigs.rows))
         continue
       }
 

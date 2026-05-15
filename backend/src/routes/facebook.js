@@ -218,10 +218,12 @@ async function sendInstagramMessage(igUserId, text, pageId) {
     }
 
     const config = configRes.rows[0].instagram_config
-    const pageAccessToken = config.access_token
+    const accessToken = config.access_token
+    const igAccountId = config.ig_account_id || config.page_id
 
+    // Instagram uses a different endpoint: /{ig_account_id}/messages
     const res = await fetch(
-      `https://graph.facebook.com/v18.0/me/messages?access_token=${pageAccessToken}`,
+      `https://graph.facebook.com/v18.0/${igAccountId}/messages?access_token=${accessToken}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

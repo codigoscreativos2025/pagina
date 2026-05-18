@@ -138,6 +138,13 @@ router.post('/meta/onboarding', auth, async (req, res) => {
         return res.status(400).json({ error: 'No se encontró una cuenta de Instagram Business vinculada a ninguna de tus Páginas de Facebook.' })
       }
 
+      // Subscribe app to page webhooks (Required for Instagram messages too)
+      await fetch(`https://graph.facebook.com/v18.0/${facebookPageId}/subscribed_apps?subscribed_fields=messages,messaging_postbacks,messaging_optins`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ access_token: pageAccessToken })
+      })
+
       // 3. Save BOTH the Facebook page_id (for webhook matching) and ig_account_id
       const igConfig = {
         page_id: facebookPageId,

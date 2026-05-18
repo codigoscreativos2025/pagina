@@ -65,6 +65,103 @@ router.post('/onboarding', auth, async (req, res) => {
 })
 
 // ============================================
+// FACEBOOK MESSENGER MESSAGE HANDLER
+// ============================================
+async function handleFacebookMessages(body, req) {
+  const pool = global.pool
+
+  for (const entry of body.entry) {
+    const pageId = entry.id
+    const messaging = entry.messaging || []
+
+    for (const event of messaging) {
+      if (!event.message || !event.sender || event.message.is_echo) continue
+
+      const senderId = event.sender.id
+      const messageText = event.message.text || ''
+      const messageId = event.message.mid
+
+      console.log(`[Facebook Webhook] Message from ${senderId}: ${messageText}`)
+
+      // Find user by page_id
+      const userRes = await pool.query(
+        `SELECT ui.user_id, a.id as agent_id FROM user_integrations ui
+         JOIN agents a ON a.user_id = ui.user_id
+         WHERE ui.facebook_config->>'page_id' = $1 AND a.is_active = true
+         LIMIT 1`,
+        [pageId]
+      )
+
+      if (userRes.rows.length === 0) {
+        console.log('[Facebook Webhook] No active agent found for page:', pageId)
+        continue
+      }
+
+      const { user_id, agent_id } = userRes.rows[0]
+
+      // Create or find lead
+      let leadRes = await pool.query(
+        `SELECT id FROM leads WHERE agent_id = $1 AND facebook_psid = $2`,
+        [agent_id, senderId]
+      )
+
+      let leadId
+      if (leadRes.rows.length === 0) {
+        // Get sender name
+        let senderName = 'Facebook User'
+        try {
+          const configRes = await pool.query(
+            `SELECT facebook_config FROM user_integrations WHERE facebook_config->>'page_id' = $1`,
+            [pageId]
+          )
+          if (configRes.rows[0]?.facebook_config?.access_token) {
+            const senderRes = await fetch(
+              `https://graph.facebook.com/v18.0/${senderId}?fields=first_name&access_token=${configRes.rows[0].facebook_config.access_token}`
+            )
+            const senderData = await senderRes.json()
+            senderName = senderData.first_name || senderName
+          }
+        } catch (e) {}
+
+        const newLead = await pool.query(
+          `INSERT INTO leads (agent_id, client_phone, name, facebook_psid, status, source)
+           VALUES ($1, $2, $3, $4, 'nuevo', 'facebook') RETURNING id`,
+          [agent_id, '', senderName, senderId]
+        )
+        leadId = newLead.rows[0].id
+      } else {
+        leadId = leadRes.rows[0].id
+        await pool.query('UPDATE leads SET updated_at = CURRENT_TIMESTAMP, last_client_message_at = CURRENT_TIMESTAMP WHERE id = $1', [leadId])
+      }
+
+      // Save message
+      await pool.query(
+        `INSERT INTO messages (lead_id, sender_type, content, message_type, source, fb_message_id)
+         VALUES ($1, 'client', $2, 'text', 'facebook', $3)`,
+        [leadId, messageText, messageId]
+      )
+
+      // Process with AI
+      try {
+        const aiResponse = await processFacebookWithAI(agent_id, leadId, messageText, pageId)
+        if (aiResponse) {
+          await pool.query(
+            `INSERT INTO messages (lead_id, sender_type, content, message_type, source)
+             VALUES ($1, 'agent', $2, 'text', 'facebook')`,
+            [leadId, aiResponse]
+          )
+
+          // Send response back via Messenger
+          await sendFacebookMessage(senderId, aiResponse, pageId)
+        }
+      } catch (aiErr) {
+        console.error('[Facebook Webhook AI Error]:', aiErr)
+      }
+    }
+  }
+}
+
+// ============================================
 // FACEBOOK MESSENGER WEBHOOK (GET - Verification)
 // ============================================
 router.get('/webhook', (req, res) => {

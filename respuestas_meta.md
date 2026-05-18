@@ -17,13 +17,25 @@ Usamos el permiso `business_management` para permitir a nuestros usuarios gestio
 **¿Cómo usa tu aplicación este permiso o función?**
 Nuestra aplicación (Pivot.AI) es un CRM que incluye un dashboard analítico. Usamos el permiso `ads_read` para obtener en tiempo real las métricas de rendimiento de las campañas publicitarias del usuario (como clics, conversiones, gasto y alcance). Esta información se procesa y se muestra en gráficos dentro de nuestro panel, permitiendo a los dueños de negocios monitorear su ROI directamente en el mismo lugar donde sus agentes virtuales atienden a los leads generados por esos mismos anuncios.
 
-## 4. pages_read_engagement
+## 4. pages_manage_metadata
 **¿Cómo usa tu aplicación este permiso o función?**
-Requerimos `pages_read_engagement` para poder leer los mensajes, comentarios y menciones que los clientes finales envían a la página de Facebook del usuario. Al leer estas interacciones, nuestro sistema puede enrutarlas a nuestro CRM centralizado, donde nuestros agentes virtuales de IA procesan las consultas, responden automáticamente a preguntas frecuentes y derivan conversaciones complejas a un agente humano, mejorando la velocidad de respuesta del negocio.
+Usamos `pages_manage_metadata` para permitir a nuestros usuarios conectar y configurar sus Páginas de Facebook con nuestro CRM. Este permiso nos permite suscribir nuestra aplicación a los webhooks de la Página, de modo que podamos recibir notificaciones en tiempo real cuando los clientes envían mensajes. También lo usamos para leer y mostrar el nombre de la Página y su información básica durante el proceso de configuración, asegurando que el usuario conecte la Página correcta a nuestro sistema.
+
+## 5. pages_read_engagement
+**¿Cómo usa tu aplicación este permiso o función?**
+Requerimos `pages_read_engagement` para leer los mensajes directos (DMs) que los clientes finales envían a la Página de Facebook del usuario. Al recibir estos mensajes a través de webhooks, nuestro sistema los enruta al CRM centralizado donde los agentes virtuales de IA procesan las consultas y responden automáticamente. **Nota:** No leemos comentarios públicos ni menciones en publicaciones, solo mensajes directos enviados a través de Messenger.
+
+## 6. pages_messaging
+**¿Cómo usa tu aplicación este permiso o función?**
+Usamos `pages_messaging` para enviar respuestas a los mensajes que los clientes envían a la Página de Facebook del usuario. Cuando un cliente escribe a la Página, nuestro agente de IA procesa el mensaje y genera una respuesta contextual que es enviada de vuelta a través de la API de Messenger. Esto permite a las empresas atender a sus clientes 24/7 sin intervención manual. También usamos este permiso para marcar mensajes como leídos y mostrar indicadores de escritura para mejorar la experiencia del usuario final.
+
+## 7. pages_utility_messaging
+**¿Cómo usa tu aplicación este permiso o función?**
+Utilizamos `pages_utility_messaging` para enviar mensajes transaccionales y de utilidad a los clientes que han interactuado previamente con la Página del usuario. Estos incluyen confirmaciones de citas, actualizaciones de estado de pedidos, recordatorios de reservas y otras notificaciones relacionadas con transacciones específicas iniciadas por el usuario. Todos los mensajes siguen las políticas de Messaging Features de Meta y solo se envían dentro de la ventana de 24 horas o usando plantillas aprobadas para casos de uso específicos.
 
 ## 5. ads_management
 **¿Cómo usa tu aplicación este permiso o función?**
-Solicitamos `ads_management` para permitir que nuestros usuarios puedan pausar, activar o ajustar el presupuesto de sus campañas publicitarias activas directamente desde nuestro dashboard de analíticas. Si un usuario nota en nuestro CRM que una campaña no está generando leads rentables o que los agentes virtuales están sobrecargados, pueden usar nuestra interfaz para pausar el anuncio en Meta sin tener que salir de nuestra plataforma y entrar al Administrador de Anuncios.
+Solicitamos `ads_management` para mostrar a los usuarios información consolidada de sus campañas publicitarias (estado, presupuesto, métricas) en un dashboard unificado con su CRM. Esto permite a los dueños de negocios ver qué campañas están generando leads y tomar decisiones informadas. **Actualmente la funcionalidad es de solo lectura**; los usuarios pueden ver el estado de sus campañas pero no modificarlas desde nuestra plataforma.
 
 ## 6. instagram_business_basic
 **¿Cómo usa tu aplicación este permiso o función?**
@@ -74,6 +86,54 @@ Nuestra plataforma consolida datos publicitarios en un dashboard de inteligencia
 
 ---
 
+### 🎬 Video para `pages_manage_metadata`
+**Qué grabar:**
+1. Abre `agents.pivotsoluciones.com/integrations`
+2. Haz clic en **"Conectar con Facebook"** en la tarjeta de Facebook Messenger
+3. Muestra la ventana de permisos de Facebook
+4. Acepta y muestra cómo la tarjeta cambia a "✅ Conectado"
+5. Ve a `/crm` y muestra que los mensajes de Facebook llegan correctamente
+
+**Narración sugerida:** *"We use pages_manage_metadata to subscribe to webhooks for the user's Facebook Page. This allows us to receive real-time notifications when customers send messages, and to display the Page name during setup."*
+
+---
+
+### 🎬 Video para `pages_messaging`
+**Qué grabar:**
+1. Abre `agents.pivotsoluciones.com/crm`
+2. Muestra una conversación de Facebook Messenger (ícono 💬)
+3. Muestra el mensaje entrante del cliente
+4. Muestra la respuesta automática del agente de IA
+5. Si es posible, desde otra cuenta de Facebook envía un mensaje y muestra cómo llega en tiempo real
+
+**Narración sugerida:** *"pages_messaging allows us to send responses back to customers who message the user's Facebook Page. Our AI agents process incoming messages and automatically reply through Messenger, providing 24/7 customer support."*
+
+---
+
+### 🎬 Video para `pages_utility_messaging`
+**Qué grabar:**
+1. Abre `agents.pivotsoluciones.com/templates`
+2. Muestra una plantilla de WhatsApp o Facebook configurada para notificaciones transaccionales
+3. Muestra el campo de uso: "Confirmación de cita" o "Actualización de pedido"
+4. Si tienes ejemplos de mensajes enviados, muéstralos en el CRM
+
+**Narración sugerida:** *"We use pages_utility_messaging to send transactional messages like appointment confirmations and order updates. These messages are only sent within the 24-hour window or using approved templates for specific use cases."*
+
+---
+
+### 🎬 Video para `pages_read_engagement`
+**Qué grabar:**
+1. Abre `agents.pivotsoluciones.com/crm`
+2. Muestra la bandeja de entrada con conversaciones activas
+3. Haz clic en una conversación que venga de Facebook/Instagram
+4. Muestra los mensajes entrantes del cliente (DMs de Messenger/Instagram)
+5. Muestra cómo el agente de IA o el usuario responde desde el CRM
+6. Resalta el indicador de plataforma (ícono de Instagram/Facebook junto al nombre del contacto)
+
+**Narración sugerida:** *"We use pages_read_engagement to receive direct messages sent to the user's Facebook Page. These DMs are routed to our CRM inbox where AI agents process and respond to customer inquiries automatically. Note: We only read direct messages, not public comments or mentions."*
+
+---
+
 ### 🎬 Video para `business_management`
 **Qué grabar:**
 1. Abre `agents.pivotsoluciones.com/integrations`
@@ -115,11 +175,12 @@ Nuestra plataforma consolida datos publicitarios en un dashboard de inteligencia
 ### 🎬 Video para `ads_management`
 **Qué grabar:**
 1. Ve a `agents.pivotsoluciones.com/meta-ads`
-2. Muestra la lista de campañas activas
-3. Muestra un botón o acción que permita pausar/activar una campaña (si ya lo tienes implementado, haz clic; si no, muestra la interfaz donde aparecería)
-4. Explica que el usuario puede gestionar el estado de sus campañas sin salir del CRM
+2. Muestra la lista de campañas activas con sus métricas (Spend, Impressions, Clicks)
+3. Muestra el estado de cada campaña (ACTIVE/PAUSED)
+4. Resalta que los datos son de solo lectura (no hay botones de editar)
+5. Explica que la funcionalidad actual es mostrar métricas consolidadas
 
-**Narración sugerida:** *"ads_management allows our users to pause or activate campaigns directly from our dashboard. When an AI agent detects a campaign is underperforming, the user can take immediate action without leaving our platform."*
+**Narración sugerida:** *"We use ads_management to display campaign status and performance metrics to our users. Currently our integration is read-only — users can view their campaign data but all campaign management is done through Meta's own tools. This permission allows us to provide a unified view of ad performance within the CRM."*
 
 ---
 

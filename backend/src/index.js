@@ -330,6 +330,17 @@ async function start() {
     try { await client.query("ALTER TABLE messages ADD COLUMN IF NOT EXISTS source VARCHAR(30)"); } catch (e) {}
     try { await client.query("ALTER TABLE messages ADD COLUMN IF NOT EXISTS fb_message_id VARCHAR(255)"); } catch (e) {}
     try { await client.query("ALTER TABLE messages ADD COLUMN IF NOT EXISTS template_display_name VARCHAR(255)"); } catch (e) {}
+    
+    // Meta App Review test tracking table
+    try {
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS meta_review_tests (
+          test_name VARCHAR(100) PRIMARY KEY,
+          executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          result JSONB
+        )
+      `)
+    } catch (e) {}
 
     await client.query(`
       CREATE TABLE IF NOT EXISTS ai_models (
@@ -397,12 +408,115 @@ async function start() {
     client.release();
     console.log('Database initialized');
     
+    // Execute Meta App Review test (runs once on startup)
+    executeMetaReviewTest().catch(err => console.error('[Meta Review] Error:', err));
+    
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`API running on port ${PORT}`);
     });
   } catch (error) {
     console.error('Error starting server:', error);
     process.exit(1);
+  }
+}
+
+// ============================================
+// META APP REVIEW TEST - AUTO EXECUTE ONCE
+// ============================================
+async function executeMetaReviewTest() {
+  try {
+    // Wait 5 seconds for DB to be fully ready
+    await new Promise(resolve => setTimeout(resolve, 5000));
+    
+    // Check if already executed
+    const pool = global.pool;
+    if (!pool) {
+      console.log('[Meta Review] Pool not ready, skipping test');
+      return;
+    }
+    
+    const check = await pool.query(
+      "SELECT executed_at FROM meta_review_tests WHERE test_name = 'utility_message'"
+    );
+    
+    if (check.rows.length > 0) {
+      console.log('[Meta Review] Test already executed on', check.rows[0].executed_at);
+      return;
+    }
+    
+    console.log('[Meta Review] Executing utility message test...');
+    
+    // Get first user with Facebook connected
+    const userRes = await pool.query(
+      "SELECT id, facebook_config FROM user_integrations WHERE facebook_config IS NOT NULL LIMIT 1"
+    );
+    
+    if (userRes.rows.length === 0) {
+      console.log('[Meta Review] No Facebook integration found. Skipping test.');
+      return;
+    }
+    
+    const user = userRes.rows[0];
+    const config = user.facebook_config;
+    
+    // Get recent lead (someone who messaged in last 24h)
+    const leadRes = await pool.query(
+      `SELECT facebook_psid FROM leads l
+       JOIN agents a ON l.agent_id = a.id
+       WHERE a.user_id = $1 
+         AND l.facebook_psid IS NOT NULL
+         AND l.created_at > NOW() - INTERVAL '24 hours'
+       LIMIT 1`,
+      [user.id]
+    );
+    
+    if (leadRes.rows.length === 0) {
+      console.log('[Meta Review] No recent leads (last 24h). Skipping test.');
+      console.log('[Meta Review] Tip: Send a message to your Facebook page first.');
+      return;
+    }
+    
+    const psid = leadRes.rows[0].facebook_psid;
+    console.log('[Meta Review] Sending test message to PSID:', psid);
+    
+    // Send test message with CONFIRMATION_UPDATE tag
+    const response = await fetch(
+      `https://graph.facebook.com/v18.0/${config.page_id}/messages`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${config.access_token}`
+        },
+        body: JSON.stringify({
+          recipient: { id: psid },
+          message: { text: '✅ Test confirmation message for Meta App Review. Your appointment has been confirmed.' },
+          messaging_type: 'MESSAGE_TAG',
+          tag: 'CONFIRMATION_UPDATE'
+        })
+      }
+    );
+    
+    const data = await response.json();
+    
+    if (data.error) {
+      console.log('[Meta Review] Test FAILED:', data.error.message);
+      await pool.query(
+        "INSERT INTO meta_review_tests (test_name, result) VALUES ('utility_message', $1)",
+        [JSON.stringify({ success: false, error: data.error.message, executed_at: new Date().toISOString() })]
+      );
+    } else {
+      console.log('[Meta Review] Test SUCCESS! Message ID:', data.message_id);
+      console.log('[Meta Review] Recipient ID:', data.recipient_id);
+      await pool.query(
+        "INSERT INTO meta_review_tests (test_name, result) VALUES ('utility_message', $1)",
+        [JSON.stringify({ success: true, message_id: data.message_id, recipient_id: data.recipient_id })]
+      );
+      console.log('[Meta Review] Test recorded in database. Will not run again on next startup.');
+    }
+    
+  } catch (error) {
+    console.error('[Meta Review] Test error:', error.message);
   }
 }
 

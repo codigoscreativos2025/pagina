@@ -72,12 +72,74 @@ router.put('/:type', auth, async (req, res) => {
 })
 
 // ============================================
+// DELETE: Disconnect an integration
+// ============================================
+router.delete('/:type', auth, async (req, res) => {
+  try {
+    const pool = req.pool
+    const userId = req.user.id
+    const type = req.params.type
+    
+    const allowedTypes = ['whatsapp', 'google', 'instagram', 'telegram', 'meta_ads', 'tiktok', 'facebook', 'tiktok_ads']
+    if (!allowedTypes.includes(type)) {
+      return res.status(400).json({ error: 'Invalid integration type' })
+    }
+
+    const column = `${type}_config`
+
+    // Clear from user_integrations
+    await pool.query(
+      `UPDATE user_integrations SET ${column} = NULL, updated_at = CURRENT_TIMESTAMP WHERE user_id = $1`,
+      [userId]
+    )
+
+    // For WhatsApp, also deactivate agents
+    if (type === 'whatsapp') {
+      await pool.query('UPDATE agents SET whatsapp_config = NULL, is_active = false WHERE user_id = $1', [userId])
+    }
+
+    // For Google, revoke tokens if possible
+    if (type === 'google') {
+      try {
+        const oauth2Client = new google.auth.OAuth2(
+          process.env.GOOGLE_CLIENT_ID,
+          process.env.GOOGLE_CLIENT_SECRET,
+          process.env.GOOGLE_REDIRECT_URI
+        )
+        const integrations = await pool.query('SELECT google_config FROM user_integrations WHERE user_id = $1', [userId])
+        if (integrations.rows[0]?.google_config?.access_token) {
+          oauth2Client.setCredentials({ access_token: integrations.rows[0].google_config.access_token })
+          await oauth2Client.revokeToken(integrations.rows[0].google_config.access_token).catch(() => {})
+        }
+      } catch (e) { console.error('Error revoking Google token:', e) }
+    }
+
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Error disconnecting integration:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// ============================================
 // TEST UTILITY MESSAGE (Meta App Review Only)
 // ============================================
 router.post('/test-utility-message', auth, async (req, res) => {
   try {
     const pool = req.pool
     const userId = req.user.id
+    
+    // Check if auto-test already ran
+    const checkRes = await pool.query(
+      "SELECT executed_at, result FROM meta_review_tests WHERE test_name = 'utility_message'"
+    )
+    if (checkRes.rows.length > 0) {
+      return res.json({ 
+        message: 'Test already executed automatically on startup',
+        executed_at: checkRes.rows[0].executed_at,
+        result: checkRes.rows[0].result
+      })
+    }
     
     // 1. Get user's Facebook page config
     const configRes = await pool.query(
@@ -138,7 +200,12 @@ router.post('/test-utility-message', auth, async (req, res) => {
       return res.status(400).json({ error: data.error.message })
     }
     
-    // 4. Log for Meta Review
+    // 4. Record in DB
+    await pool.query(
+      "INSERT INTO meta_review_tests (test_name, result) VALUES ('utility_message', $1)",
+      [JSON.stringify({ success: true, message_id: data.message_id, manual: true })]
+    )
+    
     console.log('[Meta Review Test] Utility message sent:', data)
     
     res.json({ 
@@ -155,54 +222,3 @@ router.post('/test-utility-message', auth, async (req, res) => {
 })
 
 module.exports = router
-
-// ============================================
-// DELETE: Disconnect an integration
-// ============================================
-router.delete('/:type', auth, async (req, res) => {
-  try {
-    const pool = req.pool
-    const userId = req.user.id
-    const type = req.params.type
-    
-    const allowedTypes = ['whatsapp', 'google', 'instagram', 'telegram', 'meta_ads', 'tiktok', 'facebook', 'tiktok_ads']
-    if (!allowedTypes.includes(type)) {
-      return res.status(400).json({ error: 'Invalid integration type' })
-    }
-
-    const column = `${type}_config`
-
-    // Clear from user_integrations
-    await pool.query(
-      `UPDATE user_integrations SET ${column} = NULL, updated_at = CURRENT_TIMESTAMP WHERE user_id = $1`,
-      [userId]
-    )
-
-    // For WhatsApp, also deactivate agents
-    if (type === 'whatsapp') {
-      await pool.query('UPDATE agents SET whatsapp_config = NULL, is_active = false WHERE user_id = $1', [userId])
-    }
-
-    // For Google, revoke tokens if possible
-    if (type === 'google') {
-      try {
-        const { google } = require('googleapis')
-        const oauth2Client = new google.auth.OAuth2(
-          process.env.GOOGLE_CLIENT_ID,
-          process.env.GOOGLE_CLIENT_SECRET,
-          process.env.GOOGLE_REDIRECT_URI
-        )
-        const integrations = await pool.query('SELECT google_config FROM user_integrations WHERE user_id = $1', [userId])
-        if (integrations.rows[0]?.google_config?.access_token) {
-          oauth2Client.setCredentials({ access_token: integrations.rows[0].google_config.access_token })
-          await oauth2Client.revokeToken(integrations.rows[0].google_config.access_token).catch(() => {})
-        }
-      } catch (e) { console.error('Error revoking Google token:', e) }
-    }
-
-    res.json({ success: true })
-  } catch (error) {
-    console.error('Error disconnecting integration:', error)
-    res.status(500).json({ error: 'Internal server error' })
-  }
-})

@@ -179,6 +179,52 @@ router.get('/results', auth, async (req, res) => {
     // Average response time (mock for now)
     const responseTimeAvg = agentMessages > 0 ? '< 1 min' : '—'
 
+    // Meta Ads metrics
+    const metaConfigRes = await pool.query('SELECT meta_ads_config FROM user_integrations WHERE user_id = $1', [userId])
+    const metaConfig = metaConfigRes.rows.length > 0 ? metaConfigRes.rows[0].meta_ads_config : null
+    let metaMetrics = {
+      reach: 0,
+      impressions: 0,
+      clicks: 0,
+      spend: 0,
+      connected: false
+    }
+    
+    if (metaConfig && metaConfig.ad_account_id) {
+      // Fetch real data from Meta Ads API
+      try {
+        const now = new Date()
+        const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+        const dateSince = sevenDaysAgo.toISOString().split('T')[0]
+        const dateUntil = now.toISOString().split('T')[0]
+        
+        const insightsRes = await fetch(
+          `https://graph.facebook.com/v18.0/${metaConfig.ad_account_id}/insights?level=adset&fields=reach,impressions,clicks,spend&time_range={'since':'${dateSince}','until':'${dateUntil}'}&access_token=${metaConfig.access_token}`
+        )
+        const insightsData = await insightsRes.json()
+        
+        if (insightsData.data && insightsData.data.length > 0) {
+          const aggregated = insightsData.data.reduce((acc, row) => {
+            acc.reach += parseInt(row.reach || 0)
+            acc.impressions += parseInt(row.impressions || 0)
+            acc.clicks += parseInt(row.clicks || 0)
+            acc.spend += parseFloat(row.spend || 0)
+            return acc
+          }, { reach: 0, impressions: 0, clicks: 0, spend: 0 })
+          
+          metaMetrics = {
+            reach: aggregated.reach,
+            impressions: aggregated.impressions,
+            clicks: aggregated.clicks,
+            spend: Math.round(aggregated.spend * 100) / 100,
+            connected: true
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching Meta Ads insights:', err.message)
+      }
+    }
+
     res.json({
       success: true,
       conversations_this_week: conversationsThisWeek,
@@ -186,6 +232,11 @@ router.get('/results', auth, async (req, res) => {
       leads_last_week: leadsLastWeek,
       messages_total: messagesTotal,
       time_saved_hours: timeSavedHours,
+      conversion_rate: conversionRate,
+      channels_active: channelsActive,
+      response_time_avg: responseTimeAvg,
+      meta_ads: metaMetrics
+    })
       conversion_rate: conversionRate,
       channels_active: channelsActive,
       response_time_avg: responseTimeAvg

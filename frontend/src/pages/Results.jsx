@@ -18,9 +18,12 @@ export default function Results() {
   const loadData = async () => {
     try {
       setLoading(true)
-      const res = await api.get('/analytics/results')
-      if (res.data.success) {
-        setData(res.data)
+      const [resultsRes, metaAdsRes] = await Promise.all([
+        api.get('/analytics/results'),
+        api.get('/analytics/meta-ads').catch(() => ({ data: { success: false } }))
+      ])
+      if (resultsRes.data.success) {
+        setData({ ...resultsRes.data, meta_ads: metaAdsRes.data.success ? metaAdsRes.data.metrics.meta : null })
         // Calculate traffic light
         const leadsThisWeek = res.data.leads_this_week || 0
         const leadsLastWeek = res.data.leads_last_week || 0
@@ -107,7 +110,7 @@ export default function Results() {
         </div>
 
         {/* Extra stats */}
-        <div className="bg-white rounded-2xl p-6 border border-slate-200">
+        <div className="bg-white rounded-2xl p-6 border border-slate-200 mb-8">
           <h2 className="text-lg font-bold text-slate-900 mb-4">Resumen general</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="text-center">
@@ -128,6 +131,55 @@ export default function Results() {
             </div>
           </div>
         </div>
+
+        {/* Meta Ads Metrics */}
+        {d.meta_ads && d.meta_ads.connected && (
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-200">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-slate-900">📈 Meta Ads (últimos 7 días)</h2>
+              <button 
+                onClick={() => navigate('/meta-ads')}
+                className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+              >
+                Ver dashboard completo →
+              </button>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-white rounded-xl p-4 text-center">
+                <div className="text-xs text-slate-500 mb-1">Alcance</div>
+                <div className="text-2xl font-bold text-blue-600">{fmt(d.meta_ads.reach)}</div>
+                <div className="text-[10px] text-slate-400">personas alcanzadas</div>
+              </div>
+              <div className="bg-white rounded-xl p-4 text-center">
+                <div className="text-xs text-slate-500 mb-1">Impresiones</div>
+                <div className="text-2xl font-bold text-indigo-600">{fmt(d.meta_ads.impressions)}</div>
+                <div className="text-[10px] text-slate-400">veces mostrado</div>
+              </div>
+              <div className="bg-white rounded-xl p-4 text-center">
+                <div className="text-xs text-slate-500 mb-1">Clics</div>
+                <div className="text-2xl font-bold text-purple-600">{fmt(d.meta_ads.clicks)}</div>
+                <div className="text-[10px] text-slate-400">clics recibidos</div>
+              </div>
+              <div className="bg-white rounded-xl p-4 text-center">
+                <div className="text-xs text-slate-500 mb-1">Inversión</div>
+                <div className="text-2xl font-bold text-emerald-600">${fmt(d.meta_ads.spend)}</div>
+                <div className="text-[10px] text-slate-400">gasto total</div>
+              </div>
+            </div>
+            {d.meta_ads.clicks > 0 && d.leads_this_week > 0 && (
+              <div className="mt-4 pt-4 border-t border-blue-200 text-center">
+                <div className="text-sm text-slate-600">
+                  Tasa de conversión de ads: <span className="font-bold text-blue-700">
+                    {((d.leads_this_week / d.meta_ads.clicks) * 100).toFixed(2)}%
+                  </span>
+                  <span className="text-xs text-slate-500 ml-2">
+                    ({d.leads_this_week} leads de {fmt(d.meta_ads.clicks)} clics)
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

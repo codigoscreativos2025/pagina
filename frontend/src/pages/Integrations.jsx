@@ -198,24 +198,31 @@ export default function Integrations() {
     
     setConnecting('facebook')
     try {
-      window.FB.login(async (response) => {
-        if (response.authResponse) {
-          try {
-            // Get user pages
-            const pagesRes = await api.get(`/integrations/facebook/pages?access_token=${response.authResponse.accessToken}`)
-            if (pagesRes.data.success && pagesRes.data.pages.length > 0) {
-              setFacebookPages(pagesRes.data.pages)
-              setShowPageSelector(true)
-              setConnecting(null)
-            } else {
-              alert('No se encontraron Páginas de Facebook.')
+      window.FB.login((response) => {
+        console.log('[FB.login] Facebook Messenger Response:', response);
+        const processResponse = async () => {
+          if (response.authResponse) {
+            try {
+              // Get user pages
+              const pagesRes = await api.get(`/integrations/facebook/pages?access_token=${response.authResponse.accessToken}`)
+              if (pagesRes.data.success && pagesRes.data.pages.length > 0) {
+                setFacebookPages(pagesRes.data.pages)
+                setShowPageSelector(true)
+                setConnecting(null)
+              } else {
+                alert('No se encontraron Páginas de Facebook.')
+                setConnecting(null)
+              }
+            } catch (err) {
+              alert('Error: ' + (err.response?.data?.error || err.message))
               setConnecting(null)
             }
-          } catch (err) {
-            alert('Error: ' + (err.response?.data?.error || err.message))
-            setConnecting(null)
+          } else { 
+            alert('Conexión cancelada.'); 
+            setConnecting(null) 
           }
-        } else { alert('Conexión cancelada.'); setConnecting(null) }
+        };
+        processResponse();
       }, { scope: 'pages_show_list,pages_manage_metadata,pages_messaging', response_type: 'token' })
     } catch (err) { console.error(err); setConnecting(null) }
   }

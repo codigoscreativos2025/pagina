@@ -139,11 +139,13 @@ router.post('/meta/onboarding', auth, async (req, res) => {
       }
 
       // Subscribe app to page webhooks (Required for Instagram messages too)
-      await fetch(`https://graph.facebook.com/v18.0/${facebookPageId}/subscribed_apps?subscribed_fields=messages,messaging_postbacks,messaging_optins`, {
+      const subRes = await fetch(`https://graph.facebook.com/v18.0/${facebookPageId}/subscribed_apps?subscribed_fields=messages,messaging_postbacks,messaging_optins`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ access_token: pageAccessToken })
       })
+      const subData = await subRes.json()
+      console.log(`[Instagram Onboarding] subscribed_apps response for Page ${facebookPageId}:`, subData)
 
       // 3. Save BOTH the Facebook page_id (for webhook matching) and ig_account_id
       const igConfig = {

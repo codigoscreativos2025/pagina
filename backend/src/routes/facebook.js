@@ -35,11 +35,13 @@ router.post('/onboarding', auth, async (req, res) => {
     const pageName = pageData.name || 'Facebook Page'
 
     // Subscribe app to page webhooks
-    await fetch(`https://graph.facebook.com/v18.0/${page_id}/subscribed_apps?subscribed_fields=messages,messaging_postbacks,messaging_optins`, {
+    const subRes = await fetch(`https://graph.facebook.com/v18.0/${page_id}/subscribed_apps?subscribed_fields=messages,messaging_postbacks,messaging_optins`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ access_token: pageAccessToken })
     })
+    const subData = await subRes.json()
+    console.log(`[Facebook Onboarding] subscribed_apps response for Page ${page_id}:`, subData)
 
     const facebookConfig = {
       page_id,

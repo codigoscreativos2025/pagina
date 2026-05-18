@@ -75,12 +75,19 @@ export default function Integrations() {
     })
   }, [metaConfigs.app_id])
 
+  useEffect(() => {
+    if (metaConfigs.app_id) {
+      loadFBSDK()
+    }
+  }, [metaConfigs.app_id, loadFBSDK])
+
   // Meta OAuth: WhatsApp
-  const connectWhatsApp = async () => {
+  const connectWhatsApp = () => {
     if (!metaConfigs.app_id) return alert('Falta configurar FACEBOOK_APP_ID en el servidor.')
+    if (!window.FB) return alert('El SDK de Facebook aún está cargando. Intenta de nuevo en unos segundos.')
+    
     setConnecting('whatsapp')
     try {
-      const FB = await loadFBSDK()
       const configId = metaConfigs.configs.whatsapp;
       const loginOpts = {
         response_type: 'token',
@@ -94,7 +101,7 @@ export default function Integrations() {
         loginOpts.scope = 'whatsapp_business_management,whatsapp_business_messaging,business_management';
       }
 
-      FB.login((response) => {
+      window.FB.login((response) => {
         if (response.authResponse) {
           api.post('/webhooks/onboarding', { access_token: response.authResponse.accessToken })
             .then(() => { alert('✅ WhatsApp conectado!'); loadData() })
@@ -106,17 +113,18 @@ export default function Integrations() {
   }
 
   // Meta OAuth: Instagram
-  const connectInstagram = async () => {
+  const connectInstagram = () => {
     if (!metaConfigs.app_id) return alert('Falta configurar FACEBOOK_APP_ID en el servidor.')
+    if (!window.FB) return alert('El SDK de Facebook aún está cargando. Intenta de nuevo en unos segundos.')
+    
     setConnecting('instagram')
     try {
-      const FB = await loadFBSDK()
       const configId = metaConfigs.configs.instagram
       const loginOpts = configId
         ? { config_id: configId, response_type: 'token', override_default_response_type: true }
         : { scope: 'instagram_basic,pages_show_list,pages_read_engagement,pages_messaging,instagram_manage_messages', response_type: 'token' }
       
-      FB.login((response) => {
+      window.FB.login((response) => {
         if (response.authResponse) {
           api.post('/integrations/meta/onboarding', { access_token: response.authResponse.accessToken, type: 'instagram' })
             .then(res => { alert(`✅ Instagram conectado! Página: ${res.data.page_name}`); loadData() })
@@ -128,17 +136,18 @@ export default function Integrations() {
   }
 
   // Meta OAuth: Ads
-  const connectMetaAds = async () => {
+  const connectMetaAds = () => {
     if (!metaConfigs.app_id) return alert('Falta configurar FACEBOOK_APP_ID en el servidor.')
+    if (!window.FB) return alert('El SDK de Facebook aún está cargando. Intenta de nuevo en unos segundos.')
+    
     setConnecting('meta_ads')
     try {
-      const FB = await loadFBSDK()
       const configId = metaConfigs.configs.meta_ads
       const loginOpts = configId
         ? { config_id: configId, response_type: 'token', override_default_response_type: true }
         : { scope: 'ads_read,business_management', response_type: 'token' }
       
-      FB.login((response) => {
+      window.FB.login((response) => {
         if (response.authResponse) {
           api.post('/integrations/meta/onboarding', { access_token: response.authResponse.accessToken, type: 'meta_ads' })
             .then(res => { alert(`✅ Meta Ads conectado! Cuenta: ${res.data.ad_account_name}`); loadData() })
@@ -183,12 +192,13 @@ export default function Integrations() {
   }
 
   // Facebook Page (Messenger)
-  const connectFacebook = async () => {
+  const connectFacebook = () => {
     if (!metaConfigs.app_id) return alert('Falta configurar FACEBOOK_APP_ID en el servidor.')
+    if (!window.FB) return alert('El SDK de Facebook aún está cargando. Intenta de nuevo en unos segundos.')
+    
     setConnecting('facebook')
     try {
-      const FB = await loadFBSDK()
-      FB.login(async (response) => {
+      window.FB.login(async (response) => {
         if (response.authResponse) {
           try {
             // Get user pages

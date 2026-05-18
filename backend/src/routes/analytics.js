@@ -237,10 +237,6 @@ router.get('/results', auth, async (req, res) => {
       response_time_avg: responseTimeAvg,
       meta_ads: metaMetrics
     })
-      conversion_rate: conversionRate,
-      channels_active: channelsActive,
-      response_time_avg: responseTimeAvg
-    })
   } catch (error) {
     console.error('Error fetching results:', error)
     res.status(500).json({ error: 'Internal server error' })

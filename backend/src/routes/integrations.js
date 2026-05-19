@@ -4,6 +4,25 @@ const auth = require('../middleware/auth')
 const { google } = require('googleapis')
 
 // ============================================
+// GET: Meta Config IDs (for frontend OAuth)
+// ============================================
+router.get('/meta/config-ids', auth, async (req, res) => {
+  try {
+    res.json({
+      app_id: process.env.FACEBOOK_APP_ID || '',
+      configs: {
+        whatsapp: process.env.META_CONFIG_WHATSAPP || '',
+        instagram: process.env.META_CONFIG_INSTAGRAM || '',
+        ads: process.env.META_CONFIG_ADS || ''
+      }
+    })
+  } catch (error) {
+    console.error('Error fetching meta config IDs:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// ============================================
 // GET: User integrations
 // ============================================
 router.get('/', auth, async (req, res) => {

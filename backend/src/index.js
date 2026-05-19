@@ -459,20 +459,19 @@ async function executeMetaReviewTest() {
     const user = userRes.rows[0];
     const config = user.facebook_config;
     
-    // Get recent lead (someone who messaged in last 24h)
+    // Get ANY lead with Facebook PSID (not limited to 24h for Meta Review test)
     const leadRes = await pool.query(
       `SELECT facebook_psid FROM leads l
        JOIN agents a ON l.agent_id = a.id
        WHERE a.user_id = $1 
          AND l.facebook_psid IS NOT NULL
-         AND l.last_client_message_at > NOW() - INTERVAL '24 hours'
        LIMIT 1`,
       [user.user_id]
     );
     
     if (leadRes.rows.length === 0) {
-      console.log('[Meta Review] No recent leads (last 24h). Skipping test.');
-      console.log('[Meta Review] Tip: Send a message to your Facebook page first.');
+      console.log('[Meta Review] No Facebook leads found in database. Skipping test.');
+      console.log('[Meta Review] Tip: Someone must send a message to your Facebook page first.');
       return;
     }
     

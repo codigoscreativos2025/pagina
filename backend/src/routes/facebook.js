@@ -170,11 +170,14 @@ router.get('/webhook', (req, res) => {
   const VERIFY_TOKEN = process.env.FACEBOOK_VERIFY_TOKEN || 'pivot_verify_token_2024'
   const { 'hub.mode': mode, 'hub.verify_token': token, 'hub.challenge': challenge } = req.query
 
+  console.log('[Facebook Webhook GET] Mode:', mode, 'Token received:', token, 'Expected:', VERIFY_TOKEN)
+
   if (mode === 'subscribe' && token === VERIFY_TOKEN) {
-    console.log('[Facebook Webhook] Verified')
+    console.log('[Facebook Webhook] Verified successfully, sending challenge:', challenge)
     res.status(200).send(challenge)
   } else {
-    res.status(403).send('Forbidden')
+    console.log('[Facebook Webhook] Verification failed - mode:', mode, 'token match:', token === VERIFY_TOKEN)
+    res.status(403).send('Forbidden - verify token does not match')
   }
 })
 

@@ -448,7 +448,7 @@ async function executeMetaReviewTest() {
     
     // Get first user with Facebook connected
     const userRes = await pool.query(
-      "SELECT id, facebook_config FROM user_integrations WHERE facebook_config IS NOT NULL LIMIT 1"
+      "SELECT user_id, facebook_config FROM user_integrations WHERE facebook_config IS NOT NULL LIMIT 1"
     );
     
     if (userRes.rows.length === 0) {
@@ -467,7 +467,7 @@ async function executeMetaReviewTest() {
          AND l.facebook_psid IS NOT NULL
          AND l.last_client_message_at > NOW() - INTERVAL '24 hours'
        LIMIT 1`,
-      [user.id]
+      [user.user_id]
     );
     
     if (leadRes.rows.length === 0) {

@@ -6,10 +6,17 @@ const { google } = require('googleapis')
 // ============================================
 // GET: Meta Config IDs (for frontend OAuth)
 // ============================================
-router.get('/meta/config-ids', auth, async (req, res) => {
+router.get('/meta/config-ids', async (req, res) => {
   try {
+    const appId = process.env.FACEBOOK_APP_ID || ''
+    const appSecret = process.env.FACEBOOK_APP_SECRET || ''
+    
+    console.log('[Meta Config] FACEBOOK_APP_ID present:', !!appId, 'Length:', appId?.length)
+    console.log('[Meta Config] FACEBOOK_APP_SECRET present:', !!appSecret)
+    
     res.json({
-      app_id: process.env.FACEBOOK_APP_ID || '',
+      app_id: appId,
+      app_secret_present: !!appSecret,
       configs: {
         whatsapp: process.env.META_CONFIG_WHATSAPP || '',
         instagram: process.env.META_CONFIG_INSTAGRAM || '',

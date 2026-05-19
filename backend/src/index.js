@@ -465,7 +465,7 @@ async function executeMetaReviewTest() {
        JOIN agents a ON l.agent_id = a.id
        WHERE a.user_id = $1 
          AND l.facebook_psid IS NOT NULL
-         AND l.created_at > NOW() - INTERVAL '24 hours'
+         AND l.last_client_message_at > NOW() - INTERVAL '24 hours'
        LIMIT 1`,
       [user.id]
     );

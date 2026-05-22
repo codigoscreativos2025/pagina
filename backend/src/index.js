@@ -582,8 +582,7 @@ async function executeUtilityMessageTest(pool) {
       body: JSON.stringify({
         recipient: { id: psid },
         message: { text: '✅ Test confirmation message for Meta App Review. Your appointment has been confirmed.' },
-        messaging_type: 'MESSAGE_TAG',
-        tag: 'CONFIRMATION_UPDATE'
+        messaging_type: 'RESPONSE'
       })
     }
   );

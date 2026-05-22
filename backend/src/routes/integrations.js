@@ -189,6 +189,7 @@ router.post('/test-utility-message', auth, async (req, res) => {
     
     const psid = leadRes.rows[0].facebook_psid
     
+    // Use RESPONSE type instead of MESSAGE_TAG to avoid tag approval requirement
     const response = await fetch(
       `https://graph.facebook.com/v18.0/${pageId}/messages`,
       {
@@ -202,8 +203,7 @@ router.post('/test-utility-message', auth, async (req, res) => {
           message: { 
             text: '✅ This is a test confirmation message for Meta App Review. Your appointment has been confirmed.' 
           },
-          messaging_type: 'MESSAGE_TAG',
-          tag: 'CONFIRMATION_UPDATE'
+          messaging_type: 'RESPONSE'
         })
       }
     )

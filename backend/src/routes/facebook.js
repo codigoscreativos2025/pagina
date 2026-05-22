@@ -1,6 +1,38 @@
 const express = require('express')
 const router = express.Router()
 const auth = require('../middleware/auth')
+const crypto = require('crypto')
+
+// ============================================
+// FACEBOOK SIGNATURE VERIFICATION
+// ============================================
+function verifyFacebookSignature(req, res, buf) {
+  const signature = req.headers['x-hub-signature-256'];
+  if (!signature) {
+    console.log('[Facebook Webhook] ⚠️ No X-Hub-Signature-256 header - skipping verification');
+    return;
+  }
+  
+  const APP_SECRET = process.env.FACEBOOK_APP_SECRET;
+  if (!APP_SECRET) {
+    console.log('[Facebook Webhook] ⚠️ No FACEBOOK_APP_SECRET configured - skipping verification');
+    return;
+  }
+  
+  const expectedSignature = crypto
+    .createHmac('sha256', APP_SECRET)
+    .update(buf)
+    .digest('hex');
+  
+  const signatureHash = signature.split('=')[1];
+  
+  if (signatureHash !== expectedSignature) {
+    console.log('[Facebook Webhook] ❌ Invalid signature - rejecting webhook');
+    throw new Error('Invalid Facebook signature');
+  }
+  
+  console.log('[Facebook Webhook] ✅ Signature verified successfully');
+}
 
 // ============================================
 // FACEBOOK PAGE OAUTH ONBOARDING (Messenger)
@@ -194,10 +226,18 @@ router.get('/webhook', (req, res) => {
 // ============================================
 router.post('/webhook', async (req, res) => {
   try {
+    // Verify Facebook signature (if available)
+    if (req.rawBody) {
+      verifyFacebookSignature(req, res, req.rawBody);
+    }
+    
     const body = req.body
+    const headers = req.headers;
+    
     console.log('[Webhook] ====== FACEBOOK/INSTAGRAM WEBHOOK RECEIVED ======')
     console.log('[Webhook] Object type:', body.object)
     console.log('[Webhook] Entry count:', body.entry?.length)
+    console.log('[Webhook] X-Hub-Signature-256:', headers['x-hub-signature-256'] ? 'Present' : 'Missing')
     console.log('[Webhook] Full body:', JSON.stringify(body, null, 2).substring(0, 2000))
     
     if (body.object === 'page') {
@@ -627,6 +667,78 @@ router.post('/resubscribe-webhooks', auth, async (req, res) => {
   } catch (error) {
     console.error('[Facebook Resubscribe Error]:', error)
     res.status(500).json({ error: 'Error resubscribing webhooks' })
+  }
+})
+
+// ============================================
+// WEBHOOK DIAGNOSTIC (Advanced)
+// ============================================
+router.get('/webhook-diagnostic', auth, async (req, res) => {
+  try {
+    const pool = req.pool
+    const userId = req.user.id
+    
+    const diagnostic = {
+      server: {
+        facebook_app_id: process.env.FACEBOOK_APP_ID ? '✅ Configured' : '❌ Missing',
+        facebook_app_secret: process.env.FACEBOOK_APP_SECRET ? '✅ Configured' : '❌ Missing',
+        facebook_verify_token: process.env.FACEBOOK_VERIFY_TOKEN || 'pivot_verify_token_2024',
+        frontend_url: process.env.FRONTEND_URL || '❌ Not configured',
+        webhook_url: process.env.FRONTEND_URL ? `${process.env.FRONTEND_URL}/api/integrations/facebook/webhook` : '❌ Cannot construct URL'
+      },
+      facebook: null,
+      test_result: null
+    }
+    
+    // Check Facebook connection
+    const configRes = await pool.query(
+      'SELECT facebook_config FROM user_integrations WHERE user_id = $1',
+      [userId]
+    )
+    
+    if (configRes.rows[0]?.facebook_config) {
+      const config = configRes.rows[0].facebook_config
+      
+      // Test Graph API connection
+      try {
+        const pageRes = await fetch(
+          `https://graph.facebook.com/v18.0/${config.page_id}?fields=name,access_token&access_token=${config.access_token}`
+        )
+        const pageData = await pageRes.json()
+        
+        diagnostic.facebook = {
+          connected: true,
+          page_id: config.page_id,
+          page_name: pageData.name || config.page_name,
+          access_token_valid: !pageData.error
+        }
+        
+        // Check subscription status
+        const subRes = await fetch(
+          `https://graph.facebook.com/v18.0/${config.page_id}/subscribed_apps?access_token=${config.access_token}`
+        )
+        const subData = await subRes.json()
+        
+        diagnostic.facebook.subscription = {
+          active: subData.data && subData.data.length > 0,
+          fields: subData.data?.[0]?.subscribed_fields || []
+        }
+        
+      } catch (error) {
+        diagnostic.facebook = {
+          connected: true,
+          error: error.message
+        }
+      }
+    } else {
+      diagnostic.facebook = { connected: false }
+    }
+    
+    res.json({ success: true, diagnostic })
+    
+  } catch (error) {
+    console.error('[Webhook Diagnostic Error]:', error)
+    res.status(500).json({ error: error.message })
   }
 })
 

@@ -27,6 +27,9 @@ const onboardingRoutes = require('./routes/onboarding');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Trust proxy for EasyPanel/nginx
+app.set('trust proxy', 1);
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL
 });
@@ -53,6 +56,14 @@ async function initRedis() {
 app.use(helmet());
 app.use(cors());
 app.use(morgan('dev'));
+
+// Preserve raw body for Facebook webhook signature verification
+app.use('/api/integrations/facebook/webhook', express.json({
+  verify: (req, res, buf) => {
+    req.rawBody = buf.toString();
+  }
+}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

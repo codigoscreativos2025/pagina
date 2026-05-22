@@ -268,7 +268,7 @@ router.post('/test-whatsapp-utility-message', auth, async (req, res) => {
     
     // Get a lead with WhatsApp number (client_phone column)
     const leadRes = await pool.query(
-      `SELECT client_phone as whatsapp_number, name FROM leads l
+      `SELECT l.client_phone as whatsapp_number, l.name FROM leads l
        JOIN agents a ON l.agent_id = a.id
        WHERE a.user_id = $1 AND l.client_phone IS NOT NULL AND l.source = 'whatsapp'
        LIMIT 1`,

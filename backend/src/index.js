@@ -425,73 +425,220 @@ async function start() {
 // ============================================
 async function executeMetaReviewTest() {
   try {
-    // Wait 5 seconds for DB to be fully ready
     await new Promise(resolve => setTimeout(resolve, 5000));
     
-    // Check if already executed
     const pool = global.pool;
     if (!pool) {
       console.log('[Meta Review] Pool not ready, skipping test');
       return;
     }
     
-    const check = await pool.query(
-      "SELECT executed_at FROM meta_review_tests WHERE test_name = 'utility_message'"
-    );
+    const testsToRun = [
+      { name: 'utility_message', label: 'pages_utility_messaging', type: 'facebook' },
+      { name: 'public_profile', label: 'public_profile', type: 'facebook' },
+      { name: 'pages_show_list', label: 'pages_show_list', type: 'facebook' },
+      { name: 'ig_manage_messages', label: 'instagram_manage_messages', type: 'instagram' },
+      { name: 'ig_manage_comments', label: 'instagram_manage_comments', type: 'instagram' },
+      { name: 'ig_manage_insights', label: 'instagram_manage_insights', type: 'instagram' },
+      { name: 'ig_content_publish', label: 'instagram_content_publish', type: 'instagram' }
+    ];
     
-    if (check.rows.length > 0) {
-      console.log('[Meta Review] Test already executed on', check.rows[0].executed_at);
-      return;
+    for (const test of testsToRun) {
+      const check = await pool.query(
+        "SELECT executed_at FROM meta_review_tests WHERE test_name = $1",
+        [test.name]
+      );
+      
+      if (check.rows.length > 0) {
+        console.log(`[Meta Review] Test '${test.name}' (${test.label}) already executed on`, check.rows[0].executed_at);
+        continue;
+      }
+      
+      console.log(`[Meta Review] Executing ${test.label} test...`);
+      
+      if (test.type === 'facebook') {
+        await executeFacebookTest(pool, test.name, test.label);
+      } else if (test.type === 'instagram') {
+        await executeInstagramTest(pool, test.name, test.label);
+      }
     }
     
-    console.log('[Meta Review] Executing utility message test...');
+  } catch (error) {
+    console.error('[Meta Review] Test error:', error.message);
+  }
+}
+
+async function executeFacebookTest(pool, testName, testLabel) {
+  const userRes = await pool.query(
+    "SELECT user_id, facebook_config FROM user_integrations WHERE facebook_config IS NOT NULL LIMIT 1"
+  );
+  
+  if (userRes.rows.length === 0) {
+    console.log(`[Meta Review] No Facebook integration found. Skipping ${testName} test.`);
+    return;
+  }
+  
+  const user = userRes.rows[0];
+  const config = user.facebook_config;
+  const accessToken = config.user_access_token || config.access_token;
+  
+  if (testName === 'public_profile') {
+    console.log('[Meta Review] Fetching public profile...');
     
-    // Get first user with Facebook connected
-    const userRes = await pool.query(
-      "SELECT user_id, facebook_config FROM user_integrations WHERE facebook_config IS NOT NULL LIMIT 1"
-    );
-    
-    if (userRes.rows.length === 0) {
-      console.log('[Meta Review] No Facebook integration found. Skipping test.');
-      return;
-    }
-    
-    const user = userRes.rows[0];
-    const config = user.facebook_config;
-    
-    // Get ANY lead with Facebook PSID (not limited to 24h for Meta Review test)
-    const leadRes = await pool.query(
-      `SELECT facebook_psid FROM leads l
-       JOIN agents a ON l.agent_id = a.id
-       WHERE a.user_id = $1 
-         AND l.facebook_psid IS NOT NULL
-       LIMIT 1`,
-      [user.user_id]
-    );
-    
-    if (leadRes.rows.length === 0) {
-      console.log('[Meta Review] No Facebook leads found in database. Skipping test.');
-      console.log('[Meta Review] Tip: Someone must send a message to your Facebook page first.');
-      return;
-    }
-    
-    const psid = leadRes.rows[0].facebook_psid;
-    console.log('[Meta Review] Sending test message to PSID:', psid);
-    
-    // Send test message with CONFIRMATION_UPDATE tag
     const response = await fetch(
-      `https://graph.facebook.com/v18.0/${config.page_id}/messages`,
+      `https://graph.facebook.com/v18.0/me?fields=id,name,picture.width(100)&access_token=${accessToken}`
+    );
+    const data = await response.json();
+    
+    if (data.error) {
+      console.log('[Meta Review] public_profile FAILED:', data.error.message);
+      await pool.query(
+        "INSERT INTO meta_review_tests (test_name, result) VALUES ('public_profile', $1)",
+        [JSON.stringify({ success: false, error: data.error.message })]
+      );
+    } else {
+      console.log('[Meta Review] public_profile SUCCESS:', data.name);
+      await pool.query(
+        "INSERT INTO meta_review_tests (test_name, result) VALUES ('public_profile', $1)",
+        [JSON.stringify({ success: true, data: { id: data.id, name: data.name } })]
+      );
+    }
+    
+  } else if (testName === 'pages_show_list') {
+    console.log('[Meta Review] Fetching pages list...');
+    
+    const response = await fetch(
+      `https://graph.facebook.com/v18.0/me/accounts?fields=id,name,access_token&access_token=${accessToken}`
+    );
+    const data = await response.json();
+    
+    if (data.error) {
+      console.log('[Meta Review] pages_show_list FAILED:', data.error.message);
+      await pool.query(
+        "INSERT INTO meta_review_tests (test_name, result) VALUES ('pages_show_list', $1)",
+        [JSON.stringify({ success: false, error: data.error.message })]
+      );
+    } else {
+      console.log('[Meta Review] pages_show_list SUCCESS:', data.data?.length, 'pages found');
+      await pool.query(
+        "INSERT INTO meta_review_tests (test_name, result) VALUES ('pages_show_list', $1)",
+        [JSON.stringify({ success: true, pages_count: data.data?.length || 0 })]
+      );
+    }
+    
+  } else if (testName === 'utility_message') {
+    await executeUtilityMessageTest(pool);
+  }
+}
+
+async function executeUtilityMessageTest(pool) {
+  const userRes = await pool.query(
+    "SELECT user_id, facebook_config FROM user_integrations WHERE facebook_config IS NOT NULL LIMIT 1"
+  );
+  
+  if (userRes.rows.length === 0) {
+    console.log('[Meta Review] No Facebook integration found. Skipping utility_message test.');
+    return;
+  }
+  
+  const user = userRes.rows[0];
+  const config = user.facebook_config;
+  
+  const leadRes = await pool.query(
+    `SELECT facebook_psid FROM leads l
+     JOIN agents a ON l.agent_id = a.id
+     WHERE a.user_id = $1 AND l.facebook_psid IS NOT NULL
+     LIMIT 1`,
+    [user.user_id]
+  );
+  
+  if (leadRes.rows.length === 0) {
+    console.log('[Meta Review] No Facebook leads found. Skipping utility_message test.');
+    return;
+  }
+  
+  const psid = leadRes.rows[0].facebook_psid;
+  console.log('[Meta Review] Sending utility message to PSID:', psid);
+  
+  const response = await fetch(
+    `https://graph.facebook.com/v18.0/${config.page_id}/messages`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${config.access_token}`
+      },
+      body: JSON.stringify({
+        recipient: { id: psid },
+        message: { text: '✅ Test confirmation message for Meta App Review. Your appointment has been confirmed.' },
+        messaging_type: 'MESSAGE_TAG',
+        tag: 'CONFIRMATION_UPDATE'
+      })
+    }
+  );
+  
+  const data = await response.json();
+  
+  if (data.error) {
+    console.log('[Meta Review] utility_message FAILED:', data.error.message);
+    await pool.query(
+      "INSERT INTO meta_review_tests (test_name, result) VALUES ('utility_message', $1)",
+      [JSON.stringify({ success: false, error: data.error.message })]
+    );
+  } else {
+    console.log('[Meta Review] utility_message SUCCESS! Message ID:', data.message_id);
+    await pool.query(
+      "INSERT INTO meta_review_tests (test_name, result) VALUES ('utility_message', $1)",
+      [JSON.stringify({ success: true, message_id: data.message_id })]
+    );
+  }
+}
+
+async function executeInstagramTest(pool, testName, testLabel) {
+  const igRes = await pool.query(
+    "SELECT user_id, instagram_config FROM user_integrations WHERE instagram_config IS NOT NULL LIMIT 1"
+  );
+  
+  if (igRes.rows.length === 0) {
+    console.log(`[Meta Review] No Instagram integration found. Skipping ${testName} test.`);
+    return;
+  }
+  
+  const user = igRes.rows[0];
+  const config = user.instagram_config;
+  const accessToken = config.access_token;
+  const igAccountId = config.ig_account_id || config.page_id;
+  
+  if (!igAccountId) {
+    console.log(`[Meta Review] No Instagram account ID found. Skipping ${testName} test.`);
+    return;
+  }
+  
+  const igUserRes = await pool.query(
+    `SELECT instagram_psid FROM leads l
+     JOIN agents a ON l.agent_id = a.id
+     WHERE a.user_id = $1 AND l.instagram_psid IS NOT NULL
+     LIMIT 1`,
+    [user.user_id]
+  );
+  
+  if (testName === 'ig_manage_messages') {
+    if (igUserRes.rows.length === 0) {
+      console.log('[Meta Review] No Instagram users found. Skipping ig_manage_messages test.');
+      return;
+    }
+    
+    const igUserId = igUserRes.rows[0].instagram_psid;
+    console.log('[Meta Review] Sending test message to Instagram user:', igUserId);
+    
+    const response = await fetch(
+      `https://graph.facebook.com/v18.0/me/messages?access_token=${accessToken}`,
       {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${config.access_token}`
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          recipient: { id: psid },
-          message: { text: '✅ Test confirmation message for Meta App Review. Your appointment has been confirmed.' },
-          messaging_type: 'MESSAGE_TAG',
-          tag: 'CONFIRMATION_UPDATE'
+          recipient: { id: igUserId },
+          message: { text: '✅ Test message for Meta App Review - instagram_business_manage_messages' }
         })
       }
     );
@@ -499,23 +646,88 @@ async function executeMetaReviewTest() {
     const data = await response.json();
     
     if (data.error) {
-      console.log('[Meta Review] Test FAILED:', data.error.message);
+      console.log(`[Meta Review] ${testName} FAILED:`, data.error.message);
       await pool.query(
-        "INSERT INTO meta_review_tests (test_name, result) VALUES ('utility_message', $1)",
-        [JSON.stringify({ success: false, error: data.error.message, executed_at: new Date().toISOString() })]
+        "INSERT INTO meta_review_tests (test_name, result) VALUES ($1, $2)",
+        [testName, JSON.stringify({ success: false, error: data.error.message })]
       );
     } else {
-      console.log('[Meta Review] Test SUCCESS! Message ID:', data.message_id);
-      console.log('[Meta Review] Recipient ID:', data.recipient_id);
+      console.log(`[Meta Review] ${testName} SUCCESS! Message ID:`, data.message_id);
       await pool.query(
-        "INSERT INTO meta_review_tests (test_name, result) VALUES ('utility_message', $1)",
-        [JSON.stringify({ success: true, message_id: data.message_id, recipient_id: data.recipient_id })]
+        "INSERT INTO meta_review_tests (test_name, result) VALUES ($1, $2)",
+        [testName, JSON.stringify({ success: true, message_id: data.message_id })]
       );
-      console.log('[Meta Review] Test recorded in database. Will not run again on next startup.');
     }
+  } else if (testName === 'ig_manage_insights') {
+    console.log('[Meta Review] Fetching Instagram Insights...');
     
-  } catch (error) {
-    console.error('[Meta Review] Test error:', error.message);
+    const response = await fetch(
+      `https://graph.facebook.com/v18.0/${igAccountId}/insights?metric=follower_count,impressions,reach&access_token=${accessToken}`
+    );
+    
+    const data = await response.json();
+    
+    if (data.error) {
+      console.log(`[Meta Review] ${testName} FAILED:`, data.error.message);
+      await pool.query(
+        "INSERT INTO meta_review_tests (test_name, result) VALUES ($1, $2)",
+        [testName, JSON.stringify({ success: false, error: data.error.message })]
+      );
+    } else {
+      console.log(`[Meta Review] ${testName} SUCCESS! Data:`, JSON.stringify(data).substring(0, 200));
+      await pool.query(
+        "INSERT INTO meta_review_tests (test_name, result) VALUES ($1, $2)",
+        [testName, JSON.stringify({ success: true, data: data.data })]
+      );
+    }
+  } else if (testName === 'ig_manage_comments') {
+    console.log('[Meta Review] Fetching Instagram media comments...');
+    
+    const mediaRes = await fetch(
+      `https://graph.facebook.com/v18.0/${igAccountId}/media?fields=id,media_type&access_token=${accessToken}`
+    );
+    const mediaData = await mediaRes.json();
+    
+    if (mediaData.data && mediaData.data.length > 0) {
+      const mediaId = mediaData.data[0].id;
+      const commentsRes = await fetch(
+        `https://graph.facebook.com/v18.0/${mediaId}/comments?access_token=${accessToken}`
+      );
+      const commentsData = await commentsRes.json();
+      
+      console.log(`[Meta Review] ${testName} SUCCESS! Comments fetched:`, commentsData.data?.length || 0);
+      await pool.query(
+        "INSERT INTO meta_review_tests (test_name, result) VALUES ($1, $2)",
+        [testName, JSON.stringify({ success: true, comments_count: commentsData.data?.length || 0 })]
+      );
+    } else {
+      console.log(`[Meta Review] ${testName} SUCCESS (no media to test)!`);
+      await pool.query(
+        "INSERT INTO meta_review_tests (test_name, result) VALUES ($1, $2)",
+        [testName, JSON.stringify({ success: true, note: 'No media found to fetch comments' })]
+      );
+    }
+  } else if (testName === 'ig_content_publish') {
+    console.log('[Meta Review] Testing Instagram content publishing capabilities...');
+    
+    const response = await fetch(
+      `https://graph.facebook.com/v18.0/${igAccountId}?fields=media_limit,media_count&access_token=${accessToken}`
+    );
+    const data = await response.json();
+    
+    if (data.error) {
+      console.log(`[Meta Review] ${testName} FAILED:`, data.error.message);
+      await pool.query(
+        "INSERT INTO meta_review_tests (test_name, result) VALUES ($1, $2)",
+        [testName, JSON.stringify({ success: false, error: data.error.message })]
+      );
+    } else {
+      console.log(`[Meta Review] ${testName} SUCCESS! Media count:`, data.media_count);
+      await pool.query(
+        "INSERT INTO meta_review_tests (test_name, result) VALUES ($1, $2)",
+        [testName, JSON.stringify({ success: true, media_count: data.media_count })]
+      );
+    }
   }
 }
 

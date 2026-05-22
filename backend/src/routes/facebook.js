@@ -71,19 +71,26 @@ router.post('/onboarding', auth, async (req, res) => {
 // ============================================
 async function handleFacebookMessages(body, req) {
   const pool = global.pool
+  console.log('[Facebook Handler] Starting message processing...')
 
   for (const entry of body.entry) {
     const pageId = entry.id
     const messaging = entry.messaging || []
+    
+    console.log(`[Facebook Handler] Processing entry for page: ${pageId}, messaging events: ${messaging.length}`)
 
     for (const event of messaging) {
-      if (!event.message || !event.sender || event.message.is_echo) continue
+      if (!event.message || !event.sender || event.message.is_echo) {
+        console.log('[Facebook Handler] Skipping event - no message, no sender, or is_echo:', JSON.stringify(event).substring(0, 200))
+        continue
+      }
 
       const senderId = event.sender.id
       const messageText = event.message.text || ''
       const messageId = event.message.mid
 
-      console.log(`[Facebook Webhook] Message from ${senderId}: ${messageText}`)
+      console.log(`[Facebook Handler] Message from ${senderId}: ${messageText}`)
+      console.log(`[Facebook Handler] Message ID: ${messageId}`)
 
       // Find user by page_id
       const userRes = await pool.query(
@@ -171,6 +178,7 @@ router.get('/webhook', (req, res) => {
   const { 'hub.mode': mode, 'hub.verify_token': token, 'hub.challenge': challenge } = req.query
 
   console.log('[Facebook Webhook GET] Mode:', mode, 'Token received:', token, 'Expected:', VERIFY_TOKEN)
+  console.log('[Facebook Webhook GET] Full query:', JSON.stringify(req.query))
 
   if (mode === 'subscribe' && token === VERIFY_TOKEN) {
     console.log('[Facebook Webhook] Verified successfully, sending challenge:', challenge)
@@ -187,13 +195,20 @@ router.get('/webhook', (req, res) => {
 router.post('/webhook', async (req, res) => {
   try {
     const body = req.body
-    console.log('[Webhook] Received:', JSON.stringify({ object: body.object, entry_count: body.entry?.length }).substring(0, 200))
-
+    console.log('[Webhook] ====== FACEBOOK/INSTAGRAM WEBHOOK RECEIVED ======')
+    console.log('[Webhook] Object type:', body.object)
+    console.log('[Webhook] Entry count:', body.entry?.length)
+    console.log('[Webhook] Full body:', JSON.stringify(body, null, 2).substring(0, 2000))
+    
     if (body.object === 'page') {
+      console.log('[Webhook] Processing Facebook Messenger event...')
       await handleFacebookMessages(body, req)
+      console.log('[Webhook] Facebook event processed successfully')
       res.status(200).send('EVENT_RECEIVED')
     } else if (body.object === 'instagram') {
+      console.log('[Webhook] Processing Instagram event...')
       await handleInstagramMessages(body, req)
+      console.log('[Webhook] Instagram event processed successfully')
       res.status(200).send('EVENT_RECEIVED')
     } else {
       console.log('[Webhook] Unknown object type:', body.object)
@@ -528,6 +543,90 @@ router.get('/metrics', auth, async (req, res) => {
   } catch (error) {
     console.error('[Facebook Metrics Error]:', error)
     res.status(500).json({ error: 'Error obteniendo métricas' })
+  }
+})
+
+// ============================================
+// WEBHOOK DIAGNOSTIC ENDPOINT
+// ============================================
+router.get('/webhook-status', auth, async (req, res) => {
+  try {
+    const pool = req.pool
+    const userId = req.user.id
+
+    const configRes = await pool.query(
+      'SELECT facebook_config, instagram_config FROM user_integrations WHERE user_id = $1',
+      [userId]
+    )
+
+    const fbConfig = configRes.rows[0]?.facebook_config
+    const igConfig = configRes.rows[0]?.instagram_config
+
+    const status = {
+      facebook: {
+        connected: !!fbConfig,
+        page_id: fbConfig?.page_id || null,
+        page_name: fbConfig?.page_name || null,
+        webhook_url: process.env.FRONTEND_URL ? `${process.env.FRONTEND_URL}/api/integrations/facebook/webhook` : 'Not configured',
+        verify_token: process.env.FACEBOOK_VERIFY_TOKEN || 'pivot_verify_token_2024'
+      },
+      instagram: {
+        connected: !!igConfig,
+        page_id: igConfig?.page_id || null,
+        ig_account_id: igConfig?.ig_account_id || null
+      }
+    }
+
+    res.json({ success: true, status })
+  } catch (error) {
+    console.error('[Webhook Status Error]:', error)
+    res.status(500).json({ error: 'Error getting webhook status' })
+  }
+})
+
+// ============================================
+// RESUBSCRIBE WEBHOOKS
+// ============================================
+router.post('/resubscribe-webhooks', auth, async (req, res) => {
+  try {
+    const pool = req.pool
+    const userId = req.user.id
+
+    const configRes = await pool.query(
+      'SELECT facebook_config FROM user_integrations WHERE user_id = $1',
+      [userId]
+    )
+
+    if (!configRes.rows[0]?.facebook_config) {
+      return res.status(400).json({ error: 'Facebook not connected' })
+    }
+
+    const config = configRes.rows[0].facebook_config
+    const pageId = config.page_id
+    const accessToken = config.access_token
+
+    const subRes = await fetch(
+      `https://graph.facebook.com/v18.0/${pageId}/subscribed_apps`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subscribed_fields: ['messages', 'messaging_postbacks', 'messaging_optins', 'messaging_referrals']
+        })
+      }
+    )
+
+    const subData = await subRes.json()
+    console.log('[Facebook Resubscribe] Response:', subData)
+
+    if (subData.error) {
+      return res.status(400).json({ error: subData.error.message })
+    }
+
+    res.json({ success: true, message: 'Webhooks resubscribed successfully', data: subData })
+  } catch (error) {
+    console.error('[Facebook Resubscribe Error]:', error)
+    res.status(500).json({ error: 'Error resubscribing webhooks' })
   }
 })
 

@@ -16,6 +16,8 @@ export default function Integrations() {
   const [selectedPage, setSelectedPage] = useState(null)
   const [facebookPages, setFacebookPages] = useState([])
   const [showPageSelector, setShowPageSelector] = useState(false)
+  const [metaReviewStatus, setMetaReviewStatus] = useState({ tests: [], totalCompleted: 0, totalRequired: 0 })
+  const [loadingMetaTests, setLoadingMetaTests] = useState(false)
 
   useEffect(() => { loadData() }, [])
 
@@ -48,12 +50,14 @@ export default function Integrations() {
 
   const loadData = async () => {
     try {
-      const [intRes, metaRes] = await Promise.all([
+      const [intRes, metaRes, metaTestsRes] = await Promise.all([
         api.get('/integrations'),
-        api.get('/integrations/meta/config-ids').catch(() => ({ data: { configs: {} } }))
+        api.get('/integrations/meta/config-ids').catch(() => ({ data: { configs: {} } })),
+        api.get('/integrations/meta-review-status').catch(() => ({ data: { tests: [] } }))
       ])
       setIntegrations(intRes.data.integrations || {})
       if (metaRes.data.success) setMetaConfigs(metaRes.data)
+      if (metaTestsRes.data.success) setMetaReviewStatus(metaTestsRes.data)
     } catch (err) { console.error(err) }
     finally { setLoading(false) }
   }
@@ -238,10 +242,34 @@ export default function Integrations() {
       loadData()
       setShowPageSelector(false)
       setSelectedPage(null)
+      setConnecting(null)
+    } catch (err) {
+      alert('Error: ' + (err.response?.data?.error || err.message))
+      setConnecting(null)
+    }
+  }
+
+  // Ejecutar test de Meta Review manualmente
+  const runMetaTest = async (testType) => {
+    setLoadingMetaTests(true)
+    try {
+      let res
+      if (testType === 'utility_message') {
+        res = await api.post('/integrations/test-utility-message')
+      } else if (testType === 'public_profile') {
+        res = await api.post('/integrations/test-public-profile')
+      } else if (testType === 'pages_show_list') {
+        res = await api.post('/integrations/test-pages-show-list')
+      } else {
+        const permission = testType.replace('ig_', '')
+        res = await api.post(`/integrations/test-instagram/${permission}`)
+      }
+      alert(`✅ Test completado: ${res.data.message}`)
+      loadData()
     } catch (err) {
       alert('Error: ' + (err.response?.data?.error || err.message))
     } finally {
-      setConnecting(null)
+      setLoadingMetaTests(false)
     }
   }
 
@@ -278,6 +306,45 @@ export default function Integrations() {
     } catch (err) { alert('Error desconectando: ' + (err.response?.data?.error || err.message)) }
   }
 
+  const checkWebhookStatus = async () => {
+    try {
+      const res = await api.get('/integrations/facebook/webhook-status')
+      const status = res.data.status
+      const fb = status.facebook
+      const ig = status.instagram
+      
+      let message = `📘 Facebook Messenger:\n`
+      message += `Conectado: ${fb.connected ? '✅ Sí' : '❌ No'}\n`
+      if (fb.connected) {
+        message += `Página: ${fb.page_name} (${fb.page_id})\n`
+      }
+      message += `\nWebhook URL: ${fb.webhook_url}\n`
+      message += `Verify Token: ${fb.verify_token}\n`
+      
+      if (ig.connected) {
+        message += `\n📷 Instagram:\n`
+        message += `Conectado: ✅ Sí\n`
+        message += `Page ID: ${ig.page_id}\n`
+        message += `IG Account ID: ${ig.ig_account_id}\n`
+      }
+      
+      alert(message)
+    } catch (err) {
+      alert('Error: ' + (err.response?.data?.error || err.message))
+    }
+  }
+
+  const resubscribeWebhooks = async () => {
+    if (!confirm('¿Re-suscribir webhooks de Facebook? Esto actualizará la suscripción en Meta.')) return
+    try {
+      const res = await api.post('/integrations/facebook/resubscribe-webhooks')
+      alert('✅ Webhooks re-suscritos: ' + JSON.stringify(res.data.data).substring(0, 100))
+      loadData()
+    } catch (err) {
+      alert('Error: ' + (err.response?.data?.error || err.message))
+    }
+  }
+
   const cards = [
     {
       key: 'whatsapp', icon: '📱', iconBg: 'bg-green-100 text-green-600',
@@ -304,7 +371,9 @@ export default function Integrations() {
       connectedLabel: integrations.facebook_config?.page_name,
       onConnect: connectFacebook, connectLabel: 'Conectar con Facebook',
       onDisconnect: () => disconnectIntegration('facebook'),
-      onManual: () => openModal('facebook'), manualLabel: 'Manual'
+      onManual: () => openModal('facebook'), manualLabel: 'Manual',
+      onDiagnostic: checkWebhookStatus,
+      onResubscribe: resubscribeWebhooks
     },
     {
       key: 'tiktok', icon: '🎵', iconBg: 'bg-gray-100 text-gray-900',
@@ -368,6 +437,63 @@ export default function Integrations() {
           <p className="text-slate-500 text-sm">Conecta tus cuentas con un clic. Tus usuarios finales no necesitan crear aplicaciones.</p>
         </div>
 
+        {/* Meta App Review Status */}
+        <div className="mb-8 bg-white rounded-xl border border-slate-200 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold text-slate-900">📋 Meta App Review - Estado de Tests</h2>
+            <span className={`px-3 py-1 rounded-full text-sm font-medium ${metaReviewStatus.totalCompleted >= metaReviewStatus.totalRequired ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+              {metaReviewStatus.totalCompleted}/{metaReviewStatus.totalRequired} completados
+            </span>
+          </div>
+          <p className="text-sm text-slate-600 mb-4">
+            Estos tests se ejecutan automáticamente al iniciar el backend. También puedes ejecutarlos manualmente si es necesario.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {metaReviewStatus.tests.map((test) => (
+              <div
+                key={test.label}
+                className={`p-4 rounded-lg border ${test.executed ? 'bg-green-50 border-green-200' : 'bg-slate-50 border-slate-200'}`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-lg">{test.type === 'facebook' ? '📘' : '📷'}</span>
+                      <span className="font-semibold text-slate-800 text-sm">{test.label}</span>
+                    </div>
+                    {test.executed ? (
+                      <>
+                        <div className="text-xs text-green-700 mb-1">✅ Ejecutado</div>
+                        <div className="text-xs text-slate-500">{new Date(test.executed_at).toLocaleString()}</div>
+                      </>
+                    ) : (
+                      <div className="text-xs text-slate-500">⏳ Pendiente</div>
+                    )}
+                  </div>
+                  {!test.executed && (
+                    <button
+                      onClick={() => {
+                        if (test.label === 'pages_utility_messaging') {
+                          runMetaTest('utility_message')
+                        } else if (test.label === 'public_profile') {
+                          runMetaTest('public_profile')
+                        } else if (test.label === 'pages_show_list') {
+                          runMetaTest('pages_show_list')
+                        } else {
+                          runMetaTest(`ig_${test.label.replace('instagram_', '').replace('business_', '')}`)
+                        }
+                      }}
+                      disabled={loadingMetaTests}
+                      className="px-2 py-1 bg-brand-600 text-white text-xs rounded hover:bg-brand-700 disabled:opacity-50"
+                    >
+                      {loadingMetaTests ? '...' : 'Ejecutar'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {cards.map(card => (
             <div key={card.key} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
@@ -391,6 +517,18 @@ export default function Integrations() {
                       className="flex-shrink-0 px-4 py-2.5 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors text-sm">
                       Desconectar
                     </button>
+                    {card.onDiagnostic && (
+                      <button onClick={card.onDiagnostic}
+                        className="flex-shrink-0 px-4 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors text-sm">
+                        🔍 Diagnosticar
+                      </button>
+                    )}
+                    {card.onResubscribe && (
+                      <button onClick={card.onResubscribe}
+                        className="flex-shrink-0 px-4 py-2.5 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors text-sm">
+                        🔄 Re-suscribir
+                      </button>
+                    )}
                     <button onClick={card.onManual}
                       className="flex-1 px-4 py-2.5 bg-white border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50 text-sm">
                       Editar

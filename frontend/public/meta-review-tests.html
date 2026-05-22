@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meta App Review Tests</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; background: #f5f5f5; }
+    h1 { color: #333; }
+    .card { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .test { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: #f9f9f9; margin: 10px 0; border-radius: 6px; }
+    .test.done { background: #e8f5e9; }
+    input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+    button { padding: 10px 20px; background: #dc2626; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+    button:hover { background: #b91c1c; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
+    .alert { padding: 15px; background: #e3f2fd; border-radius: 6px; margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+  <h1>📋 Meta App Review Tests</h1>
+  <div class="alert">Ingresa tu token y haz clic en Verificar Estado, luego Ejecutar en cada test.</div>
+  
+  <div class="card">
+    <h2>🔑 Token</h2>
+    <input type="text" id="token" placeholder="Tu token de autenticación">
+    <button onclick="checkStatus()">🔄 Verificar Estado</button>
+  </div>
+  
+  <div class="card" id="tests"></div>
+  
+  <script>
+    const API = 'https://agents.pivotsoluciones.com/api';
+    const tests = [
+      {n:'public_profile', l:'public_profile', t:'f', e:'/integrations/test-public-profile'},
+      {n:'pages_show_list', l:'pages_show_list', t:'f', e:'/integrations/test-pages-show-list'},
+      {n:'utility_message', l:'pages_utility_messaging', t:'f', e:'/integrations/test-utility-message'},
+      {n:'ig_manage_messages', l:'instagram_manage_messages', t:'i', e:'/integrations/test-instagram/manage_messages'},
+      {n:'ig_manage_comments', l:'instagram_manage_comments', t:'i', e:'/integrations/test-instagram/manage_comments'},
+      {n:'ig_manage_insights', l:'instagram_manage_insights', t:'i', e:'/integrations/test-instagram/manage_insights'},
+      {n:'ig_content_publish', l:'instagram_content_publish', t:'i', e:'/integrations/test-instagram/content_publish'}
+    ];
+    
+    async function checkStatus() {
+      const token = document.getElementById('token').value.trim();
+      if (!token) { alert('Ingresa tu token'); return; }
+      
+      try {
+        const r = await fetch(API + '/integrations/meta-review-status', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (!r.ok) throw new Error('Token inválido');
+        const d = await r.json();
+        renderTests(d.tests, token);
+      } catch (e) { alert('Error: ' + e.message); }
+    }
+    
+    function renderTests(list, token) {
+      const div = document.getElementById('tests');
+      div.innerHTML = '<h2>Tests</h2>';
+      list.forEach(t => {
+        div.innerHTML += '<div class="test' + (t.executed ? ' done' : '') + '">' +
+          '<div><strong>' + (t.type==='f'?'📘':'📷') + ' ' + t.label + '</strong><br>' +
+          (t.executed ? '✅ ' + new Date(t.executed_at).toLocaleString() : '⏳ Pendiente') + '</div>' +
+          (t.executed ? '<button disabled>Completado</button>' : '<button onclick="run(\'' + t.n + '\',\'' + t.e + '\')">Ejecutar</button>') +
+          '</div>';
+      });
+    }
+    
+    async function run(name, endpoint) {
+      const token = document.getElementById('token').value.trim();
+      if (!token) { alert('Ingresa tu token'); return; }
+      
+      const btn = event.target;
+      btn.disabled = true;
+      btn.textContent = 'Ejecutando...';
+      
+      try {
+        const r = await fetch(API + endpoint, {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }
+        });
+        const d = await r.json();
+        alert((r.ok?'✅ ':'❌ ') + (d.message || d.error));
+        if (r.ok) checkStatus();
+        else { btn.disabled = false; btn.textContent = 'Ejecutar'; }
+      } catch (e) {
+        alert('Error: ' + e.message);
+        btn.disabled = false;
+        btn.textContent = 'Ejecutar';
+      }
+    }
+    
+    renderTests(tests);
+  </script>
+</body>
+</html>

@@ -27,7 +27,63 @@ Requerimos `pages_read_engagement` para leer los mensajes directos (DMs) que los
 
 ## 6. pages_messaging
 **¿Cómo usa tu aplicación este permiso o función?**
-Usamos `pages_messaging` para enviar respuestas a los mensajes que los clientes envían a la Página de Facebook del usuario. Cuando un cliente escribe a la Página, nuestro agente de IA procesa el mensaje y genera una respuesta contextual que es enviada de vuelta a través de la API de Messenger. Esto permite a las empresas atender a sus clientes 24/7 sin intervención manual. También usamos este permiso para marcar mensajes como leídos y mostrar indicadores de escritura para mejorar la experiencia del usuario final.
+
+Nuestra aplicación Pivot.AI es un CRM con Inteligencia Artificial diseñado para ayudar a las empresas a automatizar su atención al cliente a través de múltiples canales, incluyendo Facebook Messenger.
+
+**Uso específico del permiso:**
+
+1. **Recepción de mensajes entrantes:** Cuando un cliente final envía un mensaje a la Página de Facebook de nuestro usuario, usamos `pages_messaging` para recibir ese mensaje a través de webhooks en tiempo real.
+
+2. **Respuestas automáticas con IA:** Una vez que recibimos el mensaje, nuestro agente de IA procesa el contenido, entiende la intención del cliente (consulta de producto, soporte técnico, agendamiento de cita, etc.) y genera una respuesta contextual y personalizada que es enviada de vuelta al cliente a través de la API de Messenger.
+
+3. **Gestión de estado de mensajes:** Usamos este permiso para marcar los mensajes como leídos y mostrar indicadores de "escribiendo..." para mejorar la experiencia del usuario final, haciendo que la interacción se sienta más natural y humana.
+
+4. **Experiencias interactivas iniciadas por el usuario:** Cuando un cliente inicia una conversación con la Página (por ejemplo, haciendo clic en un botón de "Enviar mensaje" desde un anuncio de Facebook), nuestro sistema responde automáticamente para guiar al usuario a través de flujos conversacionales predefinidos (qualificación de leads, agendamiento de citas, respuestas a preguntas frecuentes).
+
+5. **Confirmación de transacciones:** Después de que un usuario completa una acción (como reservar una cita o hacer un pedido), enviamos mensajes de confirmación con los detalles de la transacción, siguiendo las políticas de Messaging Features de Meta.
+
+**Valor para el usuario final:**
+- **Atención 24/7:** Los clientes de nuestras empresas usuarias pueden obtener respuestas inmediatas a cualquier hora, sin tener que esperar a que un agente humano esté disponible.
+- **Respuestas consistentes:** La IA asegura que todos los clientes reciban información precisa y actualizada sobre productos, servicios y políticas de la empresa.
+- **Tiempo de respuesta reducido:** Los clientes obtienen respuestas en segundos en lugar de minutos u horas.
+- **Experiencia personalizada:** La IA recuerda el contexto de la conversación y puede hacer seguimiento de interacciones previas.
+
+**Por qué es necesario:**
+Sin este permiso, nuestra aplicación no podría enviar respuestas a los mensajes que los clientes envían a las Páginas de Facebook. Esto impediría que nuestros agentes de IA funcionen, obligando a las empresas a tener personal humano disponible 24/7 para responder mensajes, lo cual no es escalable ni económicamente viable para la mayoría de nuestros usuarios (pequeñas y medianas empresas).
+
+**Casos de uso específicos que soportamos:**
+- **Soporte técnico:** Respuestas automáticas a preguntas sobre productos, troubleshooting, estado de pedidos
+- **Agendamiento de citas:** Los clientes pueden reservar, confirmar o reprogramar citas directamente desde Messenger
+- **Qualificación de leads:** Cuando un cliente hace clic en un anuncio, nuestro IA califica al lead haciendo preguntas relevantes antes de pasarlo a un agente humano
+- **E-commerce:** Respuestas sobre inventario, precios, envíos, y seguimiento de órdenes
+- **Educación:** Información sobre cursos, horarios, inscripción, y recordatorios de clases
+
+**Cumplimiento de políticas:**
+- Todos los mensajes siguen las políticas de Messaging Features de Meta
+- Respetamos la ventana de 24 horas para mensajes promocionales
+- Usamos message tags apropiados (CONFIRMATION_UPDATE, ACCOUNT_UPDATE, etc.) para mensajes fuera de la ventana de 24 horas
+- Los usuarios finales siempre pueden optar por no recibir más mensajes
+- No enviamos spam ni mensajes no solicitados
+
+**Instrucciones para probar esta integración:**
+
+**Paso 1:** Ve a nuestra página de prueba en Facebook: [Insertar enlace m.me/NombreDeTuPagina]
+
+**Paso 2:** Haz clic en el botón "Enviar mensaje" para iniciar una conversación con nuestro bot de prueba.
+
+**Paso 3:** Escribe un mensaje como "Hola, quiero información sobre sus servicios" o "Necesito agendar una cita".
+
+**Paso 4:** Observa cómo el agente de IA responde automáticamente en segundos, haciendo preguntas de seguimiento para entender mejor tu necesidad.
+
+**Paso 5:** Continúa la conversación haciendo más preguntas. La IA mantendrá el contexto y responderá coherentemente.
+
+**Paso 6 (opcional):** Ve a `https://agents.pivotsoluciones.com/crm` e inicia sesión con las credenciales de prueba proporcionadas para ver cómo la conversación aparece en el dashboard del CRM.
+
+**Credenciales de prueba (si aplica):**
+- Email: demo@pivotsoluciones.com
+- Password: [Proporcionar password temporal]
+
+**Enlace de video demostrativo:** [Subir archivo de video mostrando el flujo completo]
 
 ## 7. pages_utility_messaging
 **¿Cómo usa tu aplicación este permiso o función?**
@@ -99,14 +155,70 @@ Nuestra plataforma consolida datos publicitarios en un dashboard de inteligencia
 ---
 
 ### 🎬 Video para `pages_messaging`
-**Qué grabar:**
-1. Abre `agents.pivotsoluciones.com/crm`
-2. Muestra una conversación de Facebook Messenger (ícono 💬)
-3. Muestra el mensaje entrante del cliente
-4. Muestra la respuesta automática del agente de IA
-5. Si es posible, desde otra cuenta de Facebook envía un mensaje y muestra cómo llega en tiempo real
+**Qué grabar (paso a paso):**
 
-**Narración sugerida:** *"pages_messaging allows us to send responses back to customers who message the user's Facebook Page. Our AI agents process incoming messages and automatically reply through Messenger, providing 24/7 customer support."*
+1. **Inicio (10 seg):**
+   - Abre `https://agents.pivotsoluciones.com/crm`
+   - Muestra la barra de URL claramente
+   - Inicia sesión si es necesario
+
+2. **Bandeja de entrada (15 seg):**
+   - Muestra la lista de conversaciones en el sidebar izquierdo
+   - Identifica una conversación con el ícono 💬 (Facebook Messenger)
+   - Haz clic en esa conversación para abrirla
+
+3. **Mensaje entrante (15 seg):**
+   - Muestra el mensaje que el cliente envió a la Página de Facebook
+   - Señala el timestamp del mensaje
+   - Muestra el nombre del cliente y cualquier información disponible
+
+4. **Respuesta de la IA (20 seg):**
+   - Muestra cómo el sistema procesa el mensaje (puede mostrar "Escribiendo..." o indicador de carga)
+   - Muestra la respuesta automática que la IA generó y envió de vuelta al cliente
+   - Explica brevemente qué entendió la IA y por qué respondió así
+
+5. **Demo en vivo (30 seg - opcional pero recomendado):**
+   - Abre una ventana de incógnito o usa tu teléfono
+   - Ve a la Página de Facebook de prueba
+   - Envía un mensaje como "Hola, quiero información"
+   - Muestra cómo el mensaje llega al CRM en tiempo real
+   - Muestra cómo la IA responde automáticamente
+
+6. **Indicadores de estado (10 seg):**
+   - Muestra los indicadores de "leído" y "escribiendo..."
+   - Explica que estos mejoran la experiencia del usuario
+
+**Narración sugerida (en inglés si es posible):**
+
+*"pages_messaging allows us to send responses back to customers who message the user's Facebook Page. Let me show you how it works:*
+
+*When a customer sends a message to the Facebook Page, it appears in our CRM inbox. Our AI agent processes the message, understands the intent, and automatically generates a contextual response that is sent back through Messenger.*
+
+*This enables businesses to provide 24/7 customer support without manual intervention. The AI can handle common inquiries like product information, appointment scheduling, and technical support.*
+
+*We also use this permission to send read receipts and typing indicators, making the conversation feel more natural and human-like."*
+
+**Duración total:** 60-90 segundos
+
+**Checklist antes de grabar:**
+- [ ] La barra de URL muestra `https://agents.pivotsoluciones.com`
+- [ ] Tienes al menos 3-5 conversaciones de Facebook en el CRM
+- [ ] Las conversaciones muestran mensajes entrantes Y respuestas de la IA
+- [ ] El audio es claro y sin eco
+- [ ] La resolución del video es al menos 720p
+- [ ] El archivo de video pesa menos de 50MB (comprimir si es necesario)
+
+**Errores comunes a evitar:**
+- ❌ No mostrar la URL en la barra de navegación
+- ❌ Mostrar datos de clientes reales (usar datos de prueba)
+- ❌ Video demasiado largo (más de 2 minutos)
+- ❌ Audio de baja calidad o con eco
+- ❌ Mostrar múltiples pestañas o notificaciones personales
+
+**Subir el video:**
+1. Guarda el video en formato MP4
+2. Nómbralo: `pages_messaging_demo.mp4`
+3. Súbelo en la sección correspondiente de Meta App Review
 
 ---
 

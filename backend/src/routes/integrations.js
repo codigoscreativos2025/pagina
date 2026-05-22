@@ -267,10 +267,15 @@ router.post('/test-whatsapp-utility-message', auth, async (req, res) => {
     const accessToken = config.access_token
     
     // Get a lead with WhatsApp number (client_phone column)
+    // Note: WhatsApp webhooks create leads without setting source='whatsapp'
+    // We check if the agent has WhatsApp config instead
     const leadRes = await pool.query(
       `SELECT l.client_phone as whatsapp_number, l.name FROM leads l
        JOIN agents a ON l.agent_id = a.id
-       WHERE a.user_id = $1 AND l.client_phone IS NOT NULL AND l.source = 'whatsapp'
+       WHERE a.user_id = $1 
+         AND l.client_phone IS NOT NULL 
+         AND a.whatsapp_config IS NOT NULL
+       ORDER BY l.last_client_message_at DESC NULLS LAST
        LIMIT 1`,
       [userId]
     )

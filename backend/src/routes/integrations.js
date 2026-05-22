@@ -235,6 +235,117 @@ router.post('/test-utility-message', auth, async (req, res) => {
 })
 
 // ============================================
+// TEST WHATSAPP UTILITY MESSAGE (Meta App Review)
+// ============================================
+router.post('/test-whatsapp-utility-message', auth, async (req, res) => {
+  try {
+    const pool = req.pool
+    const userId = req.user.id
+    
+    const checkRes = await pool.query(
+      "SELECT executed_at, result FROM meta_review_tests WHERE test_name = 'whatsapp_utility_message'"
+    )
+    if (checkRes.rows.length > 0) {
+      return res.json({ 
+        message: 'Test already executed',
+        executed_at: checkRes.rows[0].executed_at,
+        result: checkRes.rows[0].result
+      })
+    }
+    
+    const configRes = await pool.query(
+      'SELECT whatsapp_config FROM user_integrations WHERE user_id = $1 AND whatsapp_config IS NOT NULL',
+      [userId]
+    )
+    
+    if (configRes.rows.length === 0 || !configRes.rows[0].whatsapp_config) {
+      return res.status(400).json({ error: 'WhatsApp not connected' })
+    }
+    
+    const config = configRes.rows[0].whatsapp_config
+    const phoneNumberId = config.phone_number_id
+    const accessToken = config.access_token
+    
+    // Get a lead with WhatsApp number
+    const leadRes = await pool.query(
+      `SELECT whatsapp_number, name FROM leads l
+       JOIN agents a ON l.agent_id = a.id
+       WHERE a.user_id = $1 AND l.whatsapp_number IS NOT NULL
+       LIMIT 1`,
+      [userId]
+    )
+    
+    if (leadRes.rows.length === 0) {
+      return res.status(400).json({ 
+        error: 'No WhatsApp leads found. Someone must message your WhatsApp number first.' 
+      })
+    }
+    
+    const whatsappNumber = leadRes.rows[0].whatsapp_number
+    const leadName = leadRes.rows[0].name
+    
+    console.log('[Meta Review] Sending WhatsApp utility message to:', whatsappNumber)
+    
+    // Send WhatsApp template message (utility - appointment confirmation)
+    const response = await fetch(
+      `https://graph.facebook.com/v17.0/${phoneNumberId}/messages`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        },
+        body: JSON.stringify({
+          messaging_product: 'whatsapp',
+          recipient_type: 'individual',
+          to: whatsappNumber,
+          type: 'template',
+          template: {
+            name: 'appointment_confirmation',
+            language: {
+              code: 'es'
+            },
+            components: [{
+              type: 'body',
+              parameters: [
+                { type: 'text', text: leadName },
+                { type: 'text', text: 'tu cita de prueba' },
+                { type: 'text', text: 'hoy a las 3:00 PM' }
+              ]
+            }]
+          }
+        })
+      }
+    )
+    
+    const data = await response.json()
+    
+    if (data.error) {
+      console.log('[Meta Review] WhatsApp utility_message FAILED:', data.error.message)
+      return res.status(400).json({ error: data.error.message })
+    }
+    
+    await pool.query(
+      "INSERT INTO meta_review_tests (test_name, result) VALUES ('whatsapp_utility_message', $1)",
+      [JSON.stringify({ success: true, message_id: data.messages?.[0]?.id, manual: true })]
+    )
+    
+    console.log('[Meta Review] WhatsApp utility_message SUCCESS:', data)
+    
+    res.json({ 
+      success: true, 
+      message: 'WhatsApp utility message sent successfully',
+      recipient: whatsappNumber,
+      message_id: data.messages?.[0]?.id
+    })
+    
+  } catch (error) {
+    console.error('Test WhatsApp utility message error:', error)
+    res.status(500).json({ error: error.message })
+  }
+})
+
+// ============================================
 // TEST INSTAGRAM PERMISSIONS (Meta App Review)
 // ============================================
 router.post('/test-instagram/:permission', auth, async (req, res) => {
@@ -370,6 +481,7 @@ router.get('/meta-review-status', auth, async (req, res) => {
     
     const testMap = {
       utility_message: { label: 'pages_utility_messaging', type: 'facebook', executed: false },
+      whatsapp_utility_message: { label: 'whatsapp_utility_messaging', type: 'whatsapp', executed: false },
       public_profile: { label: 'public_profile', type: 'facebook', executed: false },
       pages_show_list: { label: 'pages_show_list', type: 'facebook', executed: false },
       ig_manage_messages: { label: 'instagram_manage_messages', type: 'instagram', executed: false },

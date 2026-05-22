@@ -256,6 +256,8 @@ export default function Integrations() {
       let res
       if (testType === 'utility_message') {
         res = await api.post('/integrations/test-utility-message')
+      } else if (testType === 'whatsapp_utility_message') {
+        res = await api.post('/integrations/test-whatsapp-utility-message')
       } else if (testType === 'public_profile') {
         res = await api.post('/integrations/test-public-profile')
       } else if (testType === 'pages_show_list') {
@@ -474,6 +476,8 @@ export default function Integrations() {
                       onClick={() => {
                         if (test.label === 'pages_utility_messaging') {
                           runMetaTest('utility_message')
+                        } else if (test.label === 'whatsapp_utility_messaging') {
+                          runMetaTest('whatsapp_utility_message')
                         } else if (test.label === 'public_profile') {
                           runMetaTest('public_profile')
                         } else if (test.label === 'pages_show_list') {

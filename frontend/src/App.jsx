@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import Login from './pages/Login'
 import Register from './pages/Register'
@@ -34,9 +34,12 @@ function AdminRoute({ children }) {
 }
 
 function AppRoutes() {
+  const location = useLocation()
+  const isChatPage = location.pathname === '/crm'
+
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
-      <main className="flex-grow">
+    <div className={`flex flex-col min-h-screen bg-gray-50 ${isChatPage ? 'h-screen overflow-hidden' : ''}`}>
+      <main className={isChatPage ? 'flex-1 overflow-hidden' : 'flex-grow'}>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
@@ -62,6 +65,7 @@ function AppRoutes() {
         </Routes>
       </main>
       
+      {!isChatPage && (
       <footer className="bg-white border-t border-gray-200 mt-auto">
         <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center">
           <p className="text-sm text-gray-500 mb-4 sm:mb-0">
@@ -77,6 +81,7 @@ function AppRoutes() {
           </div>
         </div>
       </footer>
+      )}
     </div>
   )
 }

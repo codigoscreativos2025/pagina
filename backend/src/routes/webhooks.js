@@ -263,11 +263,7 @@ async function handleIncomingMedia(req, clientPhone, message, mediaType, agentPh
       }
     }
 
-    await pool.query(
-      `INSERT INTO messages (lead_id, sender_type, content, message_type, media_id)
-       VALUES ($1, 'client', $2, $3, $4)`,
-      [leadId, textForAI || `[${classifiedType.toUpperCase()}] ${saved.filename}`, classifiedType, mediaRow.id]
-    )
+    await saveMessage(pool, leadId, 'client', textForAI || `[${classifiedType.toUpperCase()}] ${saved.filename}`, classifiedType, mediaRow.id)
 
     if (textForAI) {
       await handleIncomingMessage(req, clientPhone, textForAI, agentPhone, clientName)

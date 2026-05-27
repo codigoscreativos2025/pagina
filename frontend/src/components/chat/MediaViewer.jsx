@@ -5,10 +5,7 @@ export default function MediaViewer({ msg, api }) {
 
   if (!msg.media_type && msg.message_type !== 'image' && msg.message_type !== 'video') return null
 
-  const getMediaUrl = () => {
-    if (!msg.media_id) return null
-    return `${api.defaults.baseURL || '/api'}/media/info/${msg.media_id}`
-  }
+  const mediaUrl = msg.media_url || `${api.defaults.baseURL || '/api'}/media/${msg.media_id}`
 
   const isImage = msg.media_type === 'image' || msg.message_type === 'image'
 
@@ -20,7 +17,7 @@ export default function MediaViewer({ msg, api }) {
       >
         {isImage ? (
           <img
-            src={`${api.defaults.baseURL || '/api'}/media/${msg.media_id}?token=${localStorage.getItem('token')}`}
+            src={mediaUrl}
             alt={msg.media_filename || 'Imagen'}
             className="w-full h-auto rounded-lg"
             loading="lazy"
@@ -46,24 +43,15 @@ export default function MediaViewer({ msg, api }) {
           </button>
           <div className="max-w-[90vw] max-h-[85vh] flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
             {isImage ? (
-              <img
-                src={`${api.defaults.baseURL || '/api'}/media/${msg.media_id}?token=${localStorage.getItem('token')}`}
-                alt={msg.media_filename || 'Imagen'}
-                className="max-w-full max-h-[75vh] object-contain rounded-lg"
-              />
+              <img src={mediaUrl} alt={msg.media_filename || 'Imagen'} className="max-w-full max-h-[75vh] object-contain rounded-lg" />
             ) : (
-              <video
-                src={`${api.defaults.baseURL || '/api'}/media/${msg.media_id}?token=${localStorage.getItem('token')}`}
-                controls
-                className="max-w-full max-h-[75vh] rounded-lg"
-              />
+              <video src={mediaUrl} controls className="max-w-full max-h-[75vh] rounded-lg" />
             )}
             <div className="flex gap-3 mt-4">
               <button
                 onClick={async () => {
                   try {
-                    const url = `${api.defaults.baseURL || '/api'}/media/${msg.media_id}?token=${localStorage.getItem('token')}`
-                    const response = await fetch(url)
+                    const response = await fetch(mediaUrl)
                     const blob = await response.blob()
                     const a = document.createElement('a')
                     a.href = URL.createObjectURL(blob)
@@ -79,8 +67,7 @@ export default function MediaViewer({ msg, api }) {
                 <button
                   onClick={async () => {
                     try {
-                      const url = `${api.defaults.baseURL || '/api'}/media/${msg.media_id}?token=${localStorage.getItem('token')}`
-                      const response = await fetch(url)
+                      const response = await fetch(mediaUrl)
                       const blob = await response.blob()
                       await navigator.clipboard.write([
                         new ClipboardItem({ [blob.type]: blob })
@@ -94,10 +81,7 @@ export default function MediaViewer({ msg, api }) {
                   📋 Copiar imagen
                 </button>
               )}
-              <button
-                onClick={() => setOpen(false)}
-                className="px-4 py-2 bg-white text-gray-800 rounded-lg text-sm font-medium hover:bg-gray-100"
-              >
+              <button onClick={() => setOpen(false)} className="px-4 py-2 bg-white text-gray-800 rounded-lg text-sm font-medium hover:bg-gray-100">
                 Cerrar
               </button>
             </div>

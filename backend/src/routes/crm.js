@@ -150,11 +150,18 @@ router.get('/leads/:id/messages', auth, async (req, res) => {
       LIMIT $2 OFFSET $3
     `, [leadId, limit, offset])
 
-    res.json({ 
-      success: true, 
-      messages: result.rows.reverse(), // Return in ASC order for chat display
-      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }
-    })
+    const host = req.get('host')
+    const protocol = req.protocol
+    const baseUrl = `${protocol}://${host}`
+
+    // Generate signed URLs for media messages
+    const messages = result.rows.map(msg => {
+      const m = { ...msg }
+      if (m.media_id && m.media_storage_path) {
+        m.media_url = mediaService.getSignedUrl(m.media_id, baseUrl)
+      }
+      return m
+    }).reverse()
   } catch (error) {
     console.error('Error fetching messages:', error)
     res.status(500).json({ error: 'Internal server error' })
@@ -350,10 +357,10 @@ router.post('/leads/:id/messages', auth, async (req, res) => {
 
     await pool.query('UPDATE leads SET is_ai_active = false WHERE id = $1', [leadId])
 
-    res.json({
-      success: true,
-      message: { content: content || `[${messageType}]`, sender_type: 'agent', message_type: messageType, media_id: media_id || null, created_at: new Date() },
-      is_ai_active: false
+    res.json({ 
+      success: true, 
+      messages,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }
     })
   } catch (error) {
     console.error('Error sending message:', error)

@@ -9,9 +9,8 @@ export default function AudioPlayer({ msg, api }) {
   const audioType = msg.media_type === 'audio' || msg.message_type === 'audio'
   if (!audioType) return null
 
-  const audioUrl = msg.media_id
-    ? `${api.defaults.baseURL || '/api'}/media/${msg.media_id}?token=${localStorage.getItem('token')}`
-    : null
+  const audioUrl = msg.media_url || (msg.media_id
+    ? `${api.defaults.baseURL || '/api'}/media/${msg.media_id}` : null)
 
   useEffect(() => {
     const audio = audioRef.current

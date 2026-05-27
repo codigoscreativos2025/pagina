@@ -39,6 +39,36 @@ class OpenClawService {
       systemContent += `\n\n[Available WhatsApp Templates]\nYou can proactively send these templates when appropriate:\n${templatesDesc}\nTo send a template, respond with: SEND_TEMPLATE:template_name`;
     }
 
+    // Inject agent tools & permissions
+    const aiConfig = parseJSON(agentConfig.ai_config);
+    const permissions = parseJSON(agentConfig.permissions) || [];
+    const tools = aiConfig.tools || [];
+
+    if (tools.length > 0 || permissions.length > 0) {
+      systemContent += '\n\n[Agent Capabilities & Permissions]';
+      
+      if (tools.length > 0) {
+        systemContent += '\nConfigured Tools:';
+        tools.forEach(tool => {
+          systemContent += `\n- ${tool.label || tool.type}: ${tool.description || 'available'}`;
+        });
+      }
+      
+      if (permissions.length > 0) {
+        systemContent += '\n\nActive Permissions:';
+        const permLabels = {
+          whatsapp_reply: 'WhatsApp (enviar mensajes)', instagram_reply: 'Instagram (enviar mensajes)',
+          facebook_reply: 'Facebook Messenger', tiktok_reply: 'TikTok',
+          telegram_notify: 'Telegram (notificaciones)', send_email: 'Email'
+        };
+        permissions.forEach(p => {
+          systemContent += `\n- ${permLabels[p] || p}: ✓ enabled`;
+        });
+      }
+      
+      systemContent += '\n\nInstructions: Use these capabilities ONLY within your role. Never respond about topics outside your defined scope. If media (images, audio, documents) is received, describe what action you would take based on your configured tools.';
+    }
+
     try {
       const headers = {
         'Content-Type': 'application/json'

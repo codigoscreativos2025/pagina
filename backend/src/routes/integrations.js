@@ -24,6 +24,73 @@ router.get('/meta/config-ids', auth, async (req, res) => {
 })
 
 // ============================================
+// POST: Meta Onboarding (Instagram via FB SDK)
+// ============================================
+router.post('/meta/onboarding', auth, async (req, res) => {
+  try {
+    const pool = req.pool
+    const userId = req.user.id
+    const { access_token, type } = req.body
+
+    if (!access_token) return res.status(400).json({ error: 'Missing access_token' })
+    if (!['instagram', 'whatsapp'].includes(type)) return res.status(400).json({ error: 'Invalid type' })
+
+    const APP_ID = process.env.FACEBOOK_APP_ID
+    const APP_SECRET = process.env.FACEBOOK_APP_SECRET
+
+    let longLivedToken = access_token
+    if (APP_ID && APP_SECRET) {
+      try {
+        const exchangeRes = await fetch(
+          `https://graph.facebook.com/v18.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${APP_ID}&client_secret=${APP_SECRET}&fb_exchange_token=${access_token}`
+        )
+        const exchangeData = await exchangeRes.json()
+        if (!exchangeData.error && exchangeData.access_token) {
+          longLivedToken = exchangeData.access_token
+        }
+      } catch (e) {}
+    }
+
+    const config = {
+      access_token: longLivedToken,
+      connected_at: new Date().toISOString()
+    }
+
+    if (type === 'instagram') {
+      try {
+        const pagesRes = await fetch(
+          `https://graph.facebook.com/v18.0/me/accounts?fields=id,name,instagram_business_account{id,username}&access_token=${longLivedToken}`
+        )
+        const pagesData = await pagesRes.json()
+        if (pagesData.data?.length > 0) {
+          const page = pagesData.data[0]
+          config.page_id = page.id
+          config.page_name = page.name
+          if (page.instagram_business_account) {
+            config.ig_account_id = page.instagram_business_account.id
+            config.ig_username = page.instagram_business_account.username
+          }
+        }
+      } catch (e) {}
+    }
+
+    const check = await pool.query('SELECT user_id FROM user_integrations WHERE user_id = $1', [userId])
+    const column = `${type}_config`
+    if (check.rows.length === 0) {
+      await pool.query(`INSERT INTO user_integrations (user_id, ${column}) VALUES ($1, $2)`, [userId, JSON.stringify(config)])
+    } else {
+      await pool.query(`UPDATE user_integrations SET ${column} = $1, updated_at = CURRENT_TIMESTAMP WHERE user_id = $2`, [JSON.stringify(config), userId])
+    }
+
+    console.log(`[Meta Onboarding] ${type} connected for user ${userId}`)
+    res.json({ success: true, config })
+  } catch (error) {
+    console.error('[Meta Onboarding Error]:', error)
+    res.status(500).json({ error: error.message })
+  }
+})
+
+// ============================================
 // GET: User integrations
 // ============================================
 router.get('/', auth, async (req, res) => {

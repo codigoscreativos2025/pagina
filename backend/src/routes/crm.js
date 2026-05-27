@@ -260,7 +260,7 @@ router.post('/leads/:id/messages', auth, async (req, res) => {
     const { content, message_type, media_id, template_id } = req.body
 
     const check = await pool.query(`
-      SELECT l.client_phone, l.is_ai_active, a.whatsapp_config, a.id as agent_id
+      SELECT l.client_phone, l.is_ai_active, l.source, a.whatsapp_config, a.id as agent_id
       FROM leads l
       JOIN agents a ON l.agent_id = a.id
       WHERE l.id = $1 AND a.user_id = $2
@@ -269,6 +269,7 @@ router.post('/leads/:id/messages', auth, async (req, res) => {
     if (check.rows.length === 0) return res.status(404).json({ error: 'Lead not found' })
 
     const lead = check.rows[0]
+    const isWhatsApp = lead.source === 'whatsapp' || !lead.source
     const whatsappConfig = typeof lead.whatsapp_config === 'string' ? JSON.parse(lead.whatsapp_config) : lead.whatsapp_config
     const agentPhoneSanitized = whatsappConfig?.phone?.replace(/\D/g, '') || ''
 
@@ -294,7 +295,10 @@ router.post('/leads/:id/messages', auth, async (req, res) => {
 
       const waMsgId = sendResult.wa_message_id
       if (waMsgId) {
-        await pool.query('UPDATE messages SET wa_message_id = $1 WHERE lead_id = $2 AND template_id = $3 ORDER BY created_at DESC LIMIT 1', [waMsgId, leadId, template_id])
+        await pool.query(
+          'UPDATE messages SET wa_message_id = $1 WHERE id = (SELECT id FROM messages WHERE lead_id = $2 AND template_id = $3 ORDER BY created_at DESC LIMIT 1)',
+          [waMsgId, leadId, template_id]
+        )
       }
 
       await pool.query('UPDATE leads SET is_ai_active = false WHERE id = $1', [leadId])
@@ -323,17 +327,24 @@ router.post('/leads/:id/messages', auth, async (req, res) => {
       messageType = mediaRecord.type
     }
 
-    const waResponse = await sendWhatsAppMessage(lead.client_phone, agentPhoneSanitized, content || `[${messageType}]`)
-    if (waResponse?.error) {
-      return res.status(400).json({ error: 'Meta API Error', details: waResponse.error })
+    let waMessageId = null
+
+    // Only send via WhatsApp API for WhatsApp leads
+    if (isWhatsApp && lead.client_phone) {
+      const waResponse = await sendWhatsAppMessage(lead.client_phone, agentPhoneSanitized, content || `[${messageType}]`)
+      if (waResponse?.error) {
+        console.error('[CRM] WhatsApp send error:', waResponse.error)
+      } else if (waResponse?.messages?.[0]?.id) {
+        waMessageId = waResponse.messages[0].id
+      }
     }
 
     await saveMessage(pool, leadId, 'agent', content || `[${messageType}]`, messageType, media_id || null)
 
-    if (waResponse?.messages?.[0]?.id) {
+    if (waMessageId) {
       await pool.query(
-        'UPDATE messages SET wa_message_id = $1 WHERE lead_id = $2 AND sender_type = $3 ORDER BY created_at DESC LIMIT 1',
-        [waResponse.messages[0].id, leadId, 'agent']
+        'UPDATE messages SET wa_message_id = $1 WHERE id = (SELECT id FROM messages WHERE lead_id = $2 AND sender_type = $3 ORDER BY created_at DESC LIMIT 1)',
+        [waMessageId, leadId, 'agent']
       )
     }
 

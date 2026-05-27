@@ -455,6 +455,85 @@ async function start() {
         console.log('[Socket.io] Client disconnected:', socket.id);
       });
     });
+
+    // Auto-refresh Facebook/Instagram tokens every 7 days
+    const TOKEN_REFRESH_INTERVAL = 7 * 24 * 60 * 60 * 1000; // 7 days
+    setInterval(async () => {
+      console.log('[Token Auto-Refresh] Checking for tokens to refresh...')
+      try {
+        const integrations = await pool.query(
+          "SELECT user_id, facebook_config, instagram_config FROM user_integrations WHERE facebook_config IS NOT NULL OR instagram_config IS NOT NULL"
+        )
+        const APP_ID = process.env.FACEBOOK_APP_ID
+        const APP_SECRET = process.env.FACEBOOK_APP_SECRET
+        if (!APP_ID || !APP_SECRET) {
+          console.log('[Token Auto-Refresh] ⚠️ Missing FACEBOOK_APP_ID or SECRET')
+          return
+        }
+
+        for (const row of integrations.rows) {
+          // Refresh Facebook
+          if (row.facebook_config?.user_access_token) {
+            try {
+              const exchangeRes = await fetch(
+                `https://graph.facebook.com/v18.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${APP_ID}&client_secret=${APP_SECRET}&fb_exchange_token=${row.facebook_config.user_access_token}`
+              )
+              const exchangeData = await exchangeRes.json()
+              if (!exchangeData.error && exchangeData.access_token) {
+                const pagesRes = await fetch(
+                  `https://graph.facebook.com/v18.0/me/accounts?fields=id,name,access_token&access_token=${exchangeData.access_token}`
+                )
+                const pagesData = await pagesRes.json()
+                const page = pagesData.data?.find(p => p.id === row.facebook_config.page_id)
+                if (page) {
+                  const updatedConfig = {
+                    ...row.facebook_config,
+                    user_access_token: exchangeData.access_token,
+                    access_token: page.access_token,
+                    token_refreshed_at: new Date().toISOString(),
+                    token_expires_at: new Date(Date.now() + (exchangeData.expires_in || 5184000) * 1000).toISOString()
+                  }
+                  await pool.query('UPDATE user_integrations SET facebook_config = $1 WHERE user_id = $2',
+                    [JSON.stringify(updatedConfig), row.user_id])
+                  console.log(`[Token Auto-Refresh] ✅ Facebook token refreshed for user ${row.user_id}`)
+                }
+              }
+            } catch (e) {
+              console.log(`[Token Auto-Refresh] ❌ Facebook user ${row.user_id}:`, e.message)
+            }
+          }
+
+          // Refresh Instagram (uses same user token)
+          if (row.instagram_config?.access_token && row.facebook_config?.user_access_token) {
+            try {
+              const exchangeRes = await fetch(
+                `https://graph.facebook.com/v18.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${APP_ID}&client_secret=${APP_SECRET}&fb_exchange_token=${row.facebook_config.user_access_token}`
+              )
+              const exchangeData = await exchangeRes.json()
+              if (!exchangeData.error && exchangeData.access_token) {
+                const updatedIgConfig = {
+                  ...row.instagram_config,
+                  access_token: exchangeData.access_token,
+                  token_refreshed_at: new Date().toISOString()
+                }
+                await pool.query('UPDATE user_integrations SET instagram_config = $1 WHERE user_id = $2',
+                  [JSON.stringify(updatedIgConfig), row.user_id])
+                console.log(`[Token Auto-Refresh] ✅ Instagram token refreshed for user ${row.user_id}`)
+              }
+            } catch (e) {
+              console.log(`[Token Auto-Refresh] ❌ Instagram user ${row.user_id}:`, e.message)
+            }
+          }
+        }
+      } catch (e) {
+        console.error('[Token Auto-Refresh] Error:', e.message)
+      }
+    }, TOKEN_REFRESH_INTERVAL)
+    
+    // Run first refresh after 5 minutes
+    setTimeout(() => {
+      console.log('[Token Auto-Refresh] First refresh cycle starting...')
+    }, 5 * 60 * 1000)
     
     server.listen(PORT, '0.0.0.0', () => {
       console.log(`API running on port ${PORT}`);

@@ -259,16 +259,16 @@ export default function CRM() {
 
   if (loading) {
     return (
-      <div className="h-full flex items-center justify-center bg-gray-50">
+      <div className="fixed inset-0 flex items-center justify-center bg-gray-50 z-10">
         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-gray-500" />
       </div>
     )
   }
 
   return (
-    <div className="h-full flex flex-col bg-gray-50">
+    <div className="fixed inset-0 flex flex-col bg-gray-50 z-10">
       {/* Navbar */}
-      <nav className="bg-white border-b border-gray-200 px-4 py-2.5 flex items-center justify-between flex-shrink-0">
+      <nav className="bg-white border-b border-gray-200 px-4 py-2 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
           <Link to="/dashboard" className="text-gray-600 hover:text-gray-900">← Dashboard</Link>
           <h1 className="text-lg font-bold text-gray-800">Chats</h1>

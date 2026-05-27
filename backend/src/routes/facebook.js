@@ -95,6 +95,33 @@ router.post('/onboarding', auth, async (req, res) => {
     }
 
     console.log(`[Facebook Onboarding] User ${userId} connected Page: ${pageName} (${page_id})`)
+
+    // Convert short-lived token to long-lived (60 days) in background
+    if (process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET) {
+      try {
+        const exchangeRes = await fetch(
+          `https://graph.facebook.com/v18.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${process.env.FACEBOOK_APP_ID}&client_secret=${process.env.FACEBOOK_APP_SECRET}&fb_exchange_token=${access_token}`
+        )
+        const exchangeData = await exchangeRes.json()
+        if (!exchangeData.error && exchangeData.access_token) {
+          const newPageRes = await fetch(
+            `https://graph.facebook.com/v18.0/${page_id}?fields=name,access_token&access_token=${exchangeData.access_token}`
+          )
+          const newPageData = await newPageRes.json()
+          if (!newPageData.error) {
+            facebookConfig.user_access_token = exchangeData.access_token
+            facebookConfig.access_token = newPageData.access_token || exchangeData.access_token
+            facebookConfig.token_refreshed_at = new Date().toISOString()
+            await pool.query('UPDATE user_integrations SET facebook_config = $1 WHERE user_id = $2',
+              [JSON.stringify(facebookConfig), userId])
+            console.log('[Facebook Onboarding] ✅ Token convertido a larga duración (' + Math.round(exchangeData.expires_in / 86400) + ' días)')
+          }
+        }
+      } catch (e) {
+        console.log('[Facebook Onboarding] ⚠️ No se pudo convertir token:', e.message)
+      }
+    }
+
     res.json({ success: true, page_name: pageName, page_id })
   } catch (error) {
     console.error('[Facebook Onboarding Error]:', error)
@@ -817,3 +844,83 @@ async function processFacebookWithAI(agentId, leadId, messageText, pageId) {
     return null
   }
 }
+
+// ============================================
+// EXCHANGE SHORT-LIVED TOKEN FOR LONG-LIVED TOKEN
+// ============================================
+router.post('/exchange-token', auth, async (req, res) => {
+  try {
+    const { access_token: token } = req.body
+    if (!token) return res.status(400).json({ error: 'Missing access_token' })
+
+    const APP_ID = process.env.FACEBOOK_APP_ID
+    const APP_SECRET = process.env.FACEBOOK_APP_SECRET
+    if (!APP_ID || !APP_SECRET) return res.status(500).json({ error: 'Missing App ID/Secret' })
+
+    const exchangeRes = await fetch(
+      `https://graph.facebook.com/v18.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${APP_ID}&client_secret=${APP_SECRET}&fb_exchange_token=${token}`
+    )
+    const data = await exchangeRes.json()
+    if (data.error) return res.status(400).json({ error: data.error.message })
+
+    res.json({ success: true, access_token: data.access_token, expires_in: data.expires_in })
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+})
+
+// ============================================
+// REFRESH ALL TOKENS (Facebook + Instagram)
+// ============================================
+router.post('/refresh-tokens', auth, async (req, res) => {
+  try {
+    const pool = req.pool
+    const userId = req.user.id
+    const configRes = await pool.query(
+      'SELECT facebook_config, instagram_config FROM user_integrations WHERE user_id = $1', [userId]
+    )
+    if (!configRes.rows[0]) return res.status(400).json({ error: 'No integrations found' })
+
+    const results = {}
+    const APP_ID = process.env.FACEBOOK_APP_ID
+    const APP_SECRET = process.env.FACEBOOK_APP_SECRET
+
+    if (configRes.rows[0].facebook_config?.user_access_token && APP_ID && APP_SECRET) {
+      try {
+        const fbConfig = configRes.rows[0].facebook_config
+        const exchangeRes = await fetch(
+          `https://graph.facebook.com/v18.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${APP_ID}&client_secret=${APP_SECRET}&fb_exchange_token=${fbConfig.user_access_token}`
+        )
+        const exchangeData = await exchangeRes.json()
+        if (!exchangeData.error) {
+          const pagesRes = await fetch(
+            `https://graph.facebook.com/v18.0/me/accounts?fields=id,name,access_token&access_token=${exchangeData.access_token}`
+          )
+          const pagesData = await pagesRes.json()
+          const page = pagesData.data?.find(p => p.id === fbConfig.page_id)
+          if (page) {
+            const updatedConfig = {
+              ...fbConfig,
+              user_access_token: exchangeData.access_token,
+              access_token: page.access_token,
+              token_refreshed_at: new Date().toISOString()
+            }
+            await pool.query('UPDATE user_integrations SET facebook_config = $1 WHERE user_id = $2',
+              [JSON.stringify(updatedConfig), userId])
+            results.facebook = '✅ Token refreshed (60 days)'
+          } else {
+            results.facebook = '⚠️ Page not found'
+          }
+        } else {
+          results.facebook = '❌ ' + exchangeData.error.message
+        }
+      } catch (e) { results.facebook = '❌ ' + e.message }
+    }
+
+    res.json({ success: true, results })
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+})
+
+module.exports = router

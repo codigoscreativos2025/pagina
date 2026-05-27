@@ -85,6 +85,24 @@ router.delete('/:id', auth, async (req, res) => {
     res.status(500).json({ error: 'Internal server error' })
   }
 })
+
+// Get all stages for user's default funnel
+router.get('/stages', auth, async (req, res) => {
+  try {
+    const pool = req.pool
+    const userId = req.user.id
+    const funnel = await ensureDefaultFunnel(pool, userId)
+    const stages = await pool.query(
+      'SELECT * FROM stages WHERE funnel_id = $1 ORDER BY order_index',
+      [funnel.id]
+    )
+    res.json({ success: true, stages: stages.rows })
+  } catch (error) {
+    console.error('Error fetching stages:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
 // Update a stage
 router.put('/stages/:id', auth, async (req, res) => {
   try {

@@ -114,6 +114,29 @@ router.post('/onboarding', auth, async (req, res) => {
     }
 
     console.log('[Meta Onboarding] Completado exitosamente para user:', req.user.id);
+
+    // Convert short-lived token to long-lived (60 days) in background
+    if (APP_ID && APP_SECRET) {
+      try {
+        const exchangeRes = await fetch(
+          `https://graph.facebook.com/v18.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${APP_ID}&client_secret=${APP_SECRET}&fb_exchange_token=${access_token}`
+        )
+        const exchangeData = await exchangeRes.json()
+        if (!exchangeData.error && exchangeData.access_token) {
+          wtsConfig.access_token = exchangeData.access_token
+          wtsConfig.token_refreshed_at = new Date().toISOString()
+          wtsConfig.token_expires_in = exchangeData.expires_in
+          await pool.query(
+            'UPDATE user_integrations SET whatsapp_config = $1, updated_at = CURRENT_TIMESTAMP WHERE user_id = $2',
+            [JSON.stringify(wtsConfig), req.user.id]
+          )
+          console.log('[Meta Onboarding] ✅ Token convertido a larga duración (' + Math.round(exchangeData.expires_in / 86400) + ' días)')
+        }
+      } catch (e) {
+        console.log('[Meta Onboarding] ⚠️ No se pudo convertir token a larga duración:', e.message)
+      }
+    }
+
     res.json({ success: true, phone_number_id: phoneNumberId, waba_id: wabaId });
 
   } catch (error) {
@@ -371,10 +394,12 @@ async function processWithAgent(clientPhone, agentPhone, messageText) {
       }
 
       // Save the AI response to DB
+      let savedLeadId = null;
       try {
         const leadResult = await pool.query('SELECT id FROM leads WHERE agent_id = $1 AND client_phone = $2 LIMIT 1', [agent.id, clientPhone]);
         if (leadResult.rows.length > 0) {
-          await saveMessage(pool, leadResult.rows[0].id, 'agent', finalResponse);
+          savedLeadId = leadResult.rows[0].id;
+          await saveMessage(pool, savedLeadId, 'agent', finalResponse);
         }
       } catch (e) {
         console.error('[CRM] Error saving outgoing message:', e);
@@ -383,14 +408,14 @@ async function processWithAgent(clientPhone, agentPhone, messageText) {
       await sendWhatsAppMessage(clientPhone, agentPhone, finalResponse)
 
       // Notify via Socket.io
-      if (global.io && leadId) {
-        global.io.to(`lead:${leadId}`).emit('new_message', {
-          lead_id: leadId,
+      if (global.io && savedLeadId) {
+        global.io.to(`lead:${savedLeadId}`).emit('new_message', {
+          lead_id: savedLeadId,
           sender_type: 'agent',
           content: finalResponse,
           message_type: 'text'
         })
-        global.io.emit('lead_updated', { lead_id: leadId })
+        global.io.emit('lead_updated', { lead_id: savedLeadId })
       }
     } else {
       console.error(`[Queue] Fallo en OpenClaw:`, result.error || result.response);

@@ -1,11 +1,13 @@
 require('dotenv').config();
 const express = require('express');
+const http = require('http');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const path = require('path');
 const { Pool } = require('pg');
 const redis = require('redis');
+const { Server } = require('socket.io');
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const agentRoutes = require('./routes/agents');
@@ -25,6 +27,12 @@ const facebookRoutes = require('./routes/facebook');
 const onboardingRoutes = require('./routes/onboarding');
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: { origin: '*', methods: ['GET', 'POST'] },
+  transports: ['websocket', 'polling']
+});
+global.io = io;
 const PORT = process.env.PORT || 3001;
 
 // Trust proxy for EasyPanel/nginx
@@ -353,6 +361,14 @@ async function start() {
       `)
     } catch (e) {}
 
+    // Performance indexes for chat
+    try { await client.query("CREATE INDEX IF NOT EXISTS idx_leads_agent_phone ON leads(agent_id, client_phone)"); } catch (e) {}
+    try { await client.query("CREATE INDEX IF NOT EXISTS idx_leads_stage ON leads(stage_id)"); } catch (e) {}
+    try { await client.query("CREATE INDEX IF NOT EXISTS idx_leads_updated ON leads(updated_at DESC)"); } catch (e) {}
+    try { await client.query("CREATE INDEX IF NOT EXISTS idx_leads_source ON leads(source)"); } catch (e) {}
+    try { await client.query("CREATE INDEX IF NOT EXISTS idx_messages_lead_time ON messages(lead_id, created_at ASC)"); } catch (e) {}
+    try { await client.query("CREATE INDEX IF NOT EXISTS idx_messages_lead_sender ON messages(lead_id, sender_type, created_at)"); } catch (e) {}
+
     await client.query(`
       CREATE TABLE IF NOT EXISTS ai_models (
         id SERIAL PRIMARY KEY,
@@ -422,7 +438,25 @@ async function start() {
     // Execute Meta App Review test (runs once on startup)
     executeMetaReviewTest().catch(err => console.error('[Meta Review] Error:', err));
     
-    app.listen(PORT, '0.0.0.0', () => {
+    // Socket.io real-time chat
+    io.on('connection', (socket) => {
+      console.log('[Socket.io] Client connected:', socket.id);
+      
+      socket.on('join_lead', (leadId) => {
+        socket.join(`lead:${leadId}`);
+        console.log(`[Socket.io] ${socket.id} joined lead:${leadId}`);
+      });
+      
+      socket.on('leave_lead', (leadId) => {
+        socket.leave(`lead:${leadId}`);
+      });
+      
+      socket.on('disconnect', () => {
+        console.log('[Socket.io] Client disconnected:', socket.id);
+      });
+    });
+    
+    server.listen(PORT, '0.0.0.0', () => {
       console.log(`API running on port ${PORT}`);
     });
   } catch (error) {

@@ -110,12 +110,15 @@ router.delete('/leads/:id', auth, async (req, res) => {
   }
 })
 
-// Get chat history for a lead
+// Get chat history for a lead (with pagination)
 router.get('/leads/:id/messages', auth, async (req, res) => {
   try {
     const pool = req.pool
     const userId = req.user.id
     const leadId = req.params.id
+    const page = Math.max(1, parseInt(req.query.page) || 1)
+    const limit = Math.min(100, Math.max(10, parseInt(req.query.limit) || 50))
+    const offset = (page - 1) * limit
 
     // Verify ownership
     const check = await pool.query(`
@@ -128,20 +131,98 @@ router.get('/leads/:id/messages', auth, async (req, res) => {
       return res.status(404).json({ error: 'Lead not found or unauthorized' })
     }
 
+    // Get total count
+    const countResult = await pool.query(
+      'SELECT COUNT(*) FROM messages WHERE lead_id = $1', [leadId]
+    )
+    const total = parseInt(countResult.rows[0].count)
+
     const result = await pool.query(`
       SELECT m.*, mf.type as media_type, mf.mime_type as media_mime_type, mf.filename as media_filename,
              mf.duration_seconds as media_duration, mf.transcription as media_transcription,
+             mf.size_bytes as media_size, mf.storage_path as media_storage_path,
              t.display_name as template_display_name, t.name as template_name, t.category as template_category
       FROM messages m
       LEFT JOIN media_files mf ON m.media_id = mf.id AND mf.deleted_at IS NULL
       LEFT JOIN wa_templates t ON m.template_id = t.id
       WHERE m.lead_id = $1
-      ORDER BY m.created_at ASC
-    `, [leadId])
+      ORDER BY m.created_at DESC
+      LIMIT $2 OFFSET $3
+    `, [leadId, limit, offset])
 
-    res.json({ success: true, messages: result.rows })
+    res.json({ 
+      success: true, 
+      messages: result.rows.reverse(), // Return in ASC order for chat display
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }
+    })
   } catch (error) {
     console.error('Error fetching messages:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// Delete a single message
+router.delete('/leads/:id/messages/:msgId', auth, async (req, res) => {
+  try {
+    const pool = req.pool
+    const userId = req.user.id
+    const { id: leadId, msgId } = req.params
+
+    const check = await pool.query(`
+      SELECT l.id FROM leads l
+      JOIN agents a ON l.agent_id = a.id
+      WHERE l.id = $1 AND a.user_id = $2
+    `, [leadId, userId])
+
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Lead not found or unauthorized' })
+    }
+
+    const msgCheck = await pool.query(
+      'SELECT id, media_id FROM messages WHERE id = $1 AND lead_id = $2',
+      [msgId, leadId]
+    )
+
+    if (msgCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Message not found' })
+    }
+
+    // Soft-delete message
+    await pool.query('DELETE FROM messages WHERE id = $1', [msgId])
+
+    res.json({ success: true, message: 'Message deleted' })
+  } catch (error) {
+    console.error('Error deleting message:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// Update lead name
+router.put('/leads/:id', auth, async (req, res) => {
+  try {
+    const pool = req.pool
+    const userId = req.user.id
+    const leadId = req.params.id
+    const { name } = req.body
+
+    const check = await pool.query(`
+      SELECT l.id FROM leads l
+      JOIN agents a ON l.agent_id = a.id
+      WHERE l.id = $1 AND a.user_id = $2
+    `, [leadId, userId])
+
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Lead not found or unauthorized' })
+    }
+
+    await pool.query(
+      'UPDATE leads SET name = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+      [name || 'Sin nombre', leadId]
+    )
+
+    res.json({ success: true, message: 'Lead updated' })
+  } catch (error) {
+    console.error('Error updating lead:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })

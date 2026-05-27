@@ -381,6 +381,17 @@ async function processWithAgent(clientPhone, agentPhone, messageText) {
       }
 
       await sendWhatsAppMessage(clientPhone, agentPhone, finalResponse)
+
+      // Notify via Socket.io
+      if (global.io && leadId) {
+        global.io.to(`lead:${leadId}`).emit('new_message', {
+          lead_id: leadId,
+          sender_type: 'agent',
+          content: finalResponse,
+          message_type: 'text'
+        })
+        global.io.emit('lead_updated', { lead_id: leadId })
+      }
     } else {
       console.error(`[Queue] Fallo en OpenClaw:`, result.error || result.response);
       await sendWhatsAppMessage(clientPhone, agentPhone, 'Lo siento, estoy teniendo problemas técnicos. Por favor intenta más tarde.')
@@ -426,10 +437,25 @@ async function getOrCreateLeadAndUpdateTimestamp(pool, agentId, clientPhone, cli
 
 async function saveMessage(pool, leadId, senderType, content, messageType = 'text', mediaId = null, templateId = null) {
   if (!content && !mediaId) return;
-  await pool.query(
-    'INSERT INTO messages (lead_id, sender_type, content, message_type, media_id, template_id) VALUES ($1, $2, $3, $4, $5, $6)',
+  const result = await pool.query(
+    'INSERT INTO messages (lead_id, sender_type, content, message_type, media_id, template_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, created_at',
     [leadId, senderType, content || '', messageType, mediaId, templateId]
   );
+
+  // Notify via Socket.io
+  if (global.io && leadId) {
+    const msg = result.rows[0];
+    global.io.to(`lead:${leadId}`).emit('new_message', {
+      id: msg.id,
+      lead_id: leadId,
+      sender_type: senderType,
+      content: content || '',
+      message_type: messageType,
+      media_id: mediaId,
+      created_at: msg.created_at
+    })
+    global.io.emit('lead_updated', { lead_id: leadId, last_message: content?.substring(0, 100) })
+  }
 }
 
 async function sendWhatsAppMessage(to, agentPhone, message) {

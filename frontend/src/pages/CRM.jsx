@@ -312,7 +312,7 @@ export default function CRM() {
           </div>
 
           {/* Right area: Chat */}
-          <div className="flex-1 flex flex-col min-w-0">
+          <div className="flex-1 flex flex-col min-w-0 min-h-0">
             {activeLead ? (
               <>
                 {/* AI toggle + stage bar */}

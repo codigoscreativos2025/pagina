@@ -17,7 +17,7 @@ export default function ChatContainer({
   inputDisabled
 }) {
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col min-h-0 flex-1">
       <ChatHeader lead={lead} onNameUpdate={onUpdateLeadName} />
       <MessageList
         messages={messages}
